@@ -57,8 +57,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     private bool IsGrounded()
     {
         var hit = Physics.OverlapSphereNonAlloc(transform.position, _groundCheckRadius, _groundColliders, _groundMask);
-        //return hit > 0;
-        return true;
+        return hit > 0;
     }
 
     // this will call every frame
@@ -82,6 +81,12 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         {
             input.moveDirection.Normalize();
         }
+    }
+
+    // prevent csp from operating on things like jumping and shooting, to prevent noticeable rubberbanding
+    protected override void ModifyExtrapolatedInput(ref MoveInput input)
+    {
+        input.jump = false;
     }
 
     private void OnDrawGizmosSelected()

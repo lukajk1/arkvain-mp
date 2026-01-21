@@ -1,9 +1,13 @@
+using PurrNet;
 using PurrNet.Prediction;
+using System;
 using UnityEngine;
 
 public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
     [SerializeField] private int _maxHealth;
+    public static event Action<PlayerID?> OnPlayerDeath;
+    public static Action KillAllPlayers;
 
     protected override HealthState GetInitialState()
     {
@@ -13,13 +17,41 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         };
     }
 
+    private void OnEnable()
+    {
+        KillAllPlayers += OnKillAllPlayers;
+    }
+
+    private void OnDisable()
+    {
+        KillAllPlayers -= OnKillAllPlayers;
+    }
+
+
+    private void Die()
+    {
+        OnPlayerDeath?.Invoke(owner);
+        predictionManager.hierarchy.Delete(gameObject);
+    }
+
+    private void OnKillAllPlayers()
+    {
+        predictionManager.hierarchy.Delete(gameObject);
+    }
+
+    [ContextMenu("Kill Player")]
+    private void KillPlayer()
+    {
+        ChangeHealth(-9999);
+    }
+
     public void ChangeHealth(int change)
     {
         currentState.health += change;
 
         if (currentState.health <= 0)
         {
-            Debug.Log("died");
+            Die();
         }
         Debug.Log($"health changed to {currentState.health}");
     }

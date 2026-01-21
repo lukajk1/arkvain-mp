@@ -39,6 +39,7 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
             _roundRunningState.OnPlayerSpawned(player, newPlayer.Value);
         }
 
+        machine.Next();
     }
 
     public struct SpawnState : IPredictedData<SpawnState>

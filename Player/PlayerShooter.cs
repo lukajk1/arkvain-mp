@@ -12,6 +12,22 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     public float shootCooldown => 1 / _fireRate;
 
     [SerializeField] private PlayerMovement _playerMovement;
+    [SerializeField] private ParticleSystem _muzzleFlashParticles;
+    private PredictedEvent _onShoot;
+
+    protected override void LateAwake()
+    {
+        base.LateAwake();
+        _onShoot = new PredictedEvent(predictionManager, this);
+        _onShoot.AddListener(OnShootEvent);
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        _onShoot.RemoveListener(OnShootEvent);
+    }
+
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
@@ -30,6 +46,7 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     private void Shoot()
     {
+        _onShoot?.Invoke();
         var forward = _playerMovement.currentInput.cameraForward ?? currentState.lastKnownForward;
         currentState.lastKnownForward = forward;
 
@@ -42,6 +59,12 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
             otherHealth.ChangeHealth(-_damage);
         }
     }
+
+    private void OnShootEvent()
+    {
+        _muzzleFlashParticles.Play();   
+    }
+
 
     protected override void UpdateInput(ref ShootInput input)
     {

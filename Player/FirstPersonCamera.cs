@@ -20,6 +20,9 @@ public class FirstPersonCamera : MonoBehaviour
     {
         _initialized = true;
         _camera.enabled = true;
+
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void LateUpdate()

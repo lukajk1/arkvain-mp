@@ -81,6 +81,10 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         {
             input.moveDirection.Normalize();
         }
+        if (input.cameraForward.HasValue)
+        {
+            input.cameraForward.Value.Normalize();
+        }
     }
 
     // prevent csp from operating on things like jumping and shooting, to prevent noticeable rubberbanding

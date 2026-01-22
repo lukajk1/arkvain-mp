@@ -41,7 +41,6 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
         state.cooldownTimer = shootCooldown;
         Shoot();
-        Debug.Log("shooting");
     }
 
     private void Shoot()

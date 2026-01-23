@@ -15,22 +15,26 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     [Header("Particles")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
-    [SerializeField] private ParticleSystem _hitBodyParticles;
-    [SerializeField] private ParticleSystem _hitOtherParticles;
+    [SerializeField] private GameObject _hitBodyParticles;
+    [SerializeField] private GameObject _hitOtherParticles;
 
-    private PredictedEvent _onShoot;
+    private PredictedEvent _onShootMuzzle;
+    private PredictedEvent<HitInfo> _onHit;
 
     protected override void LateAwake()
     {
         base.LateAwake();
-        _onShoot = new PredictedEvent(predictionManager, this);
-        _onShoot.AddListener(OnShootEvent);
+        _onShootMuzzle = new PredictedEvent(predictionManager, this);
+        _onShootMuzzle.AddListener(OnShootEvent);
+        _onHit = new PredictedEvent<HitInfo>(predictionManager, this);
+        _onHit.AddListener(OnHitEvent);
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        _onShoot.RemoveListener(OnShootEvent);
+        _onShootMuzzle.RemoveListener(OnShootEvent);
+        _onHit.RemoveListener(OnHitEvent);
     }
 
 
@@ -50,7 +54,8 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     private void Shoot()
     {
-        _onShoot?.Invoke();
+        _onShootMuzzle?.Invoke();
+
         var forward = _playerMovement.currentInput.cameraForward ?? currentState.lastKnownForward;
         currentState.lastKnownForward = forward;
 
@@ -58,15 +63,38 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
         // add a slight forward offset to origin of ray
         if (!Physics.Raycast(position + forward * 0.5f, forward, out RaycastHit hit)) return;
+
+        bool hitPlayer = false;
         if (hit.transform.TryGetComponent(out PlayerHealth otherHealth))
         {
             otherHealth.ChangeHealth(-_damage);
+            hitPlayer = true;
         }
+
+        _onHit?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer });
     }
 
     private void OnShootEvent()
     {
-        _muzzleFlashParticles.Play();   
+        if (_muzzleFlashParticles != null) _muzzleFlashParticles.Play();
+    }
+
+    private void OnHitEvent(HitInfo hitInfo)
+    {
+        if (hitInfo.hitPlayer)
+        {
+            Instantiate(_hitBodyParticles, hitInfo.position, Quaternion.identity);
+        }
+        else
+        {
+            Instantiate(_hitOtherParticles, hitInfo.position, Quaternion.identity);
+        }
+    }
+
+    public struct HitInfo
+    {
+        public Vector3 position;
+        public bool hitPlayer;
     }
 
 

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class FirstPersonCamera : MonoBehaviour
@@ -5,6 +6,9 @@ public class FirstPersonCamera : MonoBehaviour
     [SerializeField] float _lookSensitivity = 2f;
     [SerializeField] float _maxLookAngle = 80f;
     [SerializeField] Camera _camera;
+
+    [HideInInspector] public static Transform mainCameraTransform;
+    public static event Action OnCameraInitialized;
 
     Vector2 _currentRotation;
     bool _initialized;
@@ -25,6 +29,9 @@ public class FirstPersonCamera : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        mainCameraTransform = transform;
+        OnCameraInitialized?.Invoke();
     }
 
     void LateUpdate()

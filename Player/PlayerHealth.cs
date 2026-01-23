@@ -2,10 +2,12 @@ using PurrNet;
 using PurrNet.Prediction;
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
     [SerializeField] private int _maxHealth;
+    [SerializeField] private Slider _healthSlider;
     public static event Action<PlayerID?> OnPlayerDeath;
     public static Action KillAllPlayers;
 
@@ -53,7 +55,18 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         {
             Die();
         }
-        Debug.Log($"health changed to {currentState.health}");
+        //Debug.Log($"health changed to {currentState.health}");
+    }
+
+    // visuals can be called multiple times if they are being called directly in Simulate(). Using updateview() prevents that from ocurring.
+    protected override void UpdateView(HealthState viewState, HealthState? verified)
+    {
+        base.UpdateView(viewState, verified);
+
+        if (_healthSlider)
+        {
+            _healthSlider.value = (float)currentState.health / _maxHealth;
+        }
     }
 
     public struct HealthState : IPredictedData<PlayerHealth.HealthState>

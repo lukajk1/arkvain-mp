@@ -15,7 +15,16 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [SerializeField] private PredictedRigidbody _rigidbody;
     protected override void LateAwake()
     {
-        if (isOwner) _camera.Init();
+        if (isOwner)
+        {
+            _camera.Init();
+            Debug.Log("initalize camera" + _camera.gameObject.GetInstanceID());
+        }
+        else
+        {
+            Destroy(_camera.gameObject);
+            Debug.Log("spawned char is not locally controlled. destroyed camera");
+        }
     }
 
 

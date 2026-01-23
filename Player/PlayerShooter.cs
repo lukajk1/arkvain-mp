@@ -12,7 +12,12 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     public float shootCooldown => 1 / _fireRate;
 
     [SerializeField] private PlayerMovement _playerMovement;
+
+    [Header("Particles")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
+    [SerializeField] private ParticleSystem _hitBodyParticles;
+    [SerializeField] private ParticleSystem _hitOtherParticles;
+
     private PredictedEvent _onShoot;
 
     protected override void LateAwake()

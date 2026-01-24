@@ -7,7 +7,7 @@ using static PlayerShooter;
 public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.ShootState>
 {
     [SerializeField] private float _fireRate = 3;
-    [SerializeField] private int _damage = 35;
+    [SerializeField] private int _damage = 5;
     [SerializeField] private Vector3 _centerOfCamera;
 
     public float shootCooldown => 1 / _fireRate;

@@ -17,11 +17,28 @@ public class ClientGame : MonoBehaviour
             {
                 _cursorLockState = value;
                 Cursor.lockState = value;
+                Cursor.visible = value == CursorLockMode.None;
             }
         }
     }
 
     private static List<object> cursorLockList = new();
+    public static float mouseSensitivity = 250f;
+    private void Awake()
+    {
+        if (Instance != null)
+        {
+            Debug.LogError($"More than one instance of {Instance} in scene");
+        }
+
+        Instance = this;
+    }
+
+    private void Start()
+    {
+        CursorLockState = CursorLockMode.Locked;
+    }
+
     public static void ModifyCursorUnlockList(bool isAdding, object obj)
     {
         if (isAdding)
@@ -44,17 +61,4 @@ public class ClientGame : MonoBehaviour
         }
     }
 
-    public static float mouseSensitivity = 250f;
-
-    private void Awake()
-    {
-        if (Instance != null) 
-        {
-            Debug.LogError($"More than one instance of {Instance} in scene");
-        }
-
-        Instance = this;
-
-        ClientGame.CursorLockState = CursorLockMode.Locked;
-    }
 }

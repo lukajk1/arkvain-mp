@@ -15,6 +15,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [SerializeField] private FirstPersonCamera _camera;
     [SerializeField] private PredictedRigidbody _rigidbody;
     [SerializeField] private InputActionReference _jumpAction;
+    [SerializeField] private InputActionReference _moveAction;
     protected override void LateAwake()
     {
         if (isOwner)
@@ -25,6 +26,11 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
             if (_jumpAction != null)
             {
                 _jumpAction.action.Enable();
+            }
+
+            if (_moveAction != null)
+            {
+                _moveAction.action.Enable();
             }
         }
         else
@@ -94,7 +100,10 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     // this runs each tick (as opposed to each frame)
     protected override void GetFinalInput(ref MoveInput input)
     {
-        input.moveDirection = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        if (_moveAction != null)
+        {
+            input.moveDirection = _moveAction.action.ReadValue<Vector2>();
+        }
         input.cameraForward = _camera.forward;
     }
 

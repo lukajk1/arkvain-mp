@@ -28,6 +28,10 @@ public class SettingsMenu : MonoBehaviour
     {
         if (_menuObject == null) return;
 
-        _menuObject.SetActive(!_menuObject.activeSelf);
+        bool stateToSetTo = !_menuObject.activeSelf;
+
+        _menuObject.SetActive(stateToSetTo);
+        LockActionMap.i.ModifyLockList(ActionMapType.PlayerControls, stateToSetTo, this);
+        ClientGame.ModifyCursorUnlockList(stateToSetTo, this);
     }
 }

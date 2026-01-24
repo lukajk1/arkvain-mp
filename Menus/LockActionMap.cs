@@ -10,46 +10,46 @@ public enum ActionMapType
 public class LockActionMap : MonoBehaviour
 {
     public static LockActionMap i;
-
     [SerializeField] InputActionAsset inputActions;
     private InputActionMap mainMap;
-    private InputActionMap minigameMap;
 
-    [SerializeField] InputActionReference move;
+    private Dictionary<ActionMapType, List<object>> lockingDictionary = new();
 
     private void Awake()
     {
         i = this;
     }
+
     private void Start()
     {
-        mainMap = inputActions.FindActionMap("Main");
-        minigameMap = inputActions.FindActionMap("Minigame");
+        mainMap = inputActions.FindActionMap("Player");
     }
 
-    private List<object> lockList = new();
-
-    public void ModifyLockList(ActionMapType type, bool isAdding, object obj)
+    public void ModifyLockList(ActionMapType targetMap, bool isLocking, object obj)
     {
-        InputActionMap targetActionMap = null;
+        InputActionMap targetActionMap = GetActionMap(targetMap);
+        if (targetActionMap == null) return;
 
-        switch(type)
+        if (!lockingDictionary.ContainsKey(targetMap))
         {
-            case ActionMapType.PlayerControls:
-                targetActionMap = mainMap;
-                break;
-            default:
-                targetActionMap = mainMap;
-                break;
+            lockingDictionary[targetMap] = new List<object>();
         }
 
-        if (isAdding)
-        {
-            if (!lockList.Contains(obj)) lockList.Add(obj);
-        }
-        else lockList.Remove(obj);
+        List<object> lockingList = lockingDictionary[targetMap];
 
-        if (lockList.Count > 0)
+        if (isLocking)
+        {
+            if (!lockingList.Contains(obj))
+            {
+                lockingList.Add(obj);
+            }
+        }
+        else
+        {
+            lockingList.Remove(obj);
+        }
+
+        if (lockingList.Count > 0)
         {
             targetActionMap.Disable();
         }
@@ -59,9 +59,14 @@ public class LockActionMap : MonoBehaviour
         }
     }
 
-    public void LockMovement(bool value)
+    private InputActionMap GetActionMap(ActionMapType mapType)
     {
-        if (value) move.action.Disable(); 
-        else move.action.Enable(); 
+        switch (mapType)
+        {
+            case ActionMapType.PlayerControls:
+                return mainMap;
+            default:
+                return mainMap;
+        }
     }
 }

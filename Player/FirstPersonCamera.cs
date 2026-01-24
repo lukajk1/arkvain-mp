@@ -27,9 +27,6 @@ public class FirstPersonCamera : MonoBehaviour
         if (GetComponent<AudioListener>() == null)
             gameObject.AddComponent<AudioListener>();
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
         mainCameraTransform = transform;
         OnCameraInitialized?.Invoke();
     }

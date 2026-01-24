@@ -11,6 +11,11 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     public static event Action<PlayerID?> OnPlayerDeath;
     public static Action KillAllPlayers;
 
+    void Awake()
+    {
+        _healthSlider.value = 1f;
+    }
+
     protected override HealthState GetInitialState()
     {
         return new HealthState()

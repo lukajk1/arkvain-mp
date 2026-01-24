@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using PurrNet.Prediction;
 
 public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, PlayerMovement.State>
@@ -13,18 +14,29 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
     [SerializeField] private FirstPersonCamera _camera;
     [SerializeField] private PredictedRigidbody _rigidbody;
+    [SerializeField] private InputActionReference _jumpAction;
     protected override void LateAwake()
     {
         if (isOwner)
         {
             _camera.Init();
             Debug.Log("initalize camera" + _camera.gameObject.GetInstanceID());
+
+            if (_jumpAction != null)
+            {
+                _jumpAction.action.Enable();
+            }
         }
         else
         {
             Destroy(_camera.gameObject);
             Debug.Log("spawned char is not locally controlled. destroyed camera");
         }
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
     }
 
 
@@ -73,8 +85,10 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     protected override void UpdateInput(ref MoveInput input)
     {
         // if a or/(|=) b, a = true
-        input.jump |= Input.GetKeyDown(KeyCode.Space);
-
+        if (_jumpAction != null)
+        {
+            input.jump |= _jumpAction.action.IsPressed();
+        }
     }
 
     // this runs each tick (as opposed to each frame)

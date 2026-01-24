@@ -7,6 +7,9 @@ public class ClientGame : MonoBehaviour
 {
     public static ClientGame Instance { get; private set; }
 
+    public static float targetCm360 = 34.6f; // Standard competitive sensitivity
+    public static float playerDPI = 800f;
+
     private static CursorLockMode _cursorLockState;
     public static CursorLockMode CursorLockState
     {
@@ -23,7 +26,6 @@ public class ClientGame : MonoBehaviour
     }
 
     private static List<object> cursorLockList = new();
-    public static float mouseSensitivity = 250f;
     private void Awake()
     {
         if (Instance != null)

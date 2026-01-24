@@ -20,6 +20,9 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     [SerializeField] private GameObject _hitBodyParticles;
     [SerializeField] private GameObject _hitOtherParticles;
 
+    [SerializeField] private AudioClip _bulletImpact;
+    [SerializeField] private AudioClip _bulletFire;
+
     private PredictedEvent _onShootMuzzle;
     private PredictedEvent<HitInfo> _onHit;
 
@@ -27,7 +30,7 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     {
         base.LateAwake();
         _onShootMuzzle = new PredictedEvent(predictionManager, this);
-        _onShootMuzzle.AddListener(OnShootEvent);
+        _onShootMuzzle.AddListener(OnShootMuzzleEvent);
         _onHit = new PredictedEvent<HitInfo>(predictionManager, this);
         _onHit.AddListener(OnHitEvent);
 
@@ -40,7 +43,7 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        _onShootMuzzle.RemoveListener(OnShootEvent);
+        _onShootMuzzle.RemoveListener(OnShootMuzzleEvent);
         _onHit.RemoveListener(OnHitEvent);
     }
 
@@ -81,9 +84,10 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
         _onHit?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer });
     }
 
-    private void OnShootEvent()
+    private void OnShootMuzzleEvent()
     {
         if (_muzzleFlashParticles != null) _muzzleFlashParticles.Play();
+        SoundManager.Play(new SoundData(_bulletFire));
     }
 
     private void OnHitEvent(HitInfo hitInfo)
@@ -96,6 +100,7 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
         {
             Instantiate(_hitOtherParticles, hitInfo.position, Quaternion.identity);
         }
+        SoundManager.Play(new SoundData(_bulletImpact, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
     }
 
     public struct HitInfo
@@ -107,12 +112,10 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     protected override void UpdateInput(ref ShootInput input)
     {
-        Debug.Log("UpdateInput called");
         if (_shootAction != null)
         {
             input.shoot |= _shootAction.action.IsPressed();
-            if (input.shoot) Debug.Log("Shoot pressed");
-            Debug.Log($"shoot enabled: {_shootAction.action.enabled}");
+            //if (input.shoot) Debug.Log("Shoot pressed");
         }
     }
 

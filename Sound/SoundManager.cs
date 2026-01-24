@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 
@@ -13,12 +14,64 @@ public class SoundManager : MonoBehaviour
     private static float volumeVariance = 0.15f;
     private static float pitchVariance = 0.1f;
 
-    [SerializeField] private int SFXPoolSize;
+    [SerializeField] private int SFXPoolSize = 20;
+
+    private static Queue<GameObject> soundPool = new Queue<GameObject>();
 
     private void Awake()
     {
+        if (i == null) { 
         i = this;
+        DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+            }
+
+        InitializePool();
     }
+    #region object pool
+    private void InitializePool()
+    {
+        for (int j = 0; j < SFXPoolSize; j++)
+        {
+            GameObject soundObj = Instantiate(SoundObject.gameObject);
+            soundObj.SetActive(false);
+            soundObj.transform.SetParent(transform);
+            soundPool.Enqueue(soundObj);
+        }
+    }
+
+    private static GameObject GetFromPool()
+    {
+        if (soundPool.Count == 0)
+        {
+            return null;
+        }
+
+        GameObject soundObj = soundPool.Dequeue();
+        soundObj.SetActive(true);
+        return soundObj;
+    }
+
+    public static void ReturnToPool(GameObject soundObj)
+    {
+        if (soundObj == null) return;
+
+        soundObj.SetActive(false);
+        soundObj.transform.SetParent(i.transform);
+        soundObj.transform.position = Vector3.zero;
+
+        SoundDestroyer destroyer = soundObj.GetComponent<SoundDestroyer>();
+        if (destroyer != null)
+        {
+            destroyer.OnReturnedToPool();
+        }
+
+        soundPool.Enqueue(soundObj);
+    }
+    #endregion
     public static void Play(SoundData sound)
     {
         if (i == null) {
@@ -31,7 +84,19 @@ public class SoundManager : MonoBehaviour
             return;
         }
 
-        AudioSource audioSource = Instantiate(i.SoundObject, sound.soundPos, Quaternion.identity);
+        GameObject soundObj = GetFromPool();
+        if (soundObj == null)
+        {
+            Debug.LogWarning("Sound pool exhausted! Increase SFXPoolSize or sounds are not returning to pool.");
+            return;
+        }
+
+        AudioSource audioSource = soundObj.GetComponent<AudioSource>();
+        soundObj.transform.position = sound.soundPos;
+
+        // Reset to defaults before applying new settings
+        audioSource.volume = sound.volume;
+        audioSource.pitch = 1f;
 
         if (sound.varyVolume)
         {
@@ -44,8 +109,6 @@ public class SoundManager : MonoBehaviour
             float randPitch = Random.Range(1 - pitchVariance, 1 + pitchVariance);
             audioSource.pitch = randPitch;
         }
-
-        //audioSource.pitch *= Game.;
 
         if (sound.soundBlend == SoundData.SoundBlend.Spatial)
         {
@@ -74,6 +137,12 @@ public class SoundManager : MonoBehaviour
         audioSource.clip = sound.clip;
         audioSource.loop = sound.isLooping;
         audioSource.Play();
+
+        SoundDestroyer destroyer = soundObj.GetComponent<SoundDestroyer>();
+        if (destroyer != null)
+        {
+            destroyer.PlayAndReturn();
+        }
     }
 
 }

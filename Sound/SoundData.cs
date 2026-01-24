@@ -23,8 +23,8 @@ public struct SoundData
         Vector3? soundPos = null,
         SoundBlend blend = SoundBlend.NonSpatial,
         float volume = 1f, // not sure if I even want this as an option.. better to normalize and bake it into the clip directly
-        float minDist = 0f,
-        float maxDist = 0f,
+        float minDist = 4.5f,
+        float maxDist = 100f,
         bool isLooping = false,
         bool varyPitch = true,
         bool varyVolume = true

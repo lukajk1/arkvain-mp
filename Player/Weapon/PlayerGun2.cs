@@ -1,14 +1,14 @@
-using UnityEngine;
-using UnityEngine.InputSystem;
 using PurrDiction;
 using PurrNet.Prediction;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using static PlayerShooter;
 
-public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerShooter.ShootState>
+public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.ShootState>
 {
     [SerializeField] private float _fireRate = 3;
     [SerializeField] private int _damage = 35;
     [SerializeField] private Vector3 _centerOfCamera;
-
 
     public float shootCooldown => 1 / _fireRate;
 
@@ -87,7 +87,7 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     private void OnShootMuzzleEvent()
     {
         if (_muzzleFlashParticles != null) _muzzleFlashParticles.Play();
-        SoundManager.Play(new SoundData(_bulletFire));
+        SoundManager.Play(new SoundData(_bulletFire, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
     }
 
     private void OnHitEvent(HitInfo hitInfo)
@@ -147,7 +147,7 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     {
         var position = transform.TransformPoint(_centerOfCamera);
 
-        Debug.Log($"Transform pos: {transform.position}, Camera center: {_centerOfCamera}, Calculated position: {position}");
+        //Debug.Log($"Transform pos: {transform.position}, Camera center: {_centerOfCamera}, Calculated position: {position}");
 
         // Draw origin sphere
         Gizmos.color = Color.red;

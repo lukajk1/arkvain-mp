@@ -19,7 +19,7 @@ public class LocomotionAnimator : MonoBehaviour
 
             _animator.SetFloat("input_x", moveInput.x);
             _animator.SetFloat("input_y", moveInput.y);
-            _animator.SetFloat("speed", speed);
+            //_animator.SetFloat("speed", speed);
         }
         else
         {
@@ -36,7 +36,7 @@ public class LocomotionAnimator : MonoBehaviour
 
             _animator.SetFloat("input_x", normalizedX);
             _animator.SetFloat("input_y", normalizedZ);
-            _animator.SetFloat("speed", speed);
+            //_animator.SetFloat("speed", speed);
         }
     }
 }

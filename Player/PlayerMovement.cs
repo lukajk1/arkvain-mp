@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using PurrNet.Prediction;
 
 public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, PlayerMovement.State>
@@ -14,35 +13,19 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
     [SerializeField] private FirstPersonCamera _camera;
     [SerializeField] private PredictedRigidbody _rigidbody;
-    [SerializeField] private InputActionReference _jumpAction;
-    [SerializeField] private InputActionReference _moveAction;
+
     protected override void LateAwake()
     {
         if (isOwner)
         {
             _camera.Init();
             Debug.Log("initalize camera" + _camera.gameObject.GetInstanceID());
-
-            if (_jumpAction != null)
-            {
-                _jumpAction.action.Enable();
-            }
-
-            if (_moveAction != null)
-            {
-                _moveAction.action.Enable();
-            }
         }
         else
         {
             Destroy(_camera.gameObject);
             Debug.Log("spawned char is not locally controlled. destroyed camera");
         }
-    }
-
-    protected override void OnDestroy()
-    {
-        base.OnDestroy();
     }
 
 
@@ -91,19 +74,13 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     protected override void UpdateInput(ref MoveInput input)
     {
         // if a or/(|=) b, a = true
-        if (_jumpAction != null)
-        {
-            input.jump |= _jumpAction.action.IsPressed();
-        }
+        input.jump |= InputManager.Instance.Player.Jump.IsPressed();
     }
 
     // this runs each tick (as opposed to each frame)
     protected override void GetFinalInput(ref MoveInput input)
     {
-        if (_moveAction != null)
-        {
-            input.moveDirection = _moveAction.action.ReadValue<Vector2>();
-        }
+        input.moveDirection = InputManager.Instance.Player.Move.ReadValue<UnityEngine.Vector2>();
         input.cameraForward = _camera.forward;
     }
 

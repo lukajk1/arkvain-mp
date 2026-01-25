@@ -1,36 +1,17 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using PurrNet.Prediction;
 
 public class SwitchWeapons : PredictedIdentity<SwitchWeapons.SwitchInput, SwitchWeapons.SwitchState>
 {
     [SerializeField] private PlayerShooter shooter;
     [SerializeField] private PlayerGun2 gun2;
-    [SerializeField] private InputActionReference _switchAction;
-    [SerializeField] private InputActionReference _selectShooterAction;
-    [SerializeField] private InputActionReference _selectGun2Action;
 
     protected override void LateAwake()
     {
         base.LateAwake();
 
-        if (isOwner)
-        {
-            EnableAction(_switchAction);
-            EnableAction(_selectShooterAction);
-            EnableAction(_selectGun2Action);
-        }
-
         // Initialize with first weapon active
         SetActiveWeapon(true);
-    }
-
-    private void EnableAction(InputActionReference actionRef)
-    {
-        if (actionRef != null)
-        {
-            actionRef.action.Enable();
-        }
     }
 
     private void SetActiveWeapon(bool useShooter)
@@ -67,20 +48,9 @@ public class SwitchWeapons : PredictedIdentity<SwitchWeapons.SwitchInput, Switch
 
     protected override void UpdateInput(ref SwitchInput input)
     {
-        if (_switchAction != null)
-        {
-            input.switchWeapon |= _switchAction.action.WasPressedThisFrame();
-        }
-
-        if (_selectShooterAction != null)
-        {
-            input.selectShooter |= _selectShooterAction.action.WasPressedThisFrame();
-        }
-
-        if (_selectGun2Action != null)
-        {
-            input.selectGun2 |= _selectGun2Action.action.WasPressedThisFrame();
-        }
+        input.switchWeapon |= InputManager.Instance.Player.QuickSwitchWeapon.WasPressedThisFrame();
+        input.selectShooter |= InputManager.Instance.Player.PrimaryWeapon.WasPressedThisFrame();
+        input.selectGun2 |= InputManager.Instance.Player.SecondaryWeapon.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref SwitchInput input)

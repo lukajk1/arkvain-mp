@@ -1,7 +1,6 @@
 using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using static PlayerShooter;
 
 public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.ShootState>
@@ -13,7 +12,6 @@ public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.Sh
     public float shootCooldown => 1 / _fireRate;
 
     [SerializeField] private PlayerMovement _playerMovement;
-    [SerializeField] private InputActionReference _shootAction;
 
     [Header("Particles")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
@@ -33,11 +31,6 @@ public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.Sh
         _onShootMuzzle.AddListener(OnShootMuzzleEvent);
         _onHit = new PredictedEvent<HitInfo>(predictionManager, this);
         _onHit.AddListener(OnHitEvent);
-
-        if (isOwner && _shootAction != null)
-        {
-            _shootAction.action.Enable();
-        }
     }
 
     protected override void OnDestroy()
@@ -112,11 +105,7 @@ public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.Sh
 
     protected override void UpdateInput(ref ShootInput input)
     {
-        if (_shootAction != null)
-        {
-            input.shoot |= _shootAction.action.IsPressed();
-            //if (input.shoot) Debug.Log("Shoot pressed");
-        }
+        input.shoot |= InputManager.Instance.Player.Attack.IsPressed();
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)

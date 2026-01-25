@@ -3,7 +3,7 @@ using PurrNet.Prediction;
 
 public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, PlayerMovement.State>
 {
-    [SerializeField] private float _moveSpeed = 7f;
+    [HideInInspector] public float _moveSpeed = 4.2f;
     [SerializeField] private float _acceleration = 20f;
     [SerializeField] private float _jumpForce = 5f;
     [SerializeField] private float _planarDamping = 10f;

@@ -11,9 +11,23 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     public static event Action<PlayerID?> OnPlayerDeath;
     public static Action KillAllPlayers;
 
+    [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
+
     void Awake()
     {
         _healthSlider.value = 1f;
+    }
+
+    protected override void LateAwake()
+    {
+        base.LateAwake();
+
+        _onDamageTaken = new PredictedEvent<DamageInfo>(predictionManager, this);
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
     }
 
     protected override HealthState GetInitialState()
@@ -56,6 +70,16 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     {
         currentState.health += change;
 
+        // Fire damage event if taking damage (negative change)
+        if (change < 0)
+        {
+            _onDamageTaken?.Invoke(new DamageInfo
+            {
+                damage = -change,
+                position = transform.position
+            });
+        }
+
         if (currentState.health <= 0)
         {
             Die();
@@ -84,5 +108,11 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         {
             return $"Health: {health}";
         }
+    }
+
+    public struct DamageInfo
+    {
+        public int damage;
+        public Vector3 position;
     }
 }

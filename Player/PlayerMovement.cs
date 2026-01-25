@@ -9,13 +9,22 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [SerializeField] private float _planarDamping = 10f;
     [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private float _jumpCooldown = 0.2f;
+    [SerializeField] private float _landCooldown = 0.15f;
     [SerializeField] private LayerMask _groundMask;
 
     [SerializeField] private FirstPersonCamera _camera;
     [SerializeField] private PredictedRigidbody _rigidbody;
 
+    [HideInInspector] public PredictedEvent _onJump;
+    [HideInInspector] public PredictedEvent _onLand;
+
     protected override void LateAwake()
     {
+        base.LateAwake();
+
+        _onJump = new PredictedEvent(predictionManager, this);
+        _onLand = new PredictedEvent(predictionManager, this);
+
         if (isOwner)
         {
             _camera.Init();
@@ -33,13 +42,14 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     {
         // simulate is the local simulation/interpolation that occurs between packets from the server ig
         // all operations pertaining to state/input should pass through the 'interfaces' referenced by state and input here i.e. don't call input.get... in here
-        
+
         // delta = time in ms since last tick I guess
         state.jumpCooldown -= delta;
+        state.landCooldown -= delta;
 
         Vector3 targetVel = (transform.forward * input.moveDirection.y + transform.right * input.moveDirection.x) * _moveSpeed;
         _rigidbody.AddForce(targetVel * _acceleration);
-        
+
         var horizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
         _rigidbody.AddForce(-horizontal * _planarDamping);
         if (horizontal.magnitude > _moveSpeed)
@@ -47,11 +57,24 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
             _rigidbody.velocity = new Vector3(targetVel.x, _rigidbody.velocity.y, targetVel.z);
         }
 
-        if (input.jump && IsGrounded() && state.jumpCooldown <= 0)
+        bool isGrounded = IsGrounded();
+
+        // Detect landing: was not grounded last tick, but grounded now, and cooldown expired
+        if (!state.wasGrounded && isGrounded && state.landCooldown <= 0)
+        {
+            _onLand.Invoke();
+            state.landCooldown = _landCooldown;
+        }
+
+        if (input.jump && isGrounded && state.jumpCooldown <= 0)
         {
             state.jumpCooldown = _jumpCooldown;
+            state.landCooldown = _landCooldown; // Prevent landing event right after jump
             _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
+            _onJump.Invoke();
         }
+
+        state.wasGrounded = isGrounded;
 
         if (input.cameraForward.HasValue)
         {
@@ -64,7 +87,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     }
 
     private static Collider[] _groundColliders = new Collider[8];
-    private bool IsGrounded()
+    public bool IsGrounded()
     {
         var hit = Physics.OverlapSphereNonAlloc(transform.position, _groundCheckRadius, _groundColliders, _groundMask);
         return hit > 0;
@@ -111,6 +134,8 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     public struct State : IPredictedData<State>
     {
         public float jumpCooldown;
+        public bool wasGrounded;
+        public float landCooldown;
 
         public void Dispose() { }
     }

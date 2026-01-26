@@ -9,6 +9,15 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     [SerializeField] private int _damage = 35;
     [SerializeField] private Vector3 _centerOfCamera;
 
+    [Header("Recoil")]
+    [SerializeField] private float _recoilX = -2f;
+    [SerializeField] private float _recoilY = 0.5f;
+    [SerializeField] private float _recoilZ = 0.5f;
+    [SerializeField] private float _recoilRecoverySpeed = 5f;
+    [SerializeField] private float _recoilNoiseSeed = 12.345f; // Offset for Perlin noise sampling
+
+    [SerializeField] private Recoil _recoil; 
+
     public float shootCooldown => 1 / _fireRate;
 
     [SerializeField] private PlayerMovement _playerMovement;
@@ -43,6 +52,9 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
+        // Gradually recover from recoil
+        state.recoilOffset = Vector3.Lerp(state.recoilOffset, Vector3.zero, _recoilRecoverySpeed * delta);
+
         if (state.cooldownTimer > 0)
         {
             state.cooldownTimer -= delta;
@@ -52,20 +64,40 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
         if (!input.shoot) return;
 
         state.cooldownTimer = shootCooldown;
-        Shoot();
+
+        // Increment shot counter for deterministic pattern
+        state.shotCount++;
+
+        // Add recoil BEFORE shooting (affects aim)
+        // Use Perlin noise for deterministic but natural-feeling recoil pattern
+        float noiseY = Mathf.PerlinNoise(_recoilNoiseSeed + state.shotCount * 0.1f, 0f);
+        float noiseZ = Mathf.PerlinNoise(_recoilNoiseSeed + state.shotCount * 0.1f, 100f);
+
+        // Map Perlin noise (0-1) to range (-1 to 1), then scale by recoil amounts
+        state.recoilOffset += new Vector3(
+            _recoilX,
+            (noiseY * 2f - 1f) * _recoilY,
+            (noiseZ * 2f - 1f) * _recoilZ
+        );
+
+        Shoot(ref state);
     }
 
-    private void Shoot()
+    private void Shoot(ref ShootState state)
     {
         _onShootMuzzle?.Invoke();
 
-        var forward = _playerMovement.currentInput.cameraForward ?? currentState.lastKnownForward;
-        currentState.lastKnownForward = forward;
+        var forward = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
+        state.lastKnownForward = forward;
+
+        // Apply recoil offset to aim direction (server-validated)
+        var recoilRotation = Quaternion.Euler(state.recoilOffset);
+        var aimDirection = recoilRotation * forward;
 
         var position = transform.TransformPoint(_centerOfCamera);
 
-        // add a slight forward offset to origin of ray
-        if (!Physics.Raycast(position + forward * 0.5f, forward, out RaycastHit hit)) return;
+        // add a slight forward offset to origin of ray, using recoil-affected direction
+        if (!Physics.Raycast(position + aimDirection * 0.5f, aimDirection, out RaycastHit hit)) return;
 
         bool hitPlayer = false;
         if (hit.transform.TryGetComponent(out PlayerHealth otherHealth))
@@ -94,6 +126,17 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
             Instantiate(_hitOtherParticles, hitInfo.position, Quaternion.identity);
         }
         SoundManager.Play(new SoundData(_bulletImpact, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
+    }
+
+    protected override void UpdateView(ShootState viewState, ShootState? verified)
+    {
+        base.UpdateView(viewState, verified);
+
+        // Apply server-validated recoil to visual camera rotation (owner only)
+        if (isOwner && _recoil != null)
+        {
+            _recoil.SetRecoilOffset(viewState.recoilOffset);
+        }
     }
 
     public struct HitInfo
@@ -126,6 +169,8 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
     {
         public float cooldownTimer;
         public Vector3 lastKnownForward;
+        public Vector3 recoilOffset;
+        public int shotCount; // Used for deterministic recoil pattern
         public void Dispose()
         {
         }

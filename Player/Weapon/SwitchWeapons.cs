@@ -4,7 +4,7 @@ using PurrNet.Prediction;
 public class SwitchWeapons : PredictedIdentity<SwitchWeapons.SwitchInput, SwitchWeapons.SwitchState>
 {
     [SerializeField] private PlayerShooter shooter;
-    [SerializeField] private PlayerGun2 gun2;
+    [SerializeField] private WeaponDeagle gun2;
 
     protected override void LateAwake()
     {

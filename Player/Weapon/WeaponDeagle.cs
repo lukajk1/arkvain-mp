@@ -3,11 +3,13 @@ using PurrNet.Prediction;
 using UnityEngine;
 using static PlayerShooter;
 
-public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.ShootState>
+public class WeaponDeagle : PredictedIdentity<WeaponDeagle.ShootInput, WeaponDeagle.ShootState>
 {
-    [SerializeField] private float _fireRate = 3;
-    [SerializeField] private int _damage = 5;
+    private float _fireRate = 1;
+    private int _damage = 45;
     [SerializeField] private Vector3 _centerOfCamera;
+    [Tooltip("dmg ratio out to 100m away from target")]
+    [SerializeField] private AnimationCurve _damageFalloff;
 
     public float shootCooldown => 1 / _fireRate;
 
@@ -70,7 +72,19 @@ public class PlayerGun2 : PredictedIdentity<PlayerGun2.ShootInput, PlayerGun2.Sh
         bool hitPlayer = false;
         if (hit.transform.TryGetComponent(out PlayerHealth otherHealth))
         {
-            otherHealth.ChangeHealth(-_damage);
+            // Calculate distance to target
+            float distance = Vector3.Distance(position, hit.point);
+
+            // Map distance (0-100m) to curve time (0-1)
+            float curveTime = Mathf.Clamp01(distance / 100f);
+
+            // Sample curve to get damage multiplier
+            float damageMultiplier = _damageFalloff.Evaluate(curveTime);
+
+            // Calculate final damage
+            int finalDamage = Mathf.RoundToInt(_damage * damageMultiplier);
+
+            otherHealth.ChangeHealth(-finalDamage);
             hitPlayer = true;
         }
 

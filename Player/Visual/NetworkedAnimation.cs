@@ -71,7 +71,17 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
             if (_mixerState != null)
             {
-                Debug.Log($"[NetworkedAnimation] Successfully created {_mixerState.GetType().Name}");
+                // Ensure layer 0 has weight (might be 0 on remote clients)
+                if (_animancer.Layers[0].Weight < 0.01f)
+                {
+                    Debug.LogWarning($"[NetworkedAnimation] Layer 0 weight was {_animancer.Layers[0].Weight}, setting to 1");
+                    _animancer.Layers[0].Weight = 1f;
+                }
+
+                // Ensure the mixer has full weight (critical for remote clients)
+                _mixerState.Weight = 1f;
+
+                Debug.Log($"[NetworkedAnimation] Successfully created {_mixerState.GetType().Name}, Weight: {_mixerState.Weight}");
                 Debug.Log($"[NetworkedAnimation] Mixer has {_mixerState.ChildCount} child animations");
 
                 // Log each child animation
@@ -110,35 +120,31 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     protected override void Simulate(AnimInput input, ref AnimState state, float delta)
     {
-        // Update smoothed parameter target from input
-        state.moveDirectionX = input.moveDirection.x;
-        state.moveDirectionY = input.moveDirection.y;
-
-        // Debug log when there's input
-        if (input.moveDirection.sqrMagnitude > 0.01f)
-        {
-            Debug.Log($"[NetworkedAnimation] Simulate - Input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2})");
-        }
-
-        // Apply to smoothed parameters (will interpolate towards target)
+        // Set the target value for smoothed parameters from input
         if (_smoothedParameter != null)
         {
-            _smoothedParameter.TargetValue = new Vector2(state.moveDirectionX, state.moveDirectionY);
+            _smoothedParameter.TargetValue = new Vector2(input.moveDirection.x, input.moveDirection.y);
+        }
+
+        // Read back the ACTUAL mixer state (after smoothing)
+        // This is critical for network sync - we need the actual values, not just the target
+        if (_mixerState != null)
+        {
+            state.moveDirectionX = _mixerState.Parameter.x;
+            state.moveDirectionY = _mixerState.Parameter.y;
+            state.mixerTime = _mixerState.Time;
+            state.mixerSpeed = _mixerState.Speed;
 
             if (input.moveDirection.sqrMagnitude > 0.01f)
             {
-                Debug.Log($"[NetworkedAnimation] Set TargetValue to ({state.moveDirectionX:F2}, {state.moveDirectionY:F2})");
+                Debug.Log($"[NetworkedAnimation] Simulate - Input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2}), Mixer: ({state.moveDirectionX:F2}, {state.moveDirectionY:F2}), Time: {state.mixerTime:F2}");
             }
         }
-        else if (input.moveDirection.sqrMagnitude > 0.01f)
+        else
         {
-            Debug.LogWarning($"[NetworkedAnimation] _smoothedParameter is NULL! Cannot set target value.");
-        }
-
-        // Log mixer state if it exists
-        if (_mixerState != null && input.moveDirection.sqrMagnitude > 0.01f)
-        {
-            Debug.Log($"[NetworkedAnimation] Mixer Parameter: ({_mixerState.Parameter.x:F2}, {_mixerState.Parameter.y:F2}), IsPlaying: {_mixerState.IsPlaying}, Weight: {_mixerState.Weight:F2}");
+            // Fallback if mixer isn't available
+            state.moveDirectionX = input.moveDirection.x;
+            state.moveDirectionY = input.moveDirection.y;
         }
     }
 
@@ -175,32 +181,45 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     }
 
     /// <summary>
-    /// Called at initialization to capture the current mixer parameter values.
+    /// Called at initialization to capture the current mixer state.
     /// </summary>
     protected override void GetUnityState(ref AnimState state)
     {
         if (_mixerState == null)
             return;
 
-        // Capture current mixer parameter values
+        // Capture current mixer state
         state.moveDirectionX = _mixerState.Parameter.x;
         state.moveDirectionY = _mixerState.Parameter.y;
+        state.mixerTime = _mixerState.Time;
+        state.mixerSpeed = _mixerState.Speed;
+        state.weight = _mixerState.Weight;
         state.locomotionMixerIndex = _locomotionMixerIndex;
     }
 
     /// <summary>
-    /// Called after rollback to restore mixer parameters to the rolled-back state.
+    /// Called after rollback to restore mixer to the rolled-back state.
     /// Critical for maintaining synchronized animation blending after prediction corrections.
     /// </summary>
     protected override void SetUnityState(AnimState state)
     {
+        // 1. Ensure the mixer exists (in case SetUnityState runs before LateAwake or if it was destroyed)
         if (_mixerState == null)
+        {
+            // Re-run your initialization logic here if needed, or simply return if you trust LateAwake
+            // Ideally, extract the creation logic from LateAwake into a method like InitializeMixer()
             return;
+        }
 
-        // Snap mixer parameters to rolled-back state (immediate, no smoothing)
+        // 2. Apply parameters
         _mixerState.Parameter = new Vector2(state.moveDirectionX, state.moveDirectionY);
+        _mixerState.Time = state.mixerTime;
+        _mixerState.Speed = state.mixerSpeed;
 
-        // Also update the smoothed parameter target to match
+        // 3. Apply Weight
+        _mixerState.Weight = state.weight; // <--- APPLY THIS
+
+        // 4. Update smoothed target to match visual snap
         if (_smoothedParameter != null)
         {
             _smoothedParameter.TargetValue = new Vector2(state.moveDirectionX, state.moveDirectionY);
@@ -222,7 +241,10 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     {
         public float moveDirectionX;
         public float moveDirectionY;
-        public byte locomotionMixerIndex; // Track which mixer is playing for network sync
+        public float mixerTime;  // Sync the mixer's playback time for synchronized footsteps
+        public float mixerSpeed; // Sync the mixer's speed
+        public float weight;
+        public byte locomotionMixerIndex;
 
         public void Dispose()
         {

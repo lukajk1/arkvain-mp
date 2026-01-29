@@ -3,266 +3,207 @@ using Animancer.TransitionLibraries;
 using PurrDiction;
 using PurrNet.Prediction;
 using System;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
-/// Server-synced animation playback system using Animancer serialization and PurrNet prediction.
-/// Ensures precise animation synchronization across clients for accurate hitbox positioning.
+/// Server-synced animation playback system using Animancer 2D directional mixer and PurrNet prediction.
+/// Drives locomotion animations based on movement input, ensuring precise synchronization across clients.
+/// Uses TransitionLibrary for consistent animation identification across network.
 /// </summary>
 public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput, NetworkedAnimation.AnimState>
 {
     [Header("Animation Setup")]
     [SerializeField] private AnimancerComponent _animancer;
-    [SerializeField] private TransitionLibraryAsset _transitionLibrary;
 
-    [Header("Test Input")]
-    [SerializeField] private InputActionReference _testPlayAnimationAction;
-    [SerializeField] private byte _testAnimationIndex = 0;
+    // Transition indices in the library
+    [Header("Transition Indices")]
+    [SerializeField] private byte _locomotionMixerIndex = 0;
+    [SerializeField] private byte _jumpIndex = 1;
 
-    private PredictedEvent<AnimationPlaybackData> _onPlayAnimation;
+    [Header("Parameter Smoothing")]
+    [SerializeField] private StringAsset _parameterX;
+    [SerializeField] private StringAsset _parameterY;
+    [SerializeField] private float _parameterSmoothTime = 0.25f;
+
+    private SmoothedVector2Parameter _smoothedParameter;
+    private Vector2MixerState _mixerState;
 
     protected override void LateAwake()
     {
         base.LateAwake();
 
-        // Initialize predicted event for animation playback
-        _onPlayAnimation = new PredictedEvent<AnimationPlaybackData>(predictionManager, this);
-        _onPlayAnimation.AddListener(OnPlayAnimationEvent);
+        Debug.Log($"[NetworkedAnimation] LateAwake started on {gameObject.name}");
 
-        // Ensure we have a valid animancer component
         if (_animancer == null)
         {
             _animancer = GetComponent<AnimancerComponent>();
+            Debug.Log($"[NetworkedAnimation] AnimancerComponent: {(_animancer != null ? "Found" : "NULL!")}");
         }
 
-        // Set transition library if available
-        if (_transitionLibrary != null && _animancer != null)
+        if (_animancer == null)
         {
-            _animancer.Graph.Transitions = _transitionLibrary.Library;
+            Debug.LogError($"[NetworkedAnimation] No AnimancerComponent found on {gameObject.name}!");
+            return;
         }
 
-        // Enable test input action
-        if (_testPlayAnimationAction != null)
+        // Get the transition library from the AnimancerComponent
+        if (_animancer.Graph.Transitions == null)
         {
-            _testPlayAnimationAction.action.Enable();
+            Debug.LogError($"[NetworkedAnimation] AnimancerComponent has no TransitionLibrary set! Please assign it in the AnimancerComponent inspector.");
+            return;
         }
-    }
 
-    protected override void OnDestroy()
-    {
-        base.OnDestroy();
-        _onPlayAnimation.RemoveListener(OnPlayAnimationEvent);
+        Debug.Log($"[NetworkedAnimation] TransitionLibrary found with {_animancer.Graph.Transitions.Count} transitions");
 
-        if (_testPlayAnimationAction != null)
+        if (_animancer.Graph.Transitions.TryGetTransition(_locomotionMixerIndex, out TransitionModifierGroup transitionGroup))
         {
-            _testPlayAnimationAction.action.Disable();
+            var transition = transitionGroup.Transition;
+
+            Debug.Log($"[NetworkedAnimation] Transition at index {_locomotionMixerIndex}: Type={transition.GetType().Name}");
+
+            // If it's a MixerTransition2D, log the mixer type
+            if (transition is MixerTransition2D mixerTransition2D)
+            {
+                Debug.Log($"[NetworkedAnimation] MixerTransition2D Type: {mixerTransition2D.Type}");
+            }
+
+            _mixerState = _animancer.Play(transition) as Vector2MixerState;
+
+            if (_mixerState != null)
+            {
+                Debug.Log($"[NetworkedAnimation] Successfully created {_mixerState.GetType().Name}");
+                Debug.Log($"[NetworkedAnimation] Mixer has {_mixerState.ChildCount} child animations");
+
+                // Log each child animation
+                for (int i = 0; i < _mixerState.ChildCount; i++)
+                {
+                    var child = _mixerState.GetChild(i);
+                    if (child != null)
+                    {
+                        Debug.Log($"[NetworkedAnimation] Child {i}: {child.GetType().Name}, Clip={child.Clip?.name ?? "NULL"}, Weight={child.Weight:F2}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[NetworkedAnimation] Child {i} is NULL!");
+                    }
+                }
+
+                // Initialize smoothed 2D parameter for directional mixer
+                _smoothedParameter = new SmoothedVector2Parameter(
+                    _animancer,
+                    _parameterX,
+                    _parameterY,
+                    _parameterSmoothTime);
+
+                Debug.Log($"[NetworkedAnimation] SmoothedVector2Parameter initialized with X={_parameterX?.name}, Y={_parameterY?.name}");
+            }
+            else
+            {
+                Debug.LogError($"[NetworkedAnimation] Transition at index {_locomotionMixerIndex} is not a Vector2MixerState! Type: {transition.GetType().Name}");
+            }
+        }
+        else
+        {
+            Debug.LogError($"[NetworkedAnimation] Locomotion mixer index {_locomotionMixerIndex} not found in TransitionLibrary!");
         }
     }
 
     protected override void Simulate(AnimInput input, ref AnimState state, float delta)
     {
-        // Update animation time tracking
-        if (state.isPlaying)
+        // Update smoothed parameter target from input
+        state.moveDirectionX = input.moveDirection.x;
+        state.moveDirectionY = input.moveDirection.y;
+
+        // Debug log when there's input
+        if (input.moveDirection.sqrMagnitude > 0.01f)
         {
-            state.currentTime += delta * state.currentSpeed;
+            Debug.Log($"[NetworkedAnimation] Simulate - Input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2})");
         }
 
-        // Handle test animation playback
-        if (input.playAnimation)
+        // Apply to smoothed parameters (will interpolate towards target)
+        if (_smoothedParameter != null)
         {
-            PlayAnimation(input.animationIndex, ref state);
-        }
+            _smoothedParameter.TargetValue = new Vector2(state.moveDirectionX, state.moveDirectionY);
 
-        // Handle animation state updates from serialized data
-        if (input.hasSerializedState)
-        {
-            ApplySerializedState(input.serializedState, ref state);
-        }
-    }
-
-    private void PlayAnimation(byte animationIndex, ref AnimState state)
-    {
-        if (_animancer == null || _animancer.Graph.Transitions == null)
-        {
-            Debug.LogWarning("AnimancerComponent or TransitionLibrary not set up properly.");
-            return;
-        }
-
-        if (!_animancer.Graph.Transitions.TryGetTransition(animationIndex, out TransitionModifierGroup transition))
-        {
-            Debug.LogError($"Animation index {animationIndex} not found in TransitionLibrary.");
-            return;
-        }
-
-        // Update state
-        state.currentAnimationIndex = animationIndex;
-        state.currentTime = 0f;
-        state.currentSpeed = 1f;
-        state.isPlaying = true;
-
-        // Invoke predicted event for visual playback
-        _onPlayAnimation?.Invoke(new AnimationPlaybackData
-        {
-            animationIndex = animationIndex,
-            startTime = 0f,
-            speed = 1f
-        });
-    }
-
-    private void ApplySerializedState(SerializedAnimationState serializedState, ref AnimState state)
-    {
-        // Apply the serialized animation state
-        state.currentAnimationIndex = serializedState.animationIndex;
-        state.currentTime = serializedState.time;
-        state.currentSpeed = serializedState.speed;
-        state.currentWeight = serializedState.weight;
-        state.isPlaying = serializedState.isPlaying;
-
-        // Invoke event to update visuals
-        if (serializedState.isPlaying)
-        {
-            _onPlayAnimation?.Invoke(new AnimationPlaybackData
+            if (input.moveDirection.sqrMagnitude > 0.01f)
             {
-                animationIndex = serializedState.animationIndex,
-                startTime = serializedState.time,
-                speed = serializedState.speed,
-                weight = serializedState.weight
-            });
+                Debug.Log($"[NetworkedAnimation] Set TargetValue to ({state.moveDirectionX:F2}, {state.moveDirectionY:F2})");
+            }
         }
-    }
-
-    private void OnPlayAnimationEvent(AnimationPlaybackData data)
-    {
-        if (_animancer == null || _animancer.Graph.Transitions == null) return;
-
-        if (!_animancer.Graph.Transitions.TryGetTransition(data.animationIndex, out TransitionModifierGroup transition))
+        else if (input.moveDirection.sqrMagnitude > 0.01f)
         {
-            Debug.LogError($"Animation index {data.animationIndex} not found in TransitionLibrary.");
-            return;
+            Debug.LogWarning($"[NetworkedAnimation] _smoothedParameter is NULL! Cannot set target value.");
         }
 
-        AnimancerLayer layer = _animancer.Layers[0];
-
-        // Play the animation without automatic fade to maintain precise timing
-        AnimancerState animState = layer.GetOrCreateState(transition.Transition);
-        animState.Time = data.startTime;
-        animState.Speed = data.speed;
-
-        // If weight is specified, set it directly; otherwise use full weight
-        if (data.weight > 0)
+        // Log mixer state if it exists
+        if (_mixerState != null && input.moveDirection.sqrMagnitude > 0.01f)
         {
-            animState.SetWeight(data.weight);
-            layer.Play(animState, fadeDuration: 0f);
+            Debug.Log($"[NetworkedAnimation] Mixer Parameter: ({_mixerState.Parameter.x:F2}, {_mixerState.Parameter.y:F2}), IsPlaying: {_mixerState.IsPlaying}, Weight: {_mixerState.Weight:F2}");
         }
-        else
-        {
-            layer.Play(animState, fadeDuration: 0f);
-        }
-    }
-
-    protected override void UpdateView(AnimState viewState, AnimState? verified)
-    {
-        base.UpdateView(viewState, verified);
-
-        // Optionally sync view with current state for debugging
-        // This ensures visual representation matches the predicted state
     }
 
     protected override void UpdateInput(ref AnimInput input)
     {
-        // Poll for test animation playback button press
-        if (_testPlayAnimationAction != null && _testPlayAnimationAction.action.WasPressedThisFrame())
+        // Poll movement input every frame (accumulates until GetFinalInput)
+        // This matches PlayerMovement's pattern
+    }
+
+    protected override void GetFinalInput(ref AnimInput input)
+    {
+        // Get movement input at tick boundary (same as PlayerMovement)
+        input.moveDirection = InputManager.Instance.Player.Move.ReadValue<Vector2>();
+
+        if (input.moveDirection.sqrMagnitude > 0.01f)
         {
-            input.playAnimation = true;
-            input.animationIndex = _testAnimationIndex;
+            Debug.Log($"[NetworkedAnimation] GetFinalInput - Raw input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2})");
+        }
+    }
+
+    protected override void SanitizeInput(ref AnimInput input)
+    {
+        // Normalize input to prevent values > 1 (same as PlayerMovement)
+        if (input.moveDirection.magnitude > 1)
+        {
+            input.moveDirection.Normalize();
         }
     }
 
     protected override void ModifyExtrapolatedInput(ref AnimInput input)
     {
-        // Don't extrapolate animation triggers
-        input.playAnimation = false;
-        input.hasSerializedState = false;
+        // Allow extrapolation of movement for smooth animation
+        // Unlike jump/shoot which should not be extrapolated
     }
 
     /// <summary>
-    /// Gathers the current animation state for serialization and network transmission.
-    /// Based on Animancer's SerializablePose.GatherFrom() method.
+    /// Called at initialization to capture the current mixer parameter values.
     /// </summary>
-    public SerializedAnimationState GatherCurrentState()
+    protected override void GetUnityState(ref AnimState state)
     {
-        if (_animancer == null) return default;
-
-        var layer = _animancer.Layers[0];
-        var activeStates = layer.ActiveStates;
-
-        if (activeStates.Count == 0) return default;
-
-        // Get the primary active state (highest weight or currently fading in)
-        AnimancerState primaryState = activeStates[0];
-        float remainingFadeDuration = 0f;
-
-        for (int i = 0; i < activeStates.Count; i++)
-        {
-            AnimancerState state = activeStates[i];
-            if (state.FadeGroup != null && state.TargetWeight == 1)
-            {
-                primaryState = state;
-                remainingFadeDuration = state.FadeGroup.RemainingFadeDuration;
-                break;
-            }
-        }
-
-        return new SerializedAnimationState
-        {
-            animationIndex = (byte)_animancer.Graph.Transitions.IndexOf(primaryState.Key),
-            time = primaryState.Time,
-            speed = primaryState.Speed,
-            weight = primaryState.Weight,
-            fadeDuration = remainingFadeDuration,
-            isPlaying = primaryState.IsPlaying
-        };
-    }
-
-    /// <summary>
-    /// Applies a serialized animation state to the Animancer component.
-    /// Based on Animancer's SerializablePose.ApplyTo() method.
-    /// </summary>
-    public void ApplyGatheredState(SerializedAnimationState serializedState)
-    {
-        if (_animancer == null || !serializedState.isPlaying) return;
-
-        if (!_animancer.Graph.Transitions.TryGetTransition(
-            serializedState.animationIndex,
-            out TransitionModifierGroup transition))
-        {
-            Debug.LogError($"Animation index {serializedState.animationIndex} not found in TransitionLibrary.");
+        if (_mixerState == null)
             return;
-        }
 
-        float previousThreshold = AnimancerLayer.WeightlessThreshold;
-        try
+        // Capture current mixer parameter values
+        state.moveDirectionX = _mixerState.Parameter.x;
+        state.moveDirectionY = _mixerState.Parameter.y;
+        state.locomotionMixerIndex = _locomotionMixerIndex;
+    }
+
+    /// <summary>
+    /// Called after rollback to restore mixer parameters to the rolled-back state.
+    /// Critical for maintaining synchronized animation blending after prediction corrections.
+    /// </summary>
+    protected override void SetUnityState(AnimState state)
+    {
+        if (_mixerState == null)
+            return;
+
+        // Snap mixer parameters to rolled-back state (immediate, no smoothing)
+        _mixerState.Parameter = new Vector2(state.moveDirectionX, state.moveDirectionY);
+
+        // Also update the smoothed parameter target to match
+        if (_smoothedParameter != null)
         {
-            AnimancerLayer.WeightlessThreshold = 0;
-
-            AnimancerLayer layer = _animancer.Layers[0];
-            AnimancerState state = layer.GetOrCreateState(transition.Transition);
-
-            if (state.Weight != 0)
-                state = layer.GetOrCreateWeightlessState(state);
-
-            state.IsPlaying = true;
-            state.Time = serializedState.time;
-            state.Speed = serializedState.speed;
-            state.SetWeight(serializedState.weight);
-
-            layer.Play(state, serializedState.fadeDuration);
-        }
-        finally
-        {
-            AnimancerLayer.WeightlessThreshold = previousThreshold;
+            _smoothedParameter.TargetValue = new Vector2(state.moveDirectionX, state.moveDirectionY);
         }
     }
 
@@ -270,10 +211,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     public struct AnimInput : IPredictedData<AnimInput>
     {
-        public bool playAnimation;
-        public byte animationIndex;
-        public bool hasSerializedState;
-        public SerializedAnimationState serializedState;
+        public Vector2 moveDirection;
 
         public void Dispose()
         {
@@ -282,34 +220,13 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     public struct AnimState : IPredictedData<AnimState>
     {
-        public byte currentAnimationIndex;
-        public float currentTime;
-        public float currentSpeed;
-        public float currentWeight;
-        public bool isPlaying;
+        public float moveDirectionX;
+        public float moveDirectionY;
+        public byte locomotionMixerIndex; // Track which mixer is playing for network sync
 
         public void Dispose()
         {
         }
-    }
-
-    [Serializable]
-    public struct SerializedAnimationState
-    {
-        public byte animationIndex;
-        public float time;
-        public float speed;
-        public float weight;
-        public float fadeDuration;
-        public bool isPlaying;
-    }
-
-    public struct AnimationPlaybackData
-    {
-        public byte animationIndex;
-        public float startTime;
-        public float speed;
-        public float weight;
     }
 
     #endregion
@@ -317,13 +234,29 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        // Debug visualization if needed
+        // Debug visualization
         if (_animancer != null && Application.isPlaying)
         {
             UnityEditor.Handles.Label(
-                transform.position + Vector3.up * 2f,
-                $"Anim: {currentState.currentAnimationIndex} | Time: {currentState.currentTime:F2}s"
+                transform.position + Vector3.up * 2.5f,
+                $"Move: ({currentState.moveDirectionX:F2}, {currentState.moveDirectionY:F2})"
             );
+
+            // Draw direction arrow
+            Vector3 direction = new Vector3(currentState.moveDirectionX, 0, currentState.moveDirectionY);
+            if (direction.sqrMagnitude > 0.01f)
+            {
+                UnityEditor.Handles.color = Color.cyan;
+                UnityEditor.Handles.DrawLine(
+                    transform.position + Vector3.up,
+                    transform.position + Vector3.up + direction
+                );
+                UnityEditor.Handles.DrawWireDisc(
+                    transform.position + Vector3.up + direction,
+                    Vector3.up,
+                    0.1f
+                );
+            }
         }
     }
 #endif

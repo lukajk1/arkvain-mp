@@ -29,19 +29,19 @@ public class LocomotionAnimator : StatelessPredictedIdentity
     private void OnJump()
     {
         _animator.SetBool("isGrounded", false);
-        Debug.Log("jumped" + gameObject.GetInstanceID());
+        //Debug.Log("jumped" + gameObject.GetInstanceID());
 
     }
 
     private void OnLand()
     {
         _animator.SetBool("isGrounded", true);
-        Debug.Log("landed" + gameObject.GetInstanceID());
+        //Debug.Log("landed" + gameObject.GetInstanceID());
     }
 
     private void Update()
     {
-        Debug.Log("isGrounded animator:" + _animator.GetBool("isGrounded"));
+        //Debug.Log("isGrounded animator:" + _animator.GetBool("isGrounded"));
         if (_movement.isOwner)
         {
             // Local player: Use predicted input for instant response (already normalized -1 to 1)

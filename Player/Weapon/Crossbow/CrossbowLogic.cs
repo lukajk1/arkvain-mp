@@ -1,9 +1,13 @@
 using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
-using static PlayerShooter;
 
-public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerShooter.ShootState>
+public struct HitInfo
+{
+    public Vector3 position;
+    public bool hitPlayer;
+}
+public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, CrossbowLogic.ShootState>, IWeaponLogic
 {
     [SerializeField] private float _fireRate = 3;
     private float _headShotModifier = 1.8f;
@@ -19,37 +23,44 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     [SerializeField] private PlayerMovement _playerMovement;
 
-    [Header("Particles")]
-    [SerializeField] private ParticleSystem _muzzleFlashParticles;
-    [SerializeField] private GameObject _hitBodyParticles;
-    [SerializeField] private GameObject _hitOtherParticles;
+    // Public events for CrossbowVisual to subscribe to
+    public event System.Action onShoot;
+    public event System.Action<HitInfo> onHit;
+    public event System.Action onReload;
+    public event System.Action onSwitchToActive;
 
-    [SerializeField] private AudioClip _bulletImpact;
-    [SerializeField] private AudioClip _bulletFire;
-
-    private PredictedEvent _onShootMuzzle;
-    private PredictedEvent<HitInfo> _onHit;
+    private PredictedEvent _onShootEvent;
+    private PredictedEvent<HitInfo> _onHitEvent;
 
     protected override void LateAwake()
     {
         base.LateAwake();
-        _onShootMuzzle = new PredictedEvent(predictionManager, this);
-        _onShootMuzzle.AddListener(OnShootMuzzleEvent);
-        _onHit = new PredictedEvent<HitInfo>(predictionManager, this);
-        _onHit.AddListener(OnHitEvent);
+
+        Debug.Log("[CrossbowLogic] LateAwake started");
+
+        _onShootEvent = new PredictedEvent(predictionManager, this);
+        _onShootEvent.AddListener(OnShootEventHandler);
+        _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
+        _onHitEvent.AddListener(OnHitEventHandler);
+
+        Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}, RecoilProfile: {(_recoilProfile != null ? "Valid" : "NULL")}");
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        _onShootMuzzle.RemoveListener(OnShootMuzzleEvent);
-        _onHit.RemoveListener(OnHitEvent);
+        _onShootEvent.RemoveListener(OnShootEventHandler);
+        _onHitEvent.RemoveListener(OnHitEventHandler);
     }
 
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
-        if (_recoilProfile == null) return;
+        if (_recoilProfile == null)
+        {
+            Debug.LogWarning("[CrossbowLogic] RecoilProfile is null!");
+            return;
+        }
 
         // Gradually recover from recoil
         state.recoilOffset = Vector3.Lerp(state.recoilOffset, Vector3.zero, _recoilProfile.recoverySpeed * delta);
@@ -60,7 +71,12 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
             return;
         }
 
-        if (!input.shoot) return;
+        if (!input.shoot)
+        {
+            return;
+        }
+
+        Debug.Log($"[CrossbowLogic] SHOOT! Input received. Cooldown: {shootCooldown}s");
 
         state.cooldownTimer = shootCooldown;
 
@@ -85,7 +101,9 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     private void Shoot(ref ShootState state)
     {
-        _onShootMuzzle?.Invoke();
+        Debug.Log("[CrossbowLogic] Shoot() called");
+
+        _onShootEvent?.Invoke();
 
         // Use the camera forward direction directly - it already includes visual recoil
         // from the previous tick's UpdateView() call
@@ -94,11 +112,16 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
         var position = transform.TransformPoint(_centerOfCamera);
 
+        Debug.Log($"[CrossbowLogic] Raycast from {position}, direction {aimDirection}, layermask {_shotLayerMask.value}");
+
         // add a slight forward offset to origin of ray
         if (!Physics.Raycast(position + aimDirection * 0.5f, aimDirection, out RaycastHit hit, Mathf.Infinity, _shotLayerMask, QueryTriggerInteraction.Ignore))
         {
+            Debug.Log("[CrossbowLogic] Raycast missed - no hit");
             return;
         }
+
+        Debug.Log($"[CrossbowLogic] Raycast HIT: {hit.collider.gameObject.name} on layer {hit.collider.gameObject.layer}");
 
         // Use hit.collider.gameObject instead of hit.transform.gameObject
         // because hit.transform returns the root parent, not the GameObject with the collider
@@ -117,26 +140,31 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
             hitPlayer = true;
         }
 
-        _onHit?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer });
+        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer });
     }
 
-    private void OnShootMuzzleEvent()
+    /// <summary>
+    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual.
+    /// </summary>
+    private void OnShootEventHandler()
     {
-        if (_muzzleFlashParticles != null) _muzzleFlashParticles.Play();
-        SoundManager.Play(new SoundData(_bulletFire, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+        onShoot?.Invoke();
     }
 
-    private void OnHitEvent(HitInfo hitInfo)
+    /// <summary>
+    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual.
+    /// </summary>
+    private void OnHitEventHandler(HitInfo hitInfo)
     {
-        if (hitInfo.hitPlayer)
-        {
-            Instantiate(_hitBodyParticles, hitInfo.position, Quaternion.identity);
-        }
-        else
-        {
-            Instantiate(_hitOtherParticles, hitInfo.position, Quaternion.identity);
-        }
-        SoundManager.Play(new SoundData(_bulletImpact, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
+        onHit?.Invoke(hitInfo);
+    }
+
+    /// <summary>
+    /// Call this when the crossbow is switched to as the active weapon.
+    /// </summary>
+    public void SwitchToActive()
+    {
+        onSwitchToActive?.Invoke();
     }
 
     protected override void UpdateView(ShootState viewState, ShootState? verified)
@@ -150,16 +178,17 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
         }
     }
 
-    public struct HitInfo
-    {
-        public Vector3 position;
-        public bool hitPlayer;
-    }
-
 
     protected override void UpdateInput(ref ShootInput input)
     {
-        input.shoot |= InputManager.Instance.Player.Attack.IsPressed();
+        bool attackPressed = InputManager.Instance.Player.Attack.IsPressed();
+
+        if (attackPressed)
+        {
+            Debug.Log("[CrossbowLogic] UpdateInput: Attack button IS pressed");
+        }
+
+        input.shoot |= attackPressed;
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)

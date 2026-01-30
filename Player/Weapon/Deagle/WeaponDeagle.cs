@@ -1,7 +1,7 @@
 using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
-using static PlayerShooter;
+using static CrossbowLogic;
 
 public class WeaponDeagle : PredictedIdentity<WeaponDeagle.ShootInput, WeaponDeagle.ShootState>
 {

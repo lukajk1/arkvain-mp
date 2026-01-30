@@ -161,7 +161,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
         if (input.moveDirection.sqrMagnitude > 0.01f)
         {
-            Debug.Log($"[NetworkedAnimation] GetFinalInput - Raw input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2})");
+            //Debug.Log($"[NetworkedAnimation] GetFinalInput - Raw input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2})");
         }
     }
 

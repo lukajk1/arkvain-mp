@@ -66,8 +66,24 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         ChangeHealth(-9999);
     }
 
-    public void ChangeHealth(int change)
+    public void ChangeHealth(int change, PlayerID? attacker = null)
     {
+        // Server-side validation: Clamp damage to maximum reasonable value
+        // This prevents a malicious client from dealing 9999 damage
+        if (change < 0) // Taking damage
+        {
+            int maxDamage = 100; // Maximum damage per hit (headshot with most powerful weapon)
+
+            if (change < -maxDamage)
+            {
+                if (predictionManager.isServer)
+                {
+                    Debug.LogWarning($"[PlayerHealth] Clamping damage from {-change} to {maxDamage}. Attacker: {attacker?.ToString() ?? "unknown"}");
+                }
+                change = -maxDamage;
+            }
+        }
+
         currentState.health += change;
 
         // Fire damage event if taking damage (negative change)

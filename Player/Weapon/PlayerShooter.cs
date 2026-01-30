@@ -6,16 +6,13 @@ using static PlayerShooter;
 public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerShooter.ShootState>
 {
     [SerializeField] private float _fireRate = 3;
+    private float _headShotModifier = 1.8f;
     [SerializeField] private int _damage = 35;
     [SerializeField] private Vector3 _centerOfCamera;
+    [SerializeField] private LayerMask _shotLayerMask;
 
     [Header("Recoil")]
-    [SerializeField] private float _recoilX = -2f;
-    [SerializeField] private float _recoilY = 0.5f;
-    [SerializeField] private float _recoilZ = 0.5f;
-    [SerializeField] private float _recoilRecoverySpeed = 5f;
-    [SerializeField] private float _recoilNoiseSeed = 12.345f; // Offset for Perlin noise sampling
-
+    [SerializeField] private RecoilProfile _recoilProfile;
     [SerializeField] private Recoil _recoil; 
 
     public float shootCooldown => 1 / _fireRate;
@@ -52,8 +49,10 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
+        if (_recoilProfile == null) return;
+
         // Gradually recover from recoil
-        state.recoilOffset = Vector3.Lerp(state.recoilOffset, Vector3.zero, _recoilRecoverySpeed * delta);
+        state.recoilOffset = Vector3.Lerp(state.recoilOffset, Vector3.zero, _recoilProfile.recoverySpeed * delta);
 
         if (state.cooldownTimer > 0)
         {
@@ -65,44 +64,56 @@ public class PlayerShooter : PredictedIdentity<PlayerShooter.ShootInput, PlayerS
 
         state.cooldownTimer = shootCooldown;
 
+        // Shoot first, THEN apply recoil (recoil affects next shot)
+        Shoot(ref state);
+
         // Increment shot counter for deterministic pattern
         state.shotCount++;
 
-        // Add recoil BEFORE shooting (affects aim)
+        // Add recoil AFTER shooting (affects next shot's aim)
         // Use Perlin noise for deterministic but natural-feeling recoil pattern
-        float noiseY = Mathf.PerlinNoise(_recoilNoiseSeed + state.shotCount * 0.1f, 0f);
-        float noiseZ = Mathf.PerlinNoise(_recoilNoiseSeed + state.shotCount * 0.1f, 100f);
+        float noiseY = Mathf.PerlinNoise(_recoilProfile.noiseSeed + state.shotCount * 0.1f, 0f);
+        float noiseZ = Mathf.PerlinNoise(_recoilProfile.noiseSeed + state.shotCount * 0.1f, 100f);
 
         // Map Perlin noise (0-1) to range (-1 to 1), then scale by recoil amounts
         state.recoilOffset += new Vector3(
-            _recoilX,
-            (noiseY * 2f - 1f) * _recoilY,
-            (noiseZ * 2f - 1f) * _recoilZ
+            _recoilProfile.recoilX,
+            (noiseY * 2f - 1f) * _recoilProfile.recoilY,
+            (noiseZ * 2f - 1f) * _recoilProfile.recoilZ
         );
-
-        Shoot(ref state);
     }
 
     private void Shoot(ref ShootState state)
     {
         _onShootMuzzle?.Invoke();
 
-        var forward = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
-        state.lastKnownForward = forward;
-
-        // Apply recoil offset to aim direction (server-validated)
-        var recoilRotation = Quaternion.Euler(state.recoilOffset);
-        var aimDirection = recoilRotation * forward;
+        // Use the camera forward direction directly - it already includes visual recoil
+        // from the previous tick's UpdateView() call
+        var aimDirection = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
+        state.lastKnownForward = aimDirection;
 
         var position = transform.TransformPoint(_centerOfCamera);
 
-        // add a slight forward offset to origin of ray, using recoil-affected direction
-        if (!Physics.Raycast(position + aimDirection * 0.5f, aimDirection, out RaycastHit hit)) return;
-
-        bool hitPlayer = false;
-        if (hit.transform.TryGetComponent(out PlayerHealth otherHealth))
+        // add a slight forward offset to origin of ray
+        if (!Physics.Raycast(position + aimDirection * 0.5f, aimDirection, out RaycastHit hit, Mathf.Infinity, _shotLayerMask, QueryTriggerInteraction.Ignore))
         {
-            otherHealth.ChangeHealth(-_damage);
+            return;
+        }
+
+        // Use hit.collider.gameObject instead of hit.transform.gameObject
+        // because hit.transform returns the root parent, not the GameObject with the collider
+        bool hitPlayer = false;
+        if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
+        {
+            if (hurtbox is HurtboxHead head)
+            {
+                int result = Mathf.RoundToInt(_damage * _headShotModifier);
+                head.health.ChangeHealth(-result, owner);
+            }
+            else
+            {
+                hurtbox.health.ChangeHealth(-_damage, owner);
+            }
             hitPlayer = true;
         }
 

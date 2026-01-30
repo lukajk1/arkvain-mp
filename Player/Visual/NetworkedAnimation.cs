@@ -53,18 +53,18 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
             return;
         }
 
-        Debug.Log($"[NetworkedAnimation] TransitionLibrary found with {_animancer.Graph.Transitions.Count} transitions");
+        //Debug.Log($"[NetworkedAnimation] TransitionLibrary found with {_animancer.Graph.Transitions.Count} transitions");
 
         if (_animancer.Graph.Transitions.TryGetTransition(_locomotionMixerIndex, out TransitionModifierGroup transitionGroup))
         {
             var transition = transitionGroup.Transition;
 
-            Debug.Log($"[NetworkedAnimation] Transition at index {_locomotionMixerIndex}: Type={transition.GetType().Name}");
+            //Debug.Log($"[NetworkedAnimation] Transition at index {_locomotionMixerIndex}: Type={transition.GetType().Name}");
 
             // If it's a MixerTransition2D, log the mixer type
             if (transition is MixerTransition2D mixerTransition2D)
             {
-                Debug.Log($"[NetworkedAnimation] MixerTransition2D Type: {mixerTransition2D.Type}");
+                //Debug.Log($"[NetworkedAnimation] MixerTransition2D Type: {mixerTransition2D.Type}");
             }
 
             _mixerState = _animancer.Play(transition) as Vector2MixerState;
@@ -74,15 +74,15 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
                 // Ensure layer 0 has weight (might be 0 on remote clients)
                 if (_animancer.Layers[0].Weight < 0.01f)
                 {
-                    Debug.LogWarning($"[NetworkedAnimation] Layer 0 weight was {_animancer.Layers[0].Weight}, setting to 1");
+                    //Debug.LogWarning($"[NetworkedAnimation] Layer 0 weight was {_animancer.Layers[0].Weight}, setting to 1");
                     _animancer.Layers[0].Weight = 1f;
                 }
 
                 // Ensure the mixer has full weight (critical for remote clients)
                 _mixerState.Weight = 1f;
 
-                Debug.Log($"[NetworkedAnimation] Successfully created {_mixerState.GetType().Name}, Weight: {_mixerState.Weight}");
-                Debug.Log($"[NetworkedAnimation] Mixer has {_mixerState.ChildCount} child animations");
+                //Debug.Log($"[NetworkedAnimation] Successfully created {_mixerState.GetType().Name}, Weight: {_mixerState.Weight}");
+                //Debug.Log($"[NetworkedAnimation] Mixer has {_mixerState.ChildCount} child animations");
 
                 // Log each child animation
                 for (int i = 0; i < _mixerState.ChildCount; i++)
@@ -90,11 +90,11 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
                     var child = _mixerState.GetChild(i);
                     if (child != null)
                     {
-                        Debug.Log($"[NetworkedAnimation] Child {i}: {child.GetType().Name}, Clip={child.Clip?.name ?? "NULL"}, Weight={child.Weight:F2}");
+                        //Debug.Log($"[NetworkedAnimation] Child {i}: {child.GetType().Name}, Clip={child.Clip?.name ?? "NULL"}, Weight={child.Weight:F2}");
                     }
                     else
                     {
-                        Debug.LogWarning($"[NetworkedAnimation] Child {i} is NULL!");
+                        //Debug.LogWarning($"[NetworkedAnimation] Child {i} is NULL!");
                     }
                 }
 
@@ -105,7 +105,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
                     _parameterY,
                     _parameterSmoothTime);
 
-                Debug.Log($"[NetworkedAnimation] SmoothedVector2Parameter initialized with X={_parameterX?.name}, Y={_parameterY?.name}");
+                //Debug.Log($"[NetworkedAnimation] SmoothedVector2Parameter initialized with X={_parameterX?.name}, Y={_parameterY?.name}");
             }
             else
             {
@@ -135,10 +135,10 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
             state.mixerTime = _mixerState.Time;
             state.mixerSpeed = _mixerState.Speed;
 
-            if (input.moveDirection.sqrMagnitude > 0.01f)
-            {
-                Debug.Log($"[NetworkedAnimation] Simulate - Input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2}), Mixer: ({state.moveDirectionX:F2}, {state.moveDirectionY:F2}), Time: {state.mixerTime:F2}");
-            }
+            //if (input.moveDirection.sqrMagnitude > 0.01f)
+            //{
+            //    Debug.Log($"[NetworkedAnimation] Simulate - Input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2}), Mixer: ({state.moveDirectionX:F2}, {state.moveDirectionY:F2}), Time: {state.mixerTime:F2}");
+            //}
         }
         else
         {

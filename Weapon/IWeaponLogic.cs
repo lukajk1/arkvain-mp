@@ -45,4 +45,10 @@ public interface IWeaponLogic
     /// Gets the maximum ammo capacity of the weapon's magazine/clip.
     /// </summary>
     int MaxAmmo { get; }
+
+    /// <summary>
+    /// Gets whether this weapon belongs to the local player.
+    /// Used to determine if UI feedback (hitmarkers, sounds) should be shown.
+    /// </summary>
+    bool isOwner { get; }
 }

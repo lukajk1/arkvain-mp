@@ -46,12 +46,18 @@ public class HitmarkerManager : MonoBehaviour
         // Subscribe to all weapon hit events
         foreach (IWeaponLogic weapon in weaponManager.GetAllWeapons())
         {
-            weapon.OnHit += ShowHitmarker;
+            // Capture weapon in lambda to check ownership per hit
+            IWeaponLogic capturedWeapon = weapon;
+            weapon.OnHit += (hitInfo) => ShowHitmarker(capturedWeapon, hitInfo);
         }
     }
 
-    private void ShowHitmarker(HitInfo hitInfo)
+    private void ShowHitmarker(IWeaponLogic weapon, HitInfo hitInfo)
     {
+        // Only show hitmarker for local player's hits
+        if (!weapon.isOwner)
+            return;
+
         if (hitInfo.hitPlayer)
         {
             AnimateHitmarker(hitInfo.isHeadshot);

@@ -2,18 +2,17 @@ using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
 
-public struct HitInfo
-{
-    public Vector3 position;
-    public bool hitPlayer;
-}
 public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, CrossbowLogic.ShootState>, IWeaponLogic
 {
-    [SerializeField] private float _fireRate = 3;
-    private float _headShotModifier = 1.8f;
-    [SerializeField] private int _damage = 35;
+    [Header("Stats")]
+    [SerializeField] private float _fireRate;
+    [SerializeField] private float _headShotModifier;
+    [SerializeField] private int _damage;
+
+    [Header("Refs")]
     [SerializeField] private Vector3 _centerOfCamera;
     [SerializeField] private LayerMask _shotLayerMask;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     [Header("Recoil")]
     [SerializeField] private RecoilProfile _recoilProfile;
@@ -21,11 +20,11 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
 
     public float shootCooldown => 1 / _fireRate;
 
-    [SerializeField] private PlayerMovement _playerMovement;
+    // IWeaponLogic interface events (public for HitmarkerManager)
+    public event System.Action<HitInfo> OnHit;
+    public event System.Action OnShoot;
 
-    // Public events for CrossbowVisual to subscribe to
-    public event System.Action onShoot;
-    public event System.Action<HitInfo> onHit;
+    // Additional events for CrossbowVisual
     public event System.Action onReload;
     public event System.Action onSwitchToActive;
 
@@ -126,12 +125,14 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         // Use hit.collider.gameObject instead of hit.transform.gameObject
         // because hit.transform returns the root parent, not the GameObject with the collider
         bool hitPlayer = false;
+        bool isHeadshot = false;
         if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
         {
             if (hurtbox is HurtboxHead head)
             {
                 int result = Mathf.RoundToInt(_damage * _headShotModifier);
                 head.health.ChangeHealth(-result, owner);
+                isHeadshot = true;
             }
             else
             {
@@ -140,23 +141,23 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
             hitPlayer = true;
         }
 
-        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer });
+        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer, isHeadshot = isHeadshot });
     }
 
     /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual.
+    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual and HitmarkerManager.
     /// </summary>
     private void OnShootEventHandler()
     {
-        onShoot?.Invoke();
+        OnShoot?.Invoke();
     }
 
     /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual.
+    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual and HitmarkerManager.
     /// </summary>
     private void OnHitEventHandler(HitInfo hitInfo)
     {
-        onHit?.Invoke(hitInfo);
+        OnHit?.Invoke(hitInfo);
     }
 
     /// <summary>

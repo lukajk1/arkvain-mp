@@ -1,13 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// Handles all visual and audio feedback for the crossbow.
-/// Subscribes to events from CrossbowLogic and plays appropriate effects.
+/// Handles all visual and audio feedback for the Deagle.
+/// Subscribes to events from DeagleLogic and plays appropriate effects.
 /// </summary>
-public class CrossbowVisual : WeaponVisual
+public class DeagleVisual : WeaponVisual
 {
     [Header("References")]
-    [SerializeField] private CrossbowLogic _crossbowLogic;
+    [SerializeField] private DeagleLogic _deagleLogic;
 
     [Header("Shoot Effects")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
@@ -21,34 +21,38 @@ public class CrossbowVisual : WeaponVisual
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadSound;
 
+    [Header("Switch to Active")]
+    [SerializeField] private Animator _animator;
+    [SerializeField] private string _equipAnimationTrigger = "Equip";
+
     private void OnEnable()
     {
-        if (_crossbowLogic == null)
+        if (_deagleLogic == null)
         {
-            Debug.LogError("[CrossbowVisual] CrossbowLogic reference is null!");
+            Debug.LogError("[DeagleVisual] DeagleLogic reference is null!");
             return;
         }
 
         // Subscribe to events
-        _crossbowLogic.onShoot += OnShoot;
-        _crossbowLogic.onHit += OnHit;
-        _crossbowLogic.onReload += OnReload;
-        _crossbowLogic.onSwitchToActive += OnSwitchToActive;
+        _deagleLogic.OnShoot += OnShoot;
+        _deagleLogic.OnHit += OnHit;
+        _deagleLogic.onReload += OnReload;
+        _deagleLogic.onSwitchToActive += OnSwitchToActive;
     }
 
     private void OnDisable()
     {
-        if (_crossbowLogic == null) return;
+        if (_deagleLogic == null) return;
 
         // Unsubscribe from events
-        _crossbowLogic.onShoot -= OnShoot;
-        _crossbowLogic.onHit -= OnHit;
-        _crossbowLogic.onReload -= OnReload;
-        _crossbowLogic.onSwitchToActive -= OnSwitchToActive;
+        _deagleLogic.OnShoot -= OnShoot;
+        _deagleLogic.OnHit -= OnHit;
+        _deagleLogic.onReload -= OnReload;
+        _deagleLogic.onSwitchToActive -= OnSwitchToActive;
     }
 
     /// <summary>
-    /// Called when the crossbow shoots. Plays muzzle flash and shoot sound.
+    /// Called when the deagle shoots. Plays muzzle flash and shoot sound.
     /// </summary>
     private void OnShoot()
     {
@@ -92,11 +96,10 @@ public class CrossbowVisual : WeaponVisual
     }
 
     /// <summary>
-    /// Called when the crossbow reloads. Plays reload sound and particles.
+    /// Called when the deagle reloads. Plays reload sound.
     /// </summary>
     private void OnReload()
     {
-
         if (_reloadSound != null)
         {
             SoundManager.Play(new SoundData(_reloadSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
@@ -104,10 +107,13 @@ public class CrossbowVisual : WeaponVisual
     }
 
     /// <summary>
-    /// Called when the crossbow becomes the active weapon. Plays equip animation.
+    /// Called when the deagle becomes the active weapon. Plays equip animation.
     /// </summary>
     private void OnSwitchToActive()
     {
-        _viewmodel.SetActive(true);
+        if (_animator != null && !string.IsNullOrEmpty(_equipAnimationTrigger))
+        {
+            _animator.SetTrigger(_equipAnimationTrigger);
+        }
     }
 }

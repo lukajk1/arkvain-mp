@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic.ShootState>, IWeaponLogic
 {
-    [SerializeField] private float _fireRate = 1;
-    [SerializeField] private int _damage = 45;
+    [SerializeField] private float _fireRate;
+    [SerializeField] private int _damage;
+    [SerializeField] private float _headShotModifier;
     [SerializeField] private Vector3 _centerOfCamera;
     [SerializeField] private LayerMask _shotLayerMask;
 
@@ -18,9 +19,11 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
 
     public float shootCooldown => 1 / _fireRate;
 
-    // Public events for DeagleVisual to subscribe to
-    public event System.Action onShoot;
-    public event System.Action<HitInfo> onHit;
+    // IWeaponLogic interface events (public for HitmarkerManager)
+    public event System.Action<HitInfo> OnHit;
+    public event System.Action OnShoot;
+
+    // Additional events for DeagleVisual
     public event System.Action onReload;
     public event System.Action onSwitchToActive;
 
@@ -73,6 +76,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
         }
 
         bool hitPlayer = false;
+        bool isHeadshot = false;
         if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
         {
             // Calculate distance to target
@@ -81,33 +85,42 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
             // Map distance (0-100m) to curve time (0-1)
             float curveTime = Mathf.Clamp01(distance / 100f);
 
-            // Sample curve to get damage multiplier
+            // Sample curve to get damage multiplier from falloff
             float damageMultiplier = _damageFalloff.Evaluate(curveTime);
 
-            // Calculate final damage
-            int finalDamage = Mathf.RoundToInt(_damage * damageMultiplier);
+            // Apply headshot multiplier if hitting a head hurtbox
+            int baseDamage = _damage;
+            if (hurtbox is HurtboxHead head)
+            {
+                baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
+                head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
+                isHeadshot = true;
+            }
+            else
+            {
+                hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
+            }
 
-            hurtbox.health.ChangeHealth(-finalDamage, owner);
             hitPlayer = true;
         }
 
-        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer });
+        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer, isHeadshot = isHeadshot });
     }
 
     /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual.
+    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual and HitmarkerManager.
     /// </summary>
     private void OnShootEventHandler()
     {
-        onShoot?.Invoke();
+        OnShoot?.Invoke();
     }
 
     /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual.
+    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual and HitmarkerManager.
     /// </summary>
     private void OnHitEventHandler(HitInfo hitInfo)
     {
-        onHit?.Invoke(hitInfo);
+        OnHit?.Invoke(hitInfo);
     }
 
     /// <summary>
@@ -116,12 +129,6 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     public void SwitchToActive()
     {
         onSwitchToActive?.Invoke();
-    }
-
-    public struct HitInfo
-    {
-        public Vector3 position;
-        public bool hitPlayer;
     }
 
     protected override void UpdateInput(ref ShootInput input)

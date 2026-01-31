@@ -1,9 +1,11 @@
 using PurrNet.Prediction;
+using System;
 using UnityEngine;
 
 /// <summary>
 /// Manages switching between different weapons with client-side prediction.
 /// Enables/disables weapon Logic/Visual pairs and triggers activation events.
+/// Broadcasts weapon events globally for systems like hitmarkers.
 /// </summary>
 public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, WeaponManager.SwitchState>
 {
@@ -32,6 +34,12 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     private const int PRIMARY_INDEX = 0;
     private const int SECONDARY_INDEX = 1;
 
+    /// <summary>
+    /// Static event broadcast when a local player's WeaponManager is initialized.
+    /// Passes the WeaponManager instance so systems can subscribe to weapon events.
+    /// </summary>
+    public static event Action<WeaponManager> OnLocalWeaponManagerReady;
+
     protected override void LateAwake()
     {
         base.LateAwake();
@@ -59,6 +67,13 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         SwitchToWeaponInternal(PRIMARY_INDEX);
 
         Debug.Log($"[WeaponManager] Primary weapon enabled (index {PRIMARY_INDEX})");
+
+        // Broadcast initialization for owner only
+        if (isOwner)
+        {
+            OnLocalWeaponManagerReady?.Invoke(this);
+            Debug.Log("[WeaponManager] Broadcast OnLocalWeaponManagerReady");
+        }
     }
 
     protected override void Simulate(SwitchInput input, ref SwitchState state, float delta)
@@ -186,6 +201,21 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     private void TriggerSwitchToActive(IWeaponLogic logic)
     {
         logic?.SwitchToActive();
+    }
+
+    /// <summary>
+    /// Gets all weapon logic components. Use this to subscribe to weapon events.
+    /// </summary>
+    public IWeaponLogic[] GetAllWeapons()
+    {
+        if (_weapons == null) return null;
+
+        IWeaponLogic[] weapons = new IWeaponLogic[_weapons.Length];
+        for (int i = 0; i < _weapons.Length; i++)
+        {
+            weapons[i] = _weapons[i].logic;
+        }
+        return weapons;
     }
 
     public struct SwitchInput : IPredictedData<SwitchInput>

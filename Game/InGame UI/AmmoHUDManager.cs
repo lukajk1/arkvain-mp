@@ -32,11 +32,21 @@ public class AmmoHUDManager : MonoBehaviour
         // Subscribe to weapon switch events
         _weaponManager.OnWeaponSwitched += OnWeaponSwitched;
 
-        // Get the first weapon to display initially
+        // Get currently active weapon (the primary weapon has already been activated)
+        // Since weapon switching happens before this event fires, we need to get the active weapon
         IWeaponLogic[] weapons = weaponManager.GetAllWeapons();
         if (weapons != null && weapons.Length > 0)
         {
-            _currentWeapon = weapons[0];
+            // Find the enabled weapon
+            foreach (var weapon in weapons)
+            {
+                var weaponMono = weapon as MonoBehaviour;
+                if (weaponMono != null && weaponMono.enabled)
+                {
+                    _currentWeapon = weapon;
+                    break;
+                }
+            }
         }
     }
 

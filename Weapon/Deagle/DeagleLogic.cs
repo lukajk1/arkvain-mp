@@ -81,7 +81,14 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
             return;
         }
 
-        // Check if we need to reload
+        // Manual reload input
+        if (input.reload && !state.isReloading && state.currentAmmo < _clipSize)
+        {
+            StartReload(ref state);
+            return;
+        }
+
+        // Auto-reload if out of ammo
         if (state.currentAmmo <= 0 && !state.isReloading)
         {
             StartReload(ref state);
@@ -193,11 +200,13 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     protected override void UpdateInput(ref ShootInput input)
     {
         input.shoot |= InputManager.Instance.Player.Attack.IsPressed();
+        input.reload |= InputManager.Instance.Player.Reload.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)
     {
         input.shoot = false;
+        input.reload = false;
     }
 
     protected override ShootState GetInitialState()
@@ -211,6 +220,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     public struct ShootInput : IPredictedData<ShootInput>
     {
         public bool shoot;
+        public bool reload;
 
         public void Dispose()
         {

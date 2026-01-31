@@ -2,23 +2,21 @@ using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
 
-public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, CrossbowLogic.ShootState>, IWeaponLogic
+public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLogic.ShootState>, IWeaponLogic
 {
     [Header("Stats")]
-    [SerializeField] private float _fireRate;
-    [SerializeField] private float _headShotModifier;
-    [SerializeField] private int _damage;
-    [SerializeField] private int _clipSize;
-    [SerializeField] private float _reloadTime;
+    [SerializeField] private float _fireRate = 1f;
+    [SerializeField] private int _damage = 50;
+    [SerializeField] private float _headShotModifier = 1.8f;
+    [SerializeField] private int _clipSize = 1;
+    [SerializeField] private float _reloadTime = 3f;
 
     [Header("Refs")]
     [SerializeField] private Vector3 _centerOfCamera;
     [SerializeField] private LayerMask _shotLayerMask;
-    [SerializeField] private PlayerMovement _playerMovement;
 
-    [Header("Recoil")]
-    [SerializeField] private RecoilProfile _recoilProfile;
-    [SerializeField] private Recoil _recoil; 
+    [Header("References")]
+    [SerializeField] private PlayerMovement _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
 
@@ -30,7 +28,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     public event System.Action<HitInfo> OnHit;
     public event System.Action OnShoot;
 
-    // Additional events for CrossbowVisual
+    // Additional events for RailgunVisual
     public event System.Action onReload;
     public event System.Action onSwitchToActive;
 
@@ -41,17 +39,12 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     protected override void LateAwake()
     {
         base.LateAwake();
-
-        Debug.Log("[CrossbowLogic] LateAwake started");
-
         _onShootEvent = new PredictedEvent(predictionManager, this);
         _onShootEvent.AddListener(OnShootEventHandler);
         _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
         _onHitEvent.AddListener(OnHitEventHandler);
         _onReloadEvent = new PredictedEvent(predictionManager, this);
         _onReloadEvent.AddListener(OnReloadEventHandler);
-
-        Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}, RecoilProfile: {(_recoilProfile != null ? "Valid" : "NULL")}");
     }
 
     protected override void OnDestroy()
@@ -62,18 +55,8 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         _onReloadEvent.RemoveListener(OnReloadEventHandler);
     }
 
-
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
-        if (_recoilProfile == null)
-        {
-            Debug.LogWarning("[CrossbowLogic] RecoilProfile is null!");
-            return;
-        }
-
-        // Gradually recover from recoil
-        state.recoilOffset = Vector3.Lerp(state.recoilOffset, Vector3.zero, _recoilProfile.recoverySpeed * delta);
-
         // Count down reload timer
         if (state.reloadTimer > 0)
         {
@@ -109,10 +92,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         }
 
         // Try to shoot
-        if (!input.shoot)
-        {
-            return;
-        }
+        if (!input.shoot) return;
 
         // Can't shoot if no ammo
         if (state.currentAmmo <= 0)
@@ -120,30 +100,11 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
             return;
         }
 
-        Debug.Log($"[CrossbowLogic] SHOOT! Input received. Cooldown: {shootCooldown}s");
-
         state.cooldownTimer = shootCooldown;
-
-        // Shoot first, THEN apply recoil (recoil affects next shot)
         Shoot(ref state);
 
         // Consume ammo
         state.currentAmmo--;
-
-        // Increment shot counter for deterministic pattern
-        state.shotCount++;
-
-        // Add recoil AFTER shooting (affects next shot's aim)
-        // Use Perlin noise for deterministic but natural-feeling recoil pattern
-        float noiseY = Mathf.PerlinNoise(_recoilProfile.noiseSeed + state.shotCount * 0.1f, 0f);
-        float noiseZ = Mathf.PerlinNoise(_recoilProfile.noiseSeed + state.shotCount * 0.1f, 100f);
-
-        // Map Perlin noise (0-1) to range (-1 to 1), then scale by recoil amounts
-        state.recoilOffset += new Vector3(
-            _recoilProfile.recoilX,
-            (noiseY * 2f - 1f) * _recoilProfile.recoilY,
-            (noiseZ * 2f - 1f) * _recoilProfile.recoilZ
-        );
     }
 
     private void StartReload(ref ShootState state)
@@ -155,44 +116,42 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
 
     private void Shoot(ref ShootState state)
     {
-        Debug.Log("[CrossbowLogic] Shoot() called");
-
         _onShootEvent?.Invoke();
 
-        // Use the camera forward direction directly - it already includes visual recoil
-        // from the previous tick's UpdateView() call
         var aimDirection = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
         state.lastKnownForward = aimDirection;
 
         var position = transform.TransformPoint(_centerOfCamera);
 
-        Debug.Log($"[CrossbowLogic] Raycast from {position}, direction {aimDirection}, layermask {_shotLayerMask.value}");
-
-        // add a slight forward offset to origin of ray
+        // Raycast with layermask
         if (!Physics.Raycast(position + aimDirection * 0.5f, aimDirection, out RaycastHit hit, Mathf.Infinity, _shotLayerMask, QueryTriggerInteraction.Ignore))
         {
-            Debug.Log("[CrossbowLogic] Raycast missed - no hit");
             return;
         }
 
-        Debug.Log($"[CrossbowLogic] Raycast HIT: {hit.collider.gameObject.name} on layer {hit.collider.gameObject.layer}");
-
-        // Use hit.collider.gameObject instead of hit.transform.gameObject
-        // because hit.transform returns the root parent, not the GameObject with the collider
         bool hitPlayer = false;
         bool isHeadshot = false;
         if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
         {
+            // Calculate distance to target
+            float distance = Vector3.Distance(position, hit.point);
+
+            // Map distance (0-100m) to curve time (0-1)
+            float curveTime = Mathf.Clamp01(distance / 100f);
+
+            // Apply headshot multiplier if hitting a head hurtbox
+            int baseDamage = _damage;
             if (hurtbox is HurtboxHead head)
             {
-                int result = Mathf.RoundToInt(_damage * _headShotModifier);
-                head.health.ChangeHealth(-result, owner);
+                baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
+                head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
                 isHeadshot = true;
             }
             else
             {
-                hurtbox.health.ChangeHealth(-_damage, owner);
+                hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
             }
+
             hitPlayer = true;
         }
 
@@ -200,7 +159,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     }
 
     /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual and HitmarkerManager.
+    /// Internal handler for PredictedEvent. Invokes public C# event for RailgunVisual and HitmarkerManager.
     /// </summary>
     private void OnShootEventHandler()
     {
@@ -208,7 +167,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     }
 
     /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual and HitmarkerManager.
+    /// Internal handler for PredictedEvent. Invokes public C# event for RailgunVisual and HitmarkerManager.
     /// </summary>
     private void OnHitEventHandler(HitInfo hitInfo)
     {
@@ -216,7 +175,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     }
 
     /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual.
+    /// Internal handler for PredictedEvent. Invokes public C# event for RailgunVisual.
     /// </summary>
     private void OnReloadEventHandler()
     {
@@ -224,41 +183,21 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     }
 
     /// <summary>
-    /// Call this when the crossbow is switched to as the active weapon.
+    /// Call this when the railgun is switched to as the active weapon.
     /// </summary>
     public void SwitchToActive()
     {
         onSwitchToActive?.Invoke();
     }
 
-    protected override void UpdateView(ShootState viewState, ShootState? verified)
-    {
-        base.UpdateView(viewState, verified);
-
-        // Apply server-validated recoil to visual camera rotation (owner only)
-        if (isOwner && _recoil != null)
-        {
-            _recoil.SetRecoilOffset(viewState.recoilOffset);
-        }
-    }
-
-
     protected override void UpdateInput(ref ShootInput input)
     {
-        bool attackPressed = InputManager.Instance.Player.Attack.IsPressed();
-
-        if (attackPressed)
-        {
-            Debug.Log("[CrossbowLogic] UpdateInput: Attack button IS pressed");
-        }
-
-        input.shoot |= attackPressed;
+        input.shoot |= InputManager.Instance.Player.Attack.IsPressed();
         input.reload |= InputManager.Instance.Player.Reload.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)
     {
-        // 'predict' to be false
         input.shoot = false;
         input.reload = false;
     }
@@ -280,12 +219,11 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         {
         }
     }
+
     public struct ShootState : IPredictedData<ShootState>
     {
         public float cooldownTimer;
         public Vector3 lastKnownForward;
-        public Vector3 recoilOffset;
-        public int shotCount; // Used for deterministic recoil pattern
         public int currentAmmo;
         public float reloadTimer;
         public bool isReloading;
@@ -300,10 +238,8 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     {
         var position = transform.TransformPoint(_centerOfCamera);
 
-        //Debug.Log($"Transform pos: {transform.position}, Camera center: {_centerOfCamera}, Calculated position: {position}");
-
         // Draw origin sphere
-        Gizmos.color = Color.red;
+        Gizmos.color = Color.magenta;
         Gizmos.DrawWireSphere(position, 0.1f);
 
         if (!Application.isPlaying) return;
@@ -312,7 +248,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         var forward = _playerMovement.currentInput.cameraForward ?? currentState.lastKnownForward;
 
         // Draw forward direction
-        Gizmos.color = Color.red;
+        Gizmos.color = Color.magenta;
         Gizmos.DrawLine(position, position + forward * 10f);
     }
 #endif

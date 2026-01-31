@@ -22,17 +22,25 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         }
     }
 
-    [Header("Primary Weapon")]
+    [Header("Weapon References")]
     [SerializeField] private CrossbowLogic _crossbowLogic;
     [SerializeField] private CrossbowVisual _crossbowVisual;
-
-    [Header("Secondary Weapon")]
     [SerializeField] private DeagleLogic _deagleLogic;
     [SerializeField] private DeagleVisual _deagleVisual;
+    [SerializeField] private RailgunLogic _railgunLogic;
+    [SerializeField] private RailgunVisual _railgunVisual;
+    [SerializeField] private TrackingGunLogic _trackingGunLogic;
+    [SerializeField] private TrackingGunVisual _trackingGunVisual;
+
+    [Header("Weapon Selection")]
+    [Tooltip("Index of weapon to use as primary (0=Crossbow, 1=Deagle, 2=Railgun, 3=TrackingGun)")]
+    [SerializeField] private int _primaryWeaponIndex = 0;
+    [Tooltip("Index of weapon to use as secondary (0=Crossbow, 1=Deagle, 2=Railgun, 3=TrackingGun)")]
+    [SerializeField] private int _secondaryWeaponIndex = 1;
 
     private WeaponPair[] _weapons;
-    private const int PRIMARY_INDEX = 0;
-    private const int SECONDARY_INDEX = 1;
+    private int _primaryIndex;
+    private int _secondaryIndex;
 
     /// <summary>
     /// Static event broadcast when a local player's WeaponManager is initialized.
@@ -52,14 +60,26 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 
         Debug.Log("[WeaponManager] LateAwake started");
 
-        // Build weapon array from references
+        // Build weapon array from references (all 4 weapons)
         _weapons = new WeaponPair[]
         {
-            new WeaponPair(_crossbowLogic, _crossbowVisual),
-            new WeaponPair(_deagleLogic, _deagleVisual)
+            new WeaponPair(_crossbowLogic, _crossbowVisual),      // Index 0
+            new WeaponPair(_deagleLogic, _deagleVisual),          // Index 1
+            new WeaponPair(_railgunLogic, _railgunVisual),        // Index 2
+            new WeaponPair(_trackingGunLogic, _trackingGunVisual) // Index 3
         };
 
-        Debug.Log($"[WeaponManager] Weapon array built with {_weapons.Length} weapons");
+        // Validate and clamp weapon indices
+        _primaryIndex = Mathf.Clamp(_primaryWeaponIndex, 0, _weapons.Length - 1);
+        _secondaryIndex = Mathf.Clamp(_secondaryWeaponIndex, 0, _weapons.Length - 1);
+
+        if (_primaryIndex == _secondaryIndex)
+        {
+            Debug.LogWarning($"[WeaponManager] Primary and secondary weapon indices are the same ({_primaryIndex}). Setting secondary to different weapon.");
+            _secondaryIndex = (_primaryIndex + 1) % _weapons.Length;
+        }
+
+        Debug.Log($"[WeaponManager] Weapon array built with {_weapons.Length} weapons. Primary: {_primaryIndex}, Secondary: {_secondaryIndex}");
 
         // Disable all weapons initially
         foreach (var weapon in _weapons)
@@ -70,9 +90,9 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         Debug.Log("[WeaponManager] All weapons disabled");
 
         // Enable primary weapon
-        SwitchToWeaponInternal(PRIMARY_INDEX);
+        SwitchToWeaponInternal(_primaryIndex);
 
-        Debug.Log($"[WeaponManager] Primary weapon enabled (index {PRIMARY_INDEX})");
+        Debug.Log($"[WeaponManager] Primary weapon enabled (index {_primaryIndex})");
 
         // Broadcast initialization for owner only
         if (isOwner)
@@ -88,26 +108,26 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         int targetIndex = state.currentWeaponIndex;
 
         // Direct selection: Primary weapon
-        if (input.selectPrimary && state.currentWeaponIndex != PRIMARY_INDEX)
+        if (input.selectPrimary && state.currentWeaponIndex != _primaryIndex)
         {
             Debug.Log("[WeaponManager] Input: Select Primary");
-            targetIndex = PRIMARY_INDEX;
+            targetIndex = _primaryIndex;
             weaponChanged = true;
         }
         // Direct selection: Secondary weapon
-        else if (input.selectSecondary && state.currentWeaponIndex != SECONDARY_INDEX)
+        else if (input.selectSecondary && state.currentWeaponIndex != _secondaryIndex)
         {
             Debug.Log("[WeaponManager] Input: Select Secondary");
-            targetIndex = SECONDARY_INDEX;
+            targetIndex = _secondaryIndex;
             weaponChanged = true;
         }
         // Quick switch: Toggle between primary and secondary
         else if (input.quickSwitch)
         {
             Debug.Log("[WeaponManager] Input: Quick Switch");
-            targetIndex = (state.currentWeaponIndex == PRIMARY_INDEX)
-                ? SECONDARY_INDEX
-                : PRIMARY_INDEX;
+            targetIndex = (state.currentWeaponIndex == _primaryIndex)
+                ? _secondaryIndex
+                : _primaryIndex;
             weaponChanged = true;
         }
 
@@ -137,7 +157,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     {
         return new SwitchState
         {
-            currentWeaponIndex = PRIMARY_INDEX
+            currentWeaponIndex = _primaryIndex
         };
     }
 
@@ -253,25 +273,37 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        // Validate primary weapon references
+        // Validate Crossbow references
         if (_crossbowLogic == null)
-        {
-            Debug.LogWarning("[WeaponManager] Primary weapon (Crossbow) logic is missing!");
-        }
+            Debug.LogWarning("[WeaponManager] Crossbow logic is missing!");
         if (_crossbowVisual == null)
-        {
-            Debug.LogWarning("[WeaponManager] Primary weapon (Crossbow) visual is missing!");
-        }
+            Debug.LogWarning("[WeaponManager] Crossbow visual is missing!");
 
-        // Validate secondary weapon references
+        // Validate Deagle references
         if (_deagleLogic == null)
-        {
-            Debug.LogWarning("[WeaponManager] Secondary weapon (Deagle) logic is missing!");
-        }
+            Debug.LogWarning("[WeaponManager] Deagle logic is missing!");
         if (_deagleVisual == null)
-        {
-            Debug.LogWarning("[WeaponManager] Secondary weapon (Deagle) visual is missing!");
-        }
+            Debug.LogWarning("[WeaponManager] Deagle visual is missing!");
+
+        // Validate Railgun references
+        if (_railgunLogic == null)
+            Debug.LogWarning("[WeaponManager] Railgun logic is missing!");
+        if (_railgunVisual == null)
+            Debug.LogWarning("[WeaponManager] Railgun visual is missing!");
+
+        // Validate TrackingGun references
+        if (_trackingGunLogic == null)
+            Debug.LogWarning("[WeaponManager] TrackingGun logic is missing!");
+        if (_trackingGunVisual == null)
+            Debug.LogWarning("[WeaponManager] TrackingGun visual is missing!");
+
+        // Validate weapon selection indices
+        if (_primaryWeaponIndex < 0 || _primaryWeaponIndex > 3)
+            Debug.LogWarning("[WeaponManager] Primary weapon index out of range! Must be 0-3.");
+        if (_secondaryWeaponIndex < 0 || _secondaryWeaponIndex > 3)
+            Debug.LogWarning("[WeaponManager] Secondary weapon index out of range! Must be 0-3.");
+        if (_primaryWeaponIndex == _secondaryWeaponIndex)
+            Debug.LogWarning("[WeaponManager] Primary and secondary weapon indices are the same!");
     }
 #endif
 }

@@ -49,9 +49,20 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     }
 
 
-    private void Die()
+    private void Die(PlayerID? attacker = null)
     {
         OnPlayerDeath?.Invoke(owner);
+
+        // Record kill/death in ScoreManager (server only)
+        if (predictionManager.isServer && attacker.HasValue && owner.HasValue)
+        {
+            ScoreManager scoreManager = FindFirstObjectByType<ScoreManager>();
+            if (scoreManager != null)
+            {
+                scoreManager.RecordKill(attacker.Value, owner.Value);
+            }
+        }
+
         predictionManager.hierarchy.Delete(gameObject);
     }
 
@@ -98,7 +109,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
         if (currentState.health <= 0)
         {
-            Die();
+            Die(attacker);
         }
         //Debug.Log($"health changed to {currentState.health}");
     }

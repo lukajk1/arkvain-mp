@@ -35,4 +35,14 @@ public interface IWeaponLogic
     /// Subscribe to this for muzzle flash, recoil animations, etc.
     /// </summary>
     event Action OnShoot;
+
+    /// <summary>
+    /// Gets the current ammo count in the weapon's magazine/clip.
+    /// </summary>
+    int CurrentAmmo { get; }
+
+    /// <summary>
+    /// Gets the maximum ammo capacity of the weapon's magazine/clip.
+    /// </summary>
+    int MaxAmmo { get; }
 }

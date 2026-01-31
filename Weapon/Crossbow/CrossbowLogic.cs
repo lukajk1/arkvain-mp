@@ -8,6 +8,8 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     [SerializeField] private float _fireRate;
     [SerializeField] private float _headShotModifier;
     [SerializeField] private int _damage;
+    [SerializeField] private int _clipSize;
+    [SerializeField] private float _reloadTime;
 
     [Header("Refs")]
     [SerializeField] private Vector3 _centerOfCamera;
@@ -20,6 +22,10 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
 
     public float shootCooldown => 1 / _fireRate;
 
+    // IWeaponLogic interface properties
+    public int CurrentAmmo => currentState.currentAmmo;
+    public int MaxAmmo => _clipSize;
+
     // IWeaponLogic interface events (public for HitmarkerManager)
     public event System.Action<HitInfo> OnHit;
     public event System.Action OnShoot;
@@ -30,6 +36,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
 
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
+    private PredictedEvent _onReloadEvent;
 
     protected override void LateAwake()
     {
@@ -41,6 +48,8 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         _onShootEvent.AddListener(OnShootEventHandler);
         _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
         _onHitEvent.AddListener(OnHitEventHandler);
+        _onReloadEvent = new PredictedEvent(predictionManager, this);
+        _onReloadEvent.AddListener(OnReloadEventHandler);
 
         Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}, RecoilProfile: {(_recoilProfile != null ? "Valid" : "NULL")}");
     }
@@ -50,6 +59,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         base.OnDestroy();
         _onShootEvent.RemoveListener(OnShootEventHandler);
         _onHitEvent.RemoveListener(OnHitEventHandler);
+        _onReloadEvent.RemoveListener(OnReloadEventHandler);
     }
 
 
@@ -64,13 +74,41 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         // Gradually recover from recoil
         state.recoilOffset = Vector3.Lerp(state.recoilOffset, Vector3.zero, _recoilProfile.recoverySpeed * delta);
 
+        // Count down reload timer
+        if (state.reloadTimer > 0)
+        {
+            state.reloadTimer -= delta;
+            if (state.reloadTimer <= 0)
+            {
+                // Reload complete
+                state.currentAmmo = _clipSize;
+                state.isReloading = false;
+            }
+            return; // Can't shoot while reloading
+        }
+
+        // Count down shoot cooldown
         if (state.cooldownTimer > 0)
         {
             state.cooldownTimer -= delta;
             return;
         }
 
+        // Check if we need to reload
+        if (state.currentAmmo <= 0 && !state.isReloading)
+        {
+            StartReload(ref state);
+            return;
+        }
+
+        // Try to shoot
         if (!input.shoot)
+        {
+            return;
+        }
+
+        // Can't shoot if no ammo
+        if (state.currentAmmo <= 0)
         {
             return;
         }
@@ -81,6 +119,9 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
 
         // Shoot first, THEN apply recoil (recoil affects next shot)
         Shoot(ref state);
+
+        // Consume ammo
+        state.currentAmmo--;
 
         // Increment shot counter for deterministic pattern
         state.shotCount++;
@@ -96,6 +137,13 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
             (noiseY * 2f - 1f) * _recoilProfile.recoilY,
             (noiseZ * 2f - 1f) * _recoilProfile.recoilZ
         );
+    }
+
+    private void StartReload(ref ShootState state)
+    {
+        state.reloadTimer = _reloadTime;
+        state.isReloading = true;
+        _onReloadEvent?.Invoke();
     }
 
     private void Shoot(ref ShootState state)
@@ -161,6 +209,14 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     }
 
     /// <summary>
+    /// Internal handler for PredictedEvent. Invokes public C# event for CrossbowVisual.
+    /// </summary>
+    private void OnReloadEventHandler()
+    {
+        onReload?.Invoke();
+    }
+
+    /// <summary>
     /// Call this when the crossbow is switched to as the active weapon.
     /// </summary>
     public void SwitchToActive()
@@ -198,6 +254,14 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         input.shoot = false;
     }
 
+    protected override ShootState GetInitialState()
+    {
+        return new ShootState
+        {
+            currentAmmo = _clipSize
+        };
+    }
+
     public struct ShootInput : IPredictedData<ShootInput>
     {
         public bool shoot;
@@ -212,6 +276,10 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         public Vector3 lastKnownForward;
         public Vector3 recoilOffset;
         public int shotCount; // Used for deterministic recoil pattern
+        public int currentAmmo;
+        public float reloadTimer;
+        public bool isReloading;
+
         public void Dispose()
         {
         }

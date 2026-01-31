@@ -9,6 +9,9 @@ public class HitmarkerManager : MonoBehaviour
     [SerializeField] private Color _bodyHitColor = Color.white;
     [SerializeField] private Color _headshotColor = Color.red;
 
+    [SerializeField] private AudioClip _bodyShotClip;
+    [SerializeField] private AudioClip _headShotClip;
+
     private Vector3 _initialScale;
     private int _currentTweenId = -1;
 
@@ -52,6 +55,15 @@ public class HitmarkerManager : MonoBehaviour
         if (hitInfo.hitPlayer)
         {
             AnimateHitmarker(hitInfo.isHeadshot);
+
+            if (hitInfo.isHeadshot)
+            {
+                if (_headShotClip != null) SoundManager.Play(new SoundData(_headShotClip, varyPitch: false, varyVolume: false));
+            }
+            else
+            {
+                if (_bodyShotClip != null) SoundManager.Play(new SoundData(_bodyShotClip, varyPitch: false, varyVolume: false));
+            }
         }
     }
 

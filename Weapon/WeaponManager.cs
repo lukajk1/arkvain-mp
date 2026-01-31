@@ -40,6 +40,12 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     /// </summary>
     public static event Action<WeaponManager> OnLocalWeaponManagerReady;
 
+    /// <summary>
+    /// Event broadcast when the active weapon changes.
+    /// Passes the newly active weapon's IWeaponLogic interface.
+    /// </summary>
+    public event Action<IWeaponLogic> OnWeaponSwitched;
+
     protected override void LateAwake()
     {
         base.LateAwake();
@@ -160,6 +166,12 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 
         // Trigger switch event on the logic component
         TriggerSwitchToActive(newWeapon.logic);
+
+        // Broadcast weapon switch event (only for owner)
+        if (isOwner)
+        {
+            OnWeaponSwitched?.Invoke(newWeapon.logic);
+        }
 
         Debug.Log($"[WeaponManager] Weapon switch complete. Active weapon index: {index}");
     }

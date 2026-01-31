@@ -4,9 +4,14 @@ using UnityEngine;
 
 public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic.ShootState>, IWeaponLogic
 {
+    [Header("Stats")]
     [SerializeField] private float _fireRate;
     [SerializeField] private int _damage;
     [SerializeField] private float _headShotModifier;
+    [SerializeField] private int _clipSize = 7;
+    [SerializeField] private float _reloadTime;
+
+    [Header("Refs")]
     [SerializeField] private Vector3 _centerOfCamera;
     [SerializeField] private LayerMask _shotLayerMask;
 
@@ -19,6 +24,10 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
 
     public float shootCooldown => 1 / _fireRate;
 
+    // IWeaponLogic interface properties
+    public int CurrentAmmo => currentState.currentAmmo;
+    public int MaxAmmo => _clipSize;
+
     // IWeaponLogic interface events (public for HitmarkerManager)
     public event System.Action<HitInfo> OnHit;
     public event System.Action OnShoot;
@@ -29,6 +38,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
 
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
+    private PredictedEvent _onReloadEvent;
 
     protected override void LateAwake()
     {
@@ -37,6 +47,8 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
         _onShootEvent.AddListener(OnShootEventHandler);
         _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
         _onHitEvent.AddListener(OnHitEventHandler);
+        _onReloadEvent = new PredictedEvent(predictionManager, this);
+        _onReloadEvent.AddListener(OnReloadEventHandler);
     }
 
     protected override void OnDestroy()
@@ -44,20 +56,59 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
         base.OnDestroy();
         _onShootEvent.RemoveListener(OnShootEventHandler);
         _onHitEvent.RemoveListener(OnHitEventHandler);
+        _onReloadEvent.RemoveListener(OnReloadEventHandler);
     }
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
+        // Count down reload timer
+        if (state.reloadTimer > 0)
+        {
+            state.reloadTimer -= delta;
+            if (state.reloadTimer <= 0)
+            {
+                // Reload complete
+                state.currentAmmo = _clipSize;
+                state.isReloading = false;
+            }
+            return; // Can't shoot while reloading
+        }
+
+        // Count down shoot cooldown
         if (state.cooldownTimer > 0)
         {
             state.cooldownTimer -= delta;
             return;
         }
 
+        // Check if we need to reload
+        if (state.currentAmmo <= 0 && !state.isReloading)
+        {
+            StartReload(ref state);
+            return;
+        }
+
+        // Try to shoot
         if (!input.shoot) return;
+
+        // Can't shoot if no ammo
+        if (state.currentAmmo <= 0)
+        {
+            return;
+        }
 
         state.cooldownTimer = shootCooldown;
         Shoot(ref state);
+
+        // Consume ammo
+        state.currentAmmo--;
+    }
+
+    private void StartReload(ref ShootState state)
+    {
+        state.reloadTimer = _reloadTime;
+        state.isReloading = true;
+        _onReloadEvent?.Invoke();
     }
 
     private void Shoot(ref ShootState state)
@@ -124,6 +175,14 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     }
 
     /// <summary>
+    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual.
+    /// </summary>
+    private void OnReloadEventHandler()
+    {
+        onReload?.Invoke();
+    }
+
+    /// <summary>
     /// Call this when the deagle is switched to as the active weapon.
     /// </summary>
     public void SwitchToActive()
@@ -141,6 +200,14 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
         input.shoot = false;
     }
 
+    protected override ShootState GetInitialState()
+    {
+        return new ShootState
+        {
+            currentAmmo = _clipSize
+        };
+    }
+
     public struct ShootInput : IPredictedData<ShootInput>
     {
         public bool shoot;
@@ -154,6 +221,9 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     {
         public float cooldownTimer;
         public Vector3 lastKnownForward;
+        public int currentAmmo;
+        public float reloadTimer;
+        public bool isReloading;
 
         public void Dispose()
         {

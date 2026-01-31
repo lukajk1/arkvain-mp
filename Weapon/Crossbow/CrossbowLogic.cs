@@ -14,11 +14,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     [Header("Refs")]
     [SerializeField] private Vector3 _centerOfCamera;
     [SerializeField] private LayerMask _shotLayerMask;
-    [SerializeField] private PlayerMovement _playerMovement;
-
-    [Header("Recoil")]
-    [SerializeField] private RecoilProfile _recoilProfile;
-    [SerializeField] private Recoil _recoil; 
+    [SerializeField] private PlayerMovement _playerMovement; 
 
     public float shootCooldown => 1 / _fireRate;
 
@@ -51,7 +47,7 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
         _onReloadEvent = new PredictedEvent(predictionManager, this);
         _onReloadEvent.AddListener(OnReloadEventHandler);
 
-        Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}, RecoilProfile: {(_recoilProfile != null ? "Valid" : "NULL")}");
+        Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}");
     }
 
     protected override void OnDestroy()
@@ -65,15 +61,6 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
-        if (_recoilProfile == null)
-        {
-            Debug.LogWarning("[CrossbowLogic] RecoilProfile is null!");
-            return;
-        }
-
-        // Gradually recover from recoil
-        state.recoilOffset = Vector3.Lerp(state.recoilOffset, Vector3.zero, _recoilProfile.recoverySpeed * delta);
-
         // Count down reload timer
         if (state.reloadTimer > 0)
         {
@@ -124,26 +111,11 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
 
         state.cooldownTimer = shootCooldown;
 
-        // Shoot first, THEN apply recoil (recoil affects next shot)
+        // Shoot
         Shoot(ref state);
 
         // Consume ammo
         state.currentAmmo--;
-
-        // Increment shot counter for deterministic pattern
-        state.shotCount++;
-
-        // Add recoil AFTER shooting (affects next shot's aim)
-        // Use Perlin noise for deterministic but natural-feeling recoil pattern
-        float noiseY = Mathf.PerlinNoise(_recoilProfile.noiseSeed + state.shotCount * 0.1f, 0f);
-        float noiseZ = Mathf.PerlinNoise(_recoilProfile.noiseSeed + state.shotCount * 0.1f, 100f);
-
-        // Map Perlin noise (0-1) to range (-1 to 1), then scale by recoil amounts
-        state.recoilOffset += new Vector3(
-            _recoilProfile.recoilX,
-            (noiseY * 2f - 1f) * _recoilProfile.recoilY,
-            (noiseZ * 2f - 1f) * _recoilProfile.recoilZ
-        );
     }
 
     private void StartReload(ref ShootState state)
@@ -234,12 +206,6 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     protected override void UpdateView(ShootState viewState, ShootState? verified)
     {
         base.UpdateView(viewState, verified);
-
-        // Apply server-validated recoil to visual camera rotation (owner only)
-        if (isOwner && _recoil != null)
-        {
-            _recoil.SetRecoilOffset(viewState.recoilOffset);
-        }
     }
 
 
@@ -284,8 +250,6 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
     {
         public float cooldownTimer;
         public Vector3 lastKnownForward;
-        public Vector3 recoilOffset;
-        public int shotCount; // Used for deterministic recoil pattern
         public int currentAmmo;
         public float reloadTimer;
         public bool isReloading;

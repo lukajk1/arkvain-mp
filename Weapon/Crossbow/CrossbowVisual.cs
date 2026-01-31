@@ -1,3 +1,4 @@
+using Mono.CSharp;
 using UnityEngine;
 
 /// <summary>
@@ -20,6 +21,18 @@ public class CrossbowVisual : WeaponVisual
 
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadSound;
+
+    private void Awake()
+    {
+        // Register VFX prefabs with the pool manager
+        if (VFXPoolManager.Instance != null)
+        {
+            if (_hitBodyParticles != null)
+                VFXPoolManager.Instance.RegisterPrefab(_hitBodyParticles);
+            if (_hitWallParticles != null)
+                VFXPoolManager.Instance.RegisterPrefab(_hitWallParticles);
+        }
+    }
 
     private void OnEnable()
     {
@@ -68,23 +81,26 @@ public class CrossbowVisual : WeaponVisual
     /// </summary>
     private void OnHit(HitInfo hitInfo)
     {
-        // Play appropriate particle effect
+        // VFX only shows for the attacker (local player who shot)
+        if (!_crossbowLogic.isOwner) return;
+
+        // Play appropriate particle effect from pool
         if (hitInfo.hitPlayer)
         {
-            if (_hitBodyParticles != null)
+            if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
             {
-                Instantiate(_hitBodyParticles, hitInfo.position, Quaternion.identity);
+                VFXPoolManager.Instance.Spawn(_hitBodyParticles, hitInfo.position, Quaternion.identity);
             }
         }
         else
         {
-            if (_hitWallParticles != null)
+            if (_hitWallParticles != null && VFXPoolManager.Instance != null)
             {
-                Instantiate(_hitWallParticles, hitInfo.position, Quaternion.identity);
+                VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
             }
         }
 
-        // Play hit sound
+        // Hit sound plays for everyone (spatial audio)
         if (_hitSound != null)
         {
             SoundManager.Play(new SoundData(_hitSound, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));

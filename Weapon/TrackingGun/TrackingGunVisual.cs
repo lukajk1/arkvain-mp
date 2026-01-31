@@ -25,6 +25,18 @@ public class TrackingGunVisual : WeaponVisual
     [SerializeField] private Animator _animator;
     [SerializeField] private string _equipAnimationTrigger = "Equip";
 
+    private void Awake()
+    {
+        // Register VFX prefabs with the pool manager
+        if (VFXPoolManager.Instance != null)
+        {
+            if (_hitBodyParticles != null)
+                VFXPoolManager.Instance.RegisterPrefab(_hitBodyParticles);
+            if (_hitWallParticles != null)
+                VFXPoolManager.Instance.RegisterPrefab(_hitWallParticles);
+        }
+    }
+
     private void OnEnable()
     {
         if (_trackingGunLogic == null)
@@ -72,19 +84,23 @@ public class TrackingGunVisual : WeaponVisual
     /// </summary>
     private void OnHit(HitInfo hitInfo)
     {
-        // Play appropriate particle effect
+        // Only show VFX for local player's hits
+        if (!_trackingGunLogic.isOwner)
+            return;
+
+        // Play appropriate particle effect from pool
         if (hitInfo.hitPlayer)
         {
-            if (_hitBodyParticles != null)
+            if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
             {
-                Instantiate(_hitBodyParticles, hitInfo.position, Quaternion.identity);
+                VFXPoolManager.Instance.Spawn(_hitBodyParticles, hitInfo.position, Quaternion.identity);
             }
         }
         else
         {
-            if (_hitWallParticles != null)
+            if (_hitWallParticles != null && VFXPoolManager.Instance != null)
             {
-                Instantiate(_hitWallParticles, hitInfo.position, Quaternion.identity);
+                VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
             }
         }
 

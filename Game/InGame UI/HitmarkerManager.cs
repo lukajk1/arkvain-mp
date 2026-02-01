@@ -6,6 +6,7 @@ public class HitmarkerManager : MonoBehaviour
     [SerializeField] private Image _hitmarker;
     [SerializeField] private float _animationDuration = 0.3f;
     [SerializeField] private float _scaleMultiplier = 1.3f; // Scale up by 30%
+    [SerializeField] private float _headshotScaleMultiplier = 1.2f; // additional scale on top
     [SerializeField] private Color _bodyHitColor = Color.white;
     [SerializeField] private Color _headshotColor = Color.red;
 
@@ -89,7 +90,10 @@ public class HitmarkerManager : MonoBehaviour
         _hitmarker.color = targetColor;
 
         // Animate scale
-        LeanTween.scale(_hitmarker.gameObject, _initialScale * _scaleMultiplier, _animationDuration)
+        float finalScaleMultiplier = _scaleMultiplier;
+        if (isHeadshot) finalScaleMultiplier *= _headshotScaleMultiplier;
+
+        LeanTween.scale(_hitmarker.gameObject, _initialScale * finalScaleMultiplier, _animationDuration)
             .setEase(LeanTweenType.easeOutCubic);
 
         // Animate alpha fade out

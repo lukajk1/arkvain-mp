@@ -22,6 +22,9 @@ public class CrossbowVisual : WeaponVisual
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadSound;
 
+    [Header("VFX Settings")]
+    [SerializeField] private float _maxVFXDistance = 50f;
+
     private void Awake()
     {
         // Register VFX prefabs with the pool manager
@@ -100,10 +103,17 @@ public class CrossbowVisual : WeaponVisual
         }
         else
         {
-            // Wall/environment effects for everyone
-            if (_hitWallParticles != null && VFXPoolManager.Instance != null)
+            // Wall/environment effects for everyone, but only if close enough to local player
+            if (Camera.main != null)
             {
-                VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
+                float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
+                if (distanceSqr < _maxVFXDistance * _maxVFXDistance)
+                {
+                    if (_hitWallParticles != null && VFXPoolManager.Instance != null)
+                    {
+                        VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
+                    }
+                }
             }
         }
     }

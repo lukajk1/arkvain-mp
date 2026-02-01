@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Handles all visual and audio feedback for the Railgun.
@@ -19,7 +20,8 @@ public class RailgunVisual : WeaponVisual
     [SerializeField] private AudioClip _hitSound;
 
     [Header("Reload Effects")]
-    [SerializeField] private AudioClip _reloadSound;
+    [FormerlySerializedAs("_reloadSound")] [SerializeField] private AudioClip _reloadCompleteClip;
+    [SerializeField] private AudioClip _passiveShotReadyClip;
 
     [Header("Switch to Active")]
     [SerializeField] private Animator _animator;
@@ -28,6 +30,7 @@ public class RailgunVisual : WeaponVisual
     [Header("VFX Settings")]
     [SerializeField] private float _maxVFXDistance = 50f;
 
+    private AudioSource _passiveHumObject;
     private void Awake()
     {
         // Register VFX prefabs with the pool manager
@@ -51,8 +54,10 @@ public class RailgunVisual : WeaponVisual
         // Subscribe to events
         _railgunLogic.OnShoot += OnShoot;
         _railgunLogic.OnHit += OnHit;
+        _railgunLogic.OnEquipped += OnEquipped;
+        _railgunLogic.OnHolstered += OnHolstered;
         _railgunLogic.onReload += OnReload;
-        _railgunLogic.onSwitchToActive += OnSwitchToActive;
+        _railgunLogic.onReloadComplete += OnReloadComplete;
     }
 
     private void OnDisable()
@@ -62,8 +67,10 @@ public class RailgunVisual : WeaponVisual
         // Unsubscribe from events
         _railgunLogic.OnShoot -= OnShoot;
         _railgunLogic.OnHit -= OnHit;
+        _railgunLogic.OnEquipped -= OnEquipped;
+        _railgunLogic.OnHolstered -= OnHolstered;
         _railgunLogic.onReload -= OnReload;
-        _railgunLogic.onSwitchToActive -= OnSwitchToActive;
+        _railgunLogic.onReloadComplete -= OnReloadComplete;
     }
 
     /// <summary>
@@ -79,6 +86,12 @@ public class RailgunVisual : WeaponVisual
         if (_shootSound != null)
         {
             SoundManager.Play(new SoundData(_shootSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+        }
+
+        if (_passiveHumObject != null)
+        {
+            SoundManager.StopLoop(_passiveHumObject);
+            _passiveHumObject = null;
         }
     }
 
@@ -126,20 +139,53 @@ public class RailgunVisual : WeaponVisual
     /// </summary>
     private void OnReload()
     {
-        if (_reloadSound != null)
+
+    }
+    
+    private void OnReloadComplete()
+    {
+        if (_reloadCompleteClip != null)
         {
-            SoundManager.Play(new SoundData(_reloadSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+            SoundManager.Play(new SoundData(_reloadCompleteClip, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+        }
+
+        if (_passiveShotReadyClip != null)
+        {
+            _passiveHumObject = SoundManager.StartLoop(new SoundData(_passiveShotReadyClip, isLooping: true));
         }
     }
 
     /// <summary>
-    /// Called when the railgun becomes the active weapon. Plays equip animation.
+    /// Called when the railgun is equipped (becomes active weapon).
+    /// Plays equip animation and any equip-specific effects.
     /// </summary>
-    private void OnSwitchToActive()
+    private void OnEquipped()
     {
         if (_animator != null && !string.IsNullOrEmpty(_equipAnimationTrigger))
         {
             _animator.SetTrigger(_equipAnimationTrigger);
         }
+
+        if (_passiveShotReadyClip != null && _passiveHumObject == null) // ensure that there is not a hum already playing
+        {
+            _passiveHumObject = SoundManager.StartLoop(new SoundData(_passiveShotReadyClip, isLooping: true));
+        }
+
+        Debug.Log("[RailgunVisual] Weapon equipped");
+    }
+
+    /// <summary>
+    /// Called when the railgun is holstered (deactivated).
+    /// </summary>
+    private void OnHolstered()
+    {
+        if (_passiveHumObject != null)
+        {
+            SoundManager.StopLoop(_passiveHumObject);
+            _passiveHumObject = null;
+        }
+
+        // Add any holster-specific logic here (cleanup, stop effects, etc.)
+        Debug.Log("[RailgunVisual] Weapon holstered");
     }
 }

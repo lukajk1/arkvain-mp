@@ -8,6 +8,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     [SerializeField] private int _maxHealth;
 
     public static event Action<PlayerID?> OnPlayerDeath;
+    public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)
     public static Action KillAllPlayers;
 
     // Event for health changes (currentHealth, maxHealth)
@@ -49,6 +50,12 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     private void Die(PlayerID? attacker = null)
     {
         OnPlayerDeath?.Invoke(owner);
+
+        // Broadcast kill event if there was an attacker
+        if (attacker.HasValue && owner.HasValue)
+        {
+            OnPlayerKilled?.Invoke(attacker.Value, owner.Value);
+        }
 
         // Record kill/death in ScoreManager (server only)
         if (predictionManager.isServer && attacker.HasValue && owner.HasValue)

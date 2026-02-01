@@ -28,6 +28,7 @@ public class TrackingGunVisual : WeaponVisual
     [Header("VFX Settings")]
     [SerializeField] private float _maxVFXDistance = 50f;
 
+
     private void Awake()
     {
         // Register VFX prefabs with the pool manager
@@ -52,7 +53,7 @@ public class TrackingGunVisual : WeaponVisual
         _trackingGunLogic.OnShoot += OnShoot;
         _trackingGunLogic.OnHit += OnHit;
         _trackingGunLogic.onReload += OnReload;
-        _trackingGunLogic.onSwitchToActive += OnSwitchToActive;
+        _trackingGunLogic.OnEquipped += OnEquipped;
     }
 
     private void OnDisable()
@@ -63,7 +64,7 @@ public class TrackingGunVisual : WeaponVisual
         _trackingGunLogic.OnShoot -= OnShoot;
         _trackingGunLogic.OnHit -= OnHit;
         _trackingGunLogic.onReload -= OnReload;
-        _trackingGunLogic.onSwitchToActive -= OnSwitchToActive;
+        _trackingGunLogic.OnEquipped -= OnEquipped;
     }
 
     /// <summary>
@@ -135,7 +136,7 @@ public class TrackingGunVisual : WeaponVisual
     /// <summary>
     /// Called when the tracking gun becomes the active weapon. Plays equip animation.
     /// </summary>
-    private void OnSwitchToActive()
+    private void OnEquipped()
     {
         if (_animator != null && !string.IsNullOrEmpty(_equipAnimationTrigger))
         {

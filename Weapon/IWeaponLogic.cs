@@ -19,10 +19,16 @@ public struct HitInfo
 public interface IWeaponLogic
 {
     /// <summary>
-    /// Called when this weapon becomes the active weapon.
-    /// Triggers visual effects like equip animations.
+    /// Called when this weapon is equipped (becomes active).
+    /// Implementations should invoke their OnEquipped event.
     /// </summary>
-    void SwitchToActive();
+    void TriggerEquipped();
+
+    /// <summary>
+    /// Called when this weapon is holstered (deactivated).
+    /// Implementations should invoke their OnHolstered event.
+    /// </summary>
+    void TriggerHolstered();
 
     /// <summary>
     /// Event fired when this weapon successfully hits a target.
@@ -35,6 +41,18 @@ public interface IWeaponLogic
     /// Subscribe to this for muzzle flash, recoil animations, etc.
     /// </summary>
     event Action OnShoot;
+
+    /// <summary>
+    /// Event fired when this weapon is equipped (becomes active).
+    /// Subscribe to this for equip sounds, animations, or starting effects.
+    /// </summary>
+    event Action OnEquipped;
+
+    /// <summary>
+    /// Event fired when this weapon is holstered (deactivated).
+    /// Subscribe to this for cleanup, stopping effects, or holster sounds.
+    /// </summary>
+    event Action OnHolstered;
 
     /// <summary>
     /// Gets the current ammo count in the weapon's magazine/clip.

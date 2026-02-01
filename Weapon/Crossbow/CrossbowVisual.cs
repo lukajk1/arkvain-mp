@@ -49,7 +49,7 @@ public class CrossbowVisual : WeaponVisual
         _crossbowLogic.OnShoot += OnShoot;
         _crossbowLogic.OnHit += OnHit;
         _crossbowLogic.onReload += OnReload;
-        _crossbowLogic.onSwitchToActive += OnSwitchToActive;
+        _crossbowLogic.OnEquipped += OnEquipped;
     }
 
     private void OnDisable()
@@ -60,7 +60,7 @@ public class CrossbowVisual : WeaponVisual
         _crossbowLogic.OnShoot -= OnShoot;
         _crossbowLogic.OnHit -= OnHit;
         _crossbowLogic.onReload -= OnReload;
-        _crossbowLogic.onSwitchToActive -= OnSwitchToActive;
+        _crossbowLogic.OnEquipped -= OnEquipped;
     }
 
     /// <summary>
@@ -133,7 +133,7 @@ public class CrossbowVisual : WeaponVisual
     /// <summary>
     /// Called when the crossbow becomes the active weapon. Plays equip animation.
     /// </summary>
-    private void OnSwitchToActive()
+    private void OnEquipped()
     {
         _viewmodel.SetActive(true);
     }

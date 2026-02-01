@@ -37,6 +37,8 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     [SerializeField] private int _primaryWeaponIndex = 0;
     [Tooltip("Index of weapon to use as secondary (0=Crossbow, 1=Deagle, 2=Railgun, 3=TrackingGun)")]
     [SerializeField] private int _secondaryWeaponIndex = 1;
+    [Tooltip("Cooldown in seconds between weapon switches")]
+    [SerializeField] private float _weaponSwitchCooldown = 0.3f;
 
     private WeaponPair[] _weapons;
     private int _primaryIndex;
@@ -104,36 +106,58 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 
     protected override void Simulate(SwitchInput input, ref SwitchState state, float delta)
     {
+        // Decrement cooldown
+        state.switchCooldown -= delta;
+
         bool weaponChanged = false;
         int targetIndex = state.currentWeaponIndex;
 
-        // Direct selection: Primary weapon
-        if (input.selectPrimary && state.currentWeaponIndex != _primaryIndex)
+        // Only process weapon switch inputs if cooldown has expired
+        if (state.switchCooldown <= 0)
         {
-            Debug.Log("[WeaponManager] Input: Select Primary");
-            targetIndex = _primaryIndex;
-            weaponChanged = true;
-        }
-        // Direct selection: Secondary weapon
-        else if (input.selectSecondary && state.currentWeaponIndex != _secondaryIndex)
-        {
-            Debug.Log("[WeaponManager] Input: Select Secondary");
-            targetIndex = _secondaryIndex;
-            weaponChanged = true;
-        }
-        // Quick switch: Toggle between primary and secondary
-        else if (input.quickSwitch)
-        {
-            Debug.Log("[WeaponManager] Input: Quick Switch");
-            targetIndex = (state.currentWeaponIndex == _primaryIndex)
-                ? _secondaryIndex
-                : _primaryIndex;
-            weaponChanged = true;
+            // Direct selection: Primary weapon
+            if (input.selectPrimary && state.currentWeaponIndex != _primaryIndex)
+            {
+                Debug.Log("[WeaponManager] Input: Select Primary");
+                targetIndex = _primaryIndex;
+                weaponChanged = true;
+            }
+            // Direct selection: Secondary weapon
+            else if (input.selectSecondary && state.currentWeaponIndex != _secondaryIndex)
+            {
+                Debug.Log("[WeaponManager] Input: Select Secondary");
+                targetIndex = _secondaryIndex;
+                weaponChanged = true;
+            }
+            // Quick switch: Toggle between primary and secondary
+            else if (input.quickSwitch)
+            {
+                Debug.Log("[WeaponManager] Input: Quick Switch");
+                targetIndex = (state.currentWeaponIndex == _primaryIndex)
+                    ? _secondaryIndex
+                    : _primaryIndex;
+                weaponChanged = true;
+            }
+            // Scroll up: Previous weapon with wrap-around
+            else if (input.scrollUp)
+            {
+                Debug.Log("[WeaponManager] Input: Scroll Up");
+                targetIndex = state.currentWeaponIndex == _primaryIndex ? _secondaryIndex : _primaryIndex;
+                weaponChanged = true;
+            }
+            // Scroll down: Next weapon with wrap-around
+            else if (input.scrollDown)
+            {
+                Debug.Log("[WeaponManager] Input: Scroll Down");
+                targetIndex = state.currentWeaponIndex == _primaryIndex ? _secondaryIndex : _primaryIndex;
+                weaponChanged = true;
+            }
         }
 
         if (weaponChanged)
         {
             state.currentWeaponIndex = targetIndex;
+            state.switchCooldown = _weaponSwitchCooldown;
             SwitchToWeaponInternal(targetIndex);
         }
     }
@@ -143,6 +167,8 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         input.quickSwitch |= InputManager.Instance.Player.QuickSwitchWeapon.WasPressedThisFrame();
         input.selectPrimary |= InputManager.Instance.Player.PrimaryWeapon.WasPressedThisFrame();
         input.selectSecondary |= InputManager.Instance.Player.SecondaryWeapon.WasPressedThisFrame();
+        input.scrollUp |= InputManager.Instance.Player.ScrollUp.WasPressedThisFrame();
+        input.scrollDown |= InputManager.Instance.Player.ScrollDown.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref SwitchInput input)
@@ -151,6 +177,8 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         input.quickSwitch = false;
         input.selectPrimary = false;
         input.selectSecondary = false;
+        input.scrollUp = false;
+        input.scrollDown = false;
     }
 
     protected override SwitchState GetInitialState()
@@ -174,9 +202,10 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 
         Debug.Log($"[WeaponManager] Switching to weapon index {index}");
 
-        // Disable all weapons
+        // Trigger holster on all weapons before disabling them
         foreach (var weapon in _weapons)
         {
+            weapon.logic?.TriggerHolstered();
             SetWeaponActive(weapon, false);
         }
 
@@ -184,8 +213,8 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         var newWeapon = _weapons[index];
         SetWeaponActive(newWeapon, true);
 
-        // Trigger switch event on the logic component
-        TriggerSwitchToActive(newWeapon.logic);
+        // Trigger equip
+        newWeapon.logic?.TriggerEquipped();
 
         // Broadcast weapon switch event (only for owner)
         if (isOwner)
@@ -228,14 +257,6 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     }
 
     /// <summary>
-    /// Calls SwitchToActive() on the weapon logic via the IWeaponLogic interface.
-    /// </summary>
-    private void TriggerSwitchToActive(IWeaponLogic logic)
-    {
-        logic?.SwitchToActive();
-    }
-
-    /// <summary>
     /// Gets all weapon logic components. Use this to subscribe to weapon events.
     /// </summary>
     public IWeaponLogic[] GetAllWeapons()
@@ -255,6 +276,8 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         public bool quickSwitch;      // Toggle between primary and secondary
         public bool selectPrimary;    // Direct select primary weapon
         public bool selectSecondary;  // Direct select secondary weapon
+        public bool scrollUp;         // Scroll to previous weapon (wraps around)
+        public bool scrollDown;       // Scroll to next weapon (wraps around)
 
         public void Dispose()
         {
@@ -264,6 +287,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     public struct SwitchState : IPredictedData<SwitchState>
     {
         public int currentWeaponIndex;
+        public float switchCooldown;
 
         public void Dispose()
         {

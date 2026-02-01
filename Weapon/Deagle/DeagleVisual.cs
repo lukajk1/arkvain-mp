@@ -52,7 +52,7 @@ public class DeagleVisual : WeaponVisual
         _deagleLogic.OnShoot += OnShoot;
         _deagleLogic.OnHit += OnHit;
         _deagleLogic.onReload += OnReload;
-        _deagleLogic.onSwitchToActive += OnSwitchToActive;
+        _deagleLogic.OnEquipped += OnEquipped;
     }
 
     private void OnDisable()
@@ -63,7 +63,7 @@ public class DeagleVisual : WeaponVisual
         _deagleLogic.OnShoot -= OnShoot;
         _deagleLogic.OnHit -= OnHit;
         _deagleLogic.onReload -= OnReload;
-        _deagleLogic.onSwitchToActive -= OnSwitchToActive;
+        _deagleLogic.OnEquipped -= OnEquipped;
     }
 
     /// <summary>
@@ -135,7 +135,7 @@ public class DeagleVisual : WeaponVisual
     /// <summary>
     /// Called when the deagle becomes the active weapon. Plays equip animation.
     /// </summary>
-    private void OnSwitchToActive()
+    private void OnEquipped()
     {
         if (_animator != null && !string.IsNullOrEmpty(_equipAnimationTrigger))
         {

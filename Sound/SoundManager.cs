@@ -145,4 +145,91 @@ public class SoundManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Starts playing a looping sound and returns the AudioSource for later control.
+    /// Call StopLoop() with the returned AudioSource when you want to stop the loop.
+    /// </summary>
+    public static AudioSource StartLoop(SoundData sound)
+    {
+        if (i == null)
+        {
+            Debug.LogError("could not start loop - no soundmanager instance");
+            return null;
+        }
+        if (sound.clip == null)
+        {
+            Debug.LogError("soundclip was null!");
+            return null;
+        }
+
+        GameObject soundObj = GetFromPool();
+        if (soundObj == null)
+        {
+            Debug.LogWarning("Sound pool exhausted! Increase SFXPoolSize or sounds are not returning to pool.");
+            return null;
+        }
+
+        AudioSource audioSource = soundObj.GetComponent<AudioSource>();
+        soundObj.transform.position = sound.soundPos;
+
+        // Reset to defaults before applying new settings
+        audioSource.volume = sound.volume;
+        audioSource.pitch = 1f;
+
+        if (sound.varyVolume)
+        {
+            float randVolume = Random.Range(sound.volume - volumeVariance, sound.volume + volumeVariance);
+            audioSource.volume = randVolume;
+        }
+
+        if (sound.varyPitch)
+        {
+            float randPitch = Random.Range(1 - pitchVariance, 1 + pitchVariance);
+            audioSource.pitch = randPitch;
+        }
+
+        if (sound.soundBlend == SoundData.SoundBlend.Spatial)
+        {
+            audioSource.spatialBlend = 1f;
+            audioSource.minDistance = sound.minDist;
+            audioSource.maxDistance = sound.maxDist;
+        }
+        else
+        {
+            audioSource.spatialBlend = 0f;
+        }
+
+        switch (sound.type)
+        {
+            case SoundData.Type.Music:
+                audioSource.outputAudioMixerGroup = i.MusicMixer;
+                break;
+            case SoundData.Type.SFX:
+                audioSource.outputAudioMixerGroup = i.SFXMixer;
+                break;
+            case SoundData.Type.Env:
+                audioSource.outputAudioMixerGroup = i.EnvMixer;
+                break;
+        }
+
+        audioSource.clip = sound.clip;
+        audioSource.loop = true; // Force looping
+        audioSource.Play();
+
+        // Don't auto-return looping sounds - caller must stop them manually
+        return audioSource;
+    }
+
+    /// <summary>
+    /// Stops a looping sound started with StartLoop() and returns it to the pool.
+    /// </summary>
+    public static void StopLoop(AudioSource audioSource)
+    {
+        if (audioSource == null) return;
+
+        audioSource.Stop();
+        audioSource.loop = false;
+        ReturnToPool(audioSource.gameObject);
+    }
+
 }

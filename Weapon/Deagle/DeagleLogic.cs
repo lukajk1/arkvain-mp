@@ -31,10 +31,11 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     // IWeaponLogic interface events (public for HitmarkerManager)
     public event System.Action<HitInfo> OnHit;
     public event System.Action OnShoot;
+    public event System.Action OnEquipped;
+    public event System.Action OnHolstered;
 
     // Additional events for DeagleVisual
     public event System.Action onReload;
-    public event System.Action onSwitchToActive;
 
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
@@ -190,11 +191,19 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     }
 
     /// <summary>
-    /// Call this when the deagle is switched to as the active weapon.
+    /// Called by WeaponManager when this weapon is equipped.
     /// </summary>
-    public void SwitchToActive()
+    public void TriggerEquipped()
     {
-        onSwitchToActive?.Invoke();
+        OnEquipped?.Invoke();
+    }
+
+    /// <summary>
+    /// Called by WeaponManager when this weapon is holstered.
+    /// </summary>
+    public void TriggerHolstered()
+    {
+        OnHolstered?.Invoke();
     }
 
     protected override void UpdateInput(ref ShootInput input)

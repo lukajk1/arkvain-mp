@@ -1,16 +1,26 @@
 using PurrNet;
 using System.Collections.Generic;
+using UnityEngine;
 
 /// <summary>
-/// Server-authoritative score tracking system.
+/// Server-authoritative 1v1 game mode manager.
+/// Tracks kills/deaths and checks win conditions.
 /// Uses standard PurrNet (non-predicted) networking for reliable, synchronized game stats.
 /// </summary>
-public class ScoreManager : NetworkBehaviour
+public class GameManager1v1 : NetworkBehaviour
 {
+    [Header("1v1 Mode Settings")]
+    [SerializeField] private int _scoreLimit = 10;
+
     // Server-authoritative score dictionary
     // Automatically syncs to all clients when changed on server
     public SyncVar<Dictionary<PlayerID, int>> kills = new SyncVar<Dictionary<PlayerID, int>>();
     public SyncVar<Dictionary<PlayerID, int>> deaths = new SyncVar<Dictionary<PlayerID, int>>();
+
+    // Event fired when a player wins (includes winner's PlayerID)
+    public static event System.Action<PlayerID> OnPlayerVictory;
+
+    private bool _matchEnded = false;
 
     protected override void OnSpawned(bool isRetroactive)
     {
@@ -21,15 +31,19 @@ public class ScoreManager : NetworkBehaviour
         {
             kills.value = new Dictionary<PlayerID, int>();
             deaths.value = new Dictionary<PlayerID, int>();
+            _matchEnded = false;
         }
     }
 
     /// <summary>
     /// Called by server to record a kill.
+    /// Checks win condition after updating scores.
     /// </summary>
     [ServerRpc]
     public void RecordKill(PlayerID killer, PlayerID victim)
     {
+        if (_matchEnded) return; // Don't record kills after match ends
+
         // Initialize if needed
         if (!kills.value.ContainsKey(killer))
             kills.value[killer] = 0;
@@ -43,6 +57,40 @@ public class ScoreManager : NetworkBehaviour
         // Force sync to clients (required when modifying dictionary contents)
         kills.SetDirty();
         deaths.SetDirty();
+
+        // Check win condition
+        CheckWinCondition();
+    }
+
+    /// <summary>
+    /// Checks if any player has reached the score limit.
+    /// Server-only.
+    /// </summary>
+    private void CheckWinCondition()
+    {
+        if (!isServer || _matchEnded) return;
+
+        foreach (var kvp in kills.value)
+        {
+            if (kvp.Value >= _scoreLimit)
+            {
+                // Winner found!
+                _matchEnded = true;
+                TriggerVictory(kvp.Key);
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Triggers victory event on all clients.
+    /// Server-only.
+    /// </summary>
+    [ObserversRpc]
+    private void TriggerVictory(PlayerID winner)
+    {
+        Debug.Log($"[ScoreManager] Player {winner} wins with {GetKills(winner)} kills!");
+        OnPlayerVictory?.Invoke(winner);
     }
 
     /// <summary>
@@ -85,5 +133,22 @@ public class ScoreManager : NetworkBehaviour
         deaths.value.Clear();
         kills.SetDirty();
         deaths.SetDirty();
+        _matchEnded = false;
+    }
+
+    /// <summary>
+    /// Get the current score limit for this 1v1 match.
+    /// </summary>
+    public int GetScoreLimit()
+    {
+        return _scoreLimit;
+    }
+
+    /// <summary>
+    /// Check if the match has ended.
+    /// </summary>
+    public bool IsMatchEnded()
+    {
+        return _matchEnded;
     }
 }

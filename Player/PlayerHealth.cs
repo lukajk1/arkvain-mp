@@ -2,21 +2,18 @@ using PurrNet;
 using PurrNet.Prediction;
 using System;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
     [SerializeField] private int _maxHealth;
-    [SerializeField] private Slider _healthSlider;
+
     public static event Action<PlayerID?> OnPlayerDeath;
     public static Action KillAllPlayers;
 
-    [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
+    // Event for health changes (currentHealth, maxHealth)
+    public event Action<int, int> OnHealthChanged;
 
-    void Awake()
-    {
-        _healthSlider.value = 1f;
-    }
+    [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
 
     protected override void LateAwake()
     {
@@ -56,7 +53,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         // Record kill/death in ScoreManager (server only)
         if (predictionManager.isServer && attacker.HasValue && owner.HasValue)
         {
-            ScoreManager scoreManager = FindFirstObjectByType<ScoreManager>();
+            GameManager1v1 scoreManager = FindFirstObjectByType<GameManager1v1>();
             if (scoreManager != null)
             {
                 scoreManager.RecordKill(attacker.Value, owner.Value);
@@ -119,10 +116,8 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     {
         base.UpdateView(viewState, verified);
 
-        if (_healthSlider)
-        {
-            _healthSlider.value = (float)currentState.health / _maxHealth;
-        }
+        // Fire event for visual components to update
+        OnHealthChanged?.Invoke(currentState.health, _maxHealth);
     }
 
     public struct HealthState : IPredictedData<PlayerHealth.HealthState>

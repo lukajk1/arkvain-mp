@@ -7,15 +7,18 @@ using System.Linq;
 /// Displays scoreboard for 1v1 matches.
 /// Shows kills/deaths for both players in a single text field.
 /// </summary>
-public class ScoreboardUI : MonoBehaviour
+public class ScoreboardUI_1v1 : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private ScoreManager _scoreManager;
+    [SerializeField] private GameManager1v1 _scoreManager;
     [SerializeField] private TextMeshProUGUI _scoreText;
+    [SerializeField] private GameObject _matchResultObject;
+    [SerializeField] private TextMeshProUGUI _matchResultText;
 
     [Header("Format")]
     [SerializeField] private string _scoreFormat = "Player {0}: {1} / Player {2}: {3}";
-    // "Player 123: 5 / Player 456: 3" (playerID: kills)
+    [SerializeField] private string _victoryMessage = "VICTORY!";
+    [SerializeField] private string _defeatMessage = "DEFEAT";
 
     [Header("Settings")]
     [SerializeField] private float _updateInterval = 0.5f; // Update UI every 0.5 seconds
@@ -28,7 +31,7 @@ public class ScoreboardUI : MonoBehaviour
     {
         if (_scoreManager == null)
         {
-            _scoreManager = FindFirstObjectByType<ScoreManager>();
+            _scoreManager = FindFirstObjectByType<GameManager1v1>();
             if (_scoreManager == null)
             {
                 Debug.LogError("[ScoreboardUI] ScoreManager not found in scene!");
@@ -37,9 +40,18 @@ public class ScoreboardUI : MonoBehaviour
             }
         }
 
+        // Hide match result object initially
+        if (_matchResultObject != null)
+        {
+            _matchResultObject.SetActive(false);
+        }
+
         // Subscribe to score changes for immediate updates
         _scoreManager.kills.onChanged += OnScoresChanged;
         _scoreManager.deaths.onChanged += OnScoresChanged;
+
+        // Subscribe to victory event
+        GameManager1v1.OnPlayerVictory += OnPlayerVictory;
 
         UpdateUI();
     }
@@ -51,6 +63,9 @@ public class ScoreboardUI : MonoBehaviour
             _scoreManager.kills.onChanged -= OnScoresChanged;
             _scoreManager.deaths.onChanged -= OnScoresChanged;
         }
+
+        // Unsubscribe from static event
+        GameManager1v1.OnPlayerVictory -= OnPlayerVictory;
     }
 
     private void Update()
@@ -95,5 +110,29 @@ public class ScoreboardUI : MonoBehaviour
 
         // Update single text field
         _scoreText.text = string.Format(_scoreFormat, player1IDStr, player1Score, player2IDStr, player2Score);
+    }
+
+    /// <summary>
+    /// Called when a player wins the match.
+    /// Shows victory or defeat message based on whether the local player won.
+    /// </summary>
+    private void OnPlayerVictory(PlayerID winner)
+    {
+        if (_matchResultObject == null || _matchResultText == null) return;
+
+        // Check if the local player is the winner
+        PlayerID localPlayerID = NetworkManager.main.localPlayer;
+
+        Debug.Log($"[ScoreboardUI_1v1] OnPlayerVictory called. Winner ID: {winner.id}, Local PlayerID: {localPlayerID.id}");
+
+        bool isLocalPlayerWinner = localPlayerID.id == winner.id;
+
+        // Set appropriate message
+        _matchResultText.text = isLocalPlayerWinner ? _victoryMessage : _defeatMessage;
+
+        // Show the match result object
+        _matchResultObject.SetActive(true);
+
+        Debug.Log($"[ScoreboardUI_1v1] Match ended. Winner: {winner.id}, Local player: {localPlayerID.id}, Victory: {isLocalPlayerWinner}");
     }
 }

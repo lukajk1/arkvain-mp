@@ -84,30 +84,30 @@ public class TrackingGunVisual : WeaponVisual
     /// </summary>
     private void OnHit(HitInfo hitInfo)
     {
-        // Only show VFX for local player's hits
-        if (!_trackingGunLogic.isOwner)
-            return;
-
         // Play appropriate particle effect from pool
         if (hitInfo.hitPlayer)
         {
-            if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
+            // Blood effects and hit sound only for attacker
+            if (_trackingGunLogic.isOwner)
             {
-                VFXPoolManager.Instance.Spawn(_hitBodyParticles, hitInfo.position, Quaternion.identity);
+                if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
+                {
+                    VFXPoolManager.Instance.Spawn(_hitBodyParticles, hitInfo.position, Quaternion.identity);
+                }
+
+                if (_hitSound != null)
+                {
+                    SoundManager.Play(new SoundData(_hitSound, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
+                }
             }
         }
         else
         {
+            // Wall/environment effects for everyone
             if (_hitWallParticles != null && VFXPoolManager.Instance != null)
             {
                 VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
             }
-        }
-
-        // Play hit sound
-        if (_hitSound != null)
-        {
-            SoundManager.Play(new SoundData(_hitSound, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
         }
     }
 

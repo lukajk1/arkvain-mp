@@ -81,29 +81,30 @@ public class CrossbowVisual : WeaponVisual
     /// </summary>
     private void OnHit(HitInfo hitInfo)
     {
-        // VFX only shows for the attacker (local player who shot)
-        if (!_crossbowLogic.isOwner) return;
-
         // Play appropriate particle effect from pool
         if (hitInfo.hitPlayer)
         {
-            if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
+            // Blood effects and hit sound only for attacker
+            if (_crossbowLogic.isOwner)
             {
-                VFXPoolManager.Instance.Spawn(_hitBodyParticles, hitInfo.position, Quaternion.identity);
+                if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
+                {
+                    VFXPoolManager.Instance.Spawn(_hitBodyParticles, hitInfo.position, Quaternion.identity);
+                }
+
+                if (_hitSound != null)
+                {
+                    SoundManager.Play(new SoundData(_hitSound, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
+                }
             }
         }
         else
         {
+            // Wall/environment effects for everyone
             if (_hitWallParticles != null && VFXPoolManager.Instance != null)
             {
                 VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
             }
-        }
-
-        // Hit sound plays for everyone (spatial audio)
-        if (_hitSound != null)
-        {
-            SoundManager.Play(new SoundData(_hitSound, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
         }
     }
 

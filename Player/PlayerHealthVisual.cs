@@ -16,8 +16,11 @@ public class PlayerHealthVisual : MonoBehaviour
     [SerializeField] private Transform _damageFlashContainer;
     [SerializeField] private float _damageFlashScaleY = 2f;
     [SerializeField] private float _damageFlashDuration = 0.3f;
+    [SerializeField] private int _healthBreakpoints = 10;
+    [SerializeField] private float _cascadeDelay = 0.05f;
 
     private float _previousHealthPercent = 1f;
+    private int _previousBreakpoint = -1;
 
     private void Awake()
     {
@@ -52,14 +55,51 @@ public class PlayerHealthVisual : MonoBehaviour
 
         float newHealthPercent = (float)currentHealth / maxHealth;
 
-        // Check if health decreased (took damage)
-        if (newHealthPercent < _previousHealthPercent && _damageFlashPrefab != null)
+        // Calculate current breakpoint (0 = 100%, 1 = 90%, 2 = 80%, etc.)
+        int currentBreakpoint = Mathf.FloorToInt((1f - newHealthPercent) * _healthBreakpoints);
+
+        // Initialize previous breakpoint on first update
+        if (_previousBreakpoint == -1)
         {
-            CreateDamageFlash(_previousHealthPercent, newHealthPercent);
+            _previousBreakpoint = currentBreakpoint;
         }
 
+        // Check if we crossed into a new breakpoint (took enough damage)
+        if (currentBreakpoint > _previousBreakpoint && _damageFlashPrefab != null)
+        {
+            // Calculate how many breakpoints were crossed
+            int breakpointsCrossed = currentBreakpoint - _previousBreakpoint;
+
+            // Trigger a flash for each breakpoint crossed, with cascading delay
+            for (int i = 0; i < breakpointsCrossed; i++)
+            {
+                int targetBreakpoint = _previousBreakpoint + i + 1;
+                float segmentEnd = 1f - (targetBreakpoint / (float)_healthBreakpoints);
+                float segmentStart = 1f - ((targetBreakpoint - 1) / (float)_healthBreakpoints);
+                float delay = i * _cascadeDelay;
+
+                CreateDamageFlashDelayed(segmentStart, segmentEnd, delay);
+            }
+        }
+
+        _previousBreakpoint = currentBreakpoint;
         _previousHealthPercent = newHealthPercent;
         _healthSlider.value = newHealthPercent;
+    }
+
+    /// <summary>
+    /// Creates a damage flash with a delay.
+    /// </summary>
+    private void CreateDamageFlashDelayed(float previousPercent, float currentPercent, float delay)
+    {
+        if (delay > 0)
+        {
+            LeanTween.delayedCall(gameObject, delay, () => CreateDamageFlash(previousPercent, currentPercent));
+        }
+        else
+        {
+            CreateDamageFlash(previousPercent, currentPercent);
+        }
     }
 
     /// <summary>

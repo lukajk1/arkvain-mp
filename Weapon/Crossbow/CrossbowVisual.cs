@@ -22,9 +22,6 @@ public class CrossbowVisual : WeaponVisual
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadSound;
 
-    [Header("VFX Settings")]
-    [SerializeField] private float _maxVFXDistance = 50f;
-
     private void Awake()
     {
         // Register VFX prefabs with the pool manager
@@ -107,7 +104,7 @@ public class CrossbowVisual : WeaponVisual
             if (Camera.main != null)
             {
                 float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
-                if (distanceSqr < _maxVFXDistance * _maxVFXDistance)
+                if (distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
                 {
                     if (_hitWallParticles != null && VFXPoolManager.Instance != null)
                     {

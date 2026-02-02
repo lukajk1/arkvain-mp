@@ -26,6 +26,9 @@ public class ClientGame : MonoBehaviour
     }
 
     private static List<object> cursorLockList = new();
+
+    // the distance at which to stop rendering environmental hit effects
+    public static float maxVFXDistance = 38f;
     private void Awake()
     {
         if (Instance != null)

@@ -25,9 +25,6 @@ public class DeagleVisual : WeaponVisual
     [SerializeField] private Animator _animator;
     [SerializeField] private string _equipAnimationTrigger = "Equip";
 
-    [Header("VFX Settings")]
-    [SerializeField] private float _maxVFXDistance = 50f;
-
     private void Awake()
     {
         // Register VFX prefabs with the pool manager
@@ -110,7 +107,7 @@ public class DeagleVisual : WeaponVisual
             if (Camera.main != null)
             {
                 float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
-                if (distanceSqr < _maxVFXDistance * _maxVFXDistance)
+                if (distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
                 {
                     if (_hitWallParticles != null && VFXPoolManager.Instance != null)
                     {

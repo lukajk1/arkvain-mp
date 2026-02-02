@@ -21,6 +21,7 @@ public class HitmarkerManager : MonoBehaviour
     [SerializeField] private AudioClip _headShotClip;
 
     private Vector3 _initialScale;
+    private Vector3 _killIconInitialScale;
     private int _currentTweenId = -1;
     private int _killIconTweenId = -1;
     private WeaponManager _localWeaponManager;
@@ -36,6 +37,7 @@ public class HitmarkerManager : MonoBehaviour
 
         if (_killIcon != null)
         {
+            _killIconInitialScale = _killIcon.transform.localScale;
             _killIcon.color = _headshotColor;
             SetKillIconAlpha(0f);
         }
@@ -162,12 +164,11 @@ public class HitmarkerManager : MonoBehaviour
         LeanTween.delayedCall(_killIconDelay, () =>
         {
             // Reset to initial state
-            Vector3 initialScale = _killIcon.transform.localScale;
-            _killIcon.transform.localScale = initialScale;
+            _killIcon.transform.localScale = _killIconInitialScale;
             SetKillIconAlpha(1f);
 
             // Animate scale up (expand outwards like hitmarker)
-            LeanTween.scale(_killIcon.gameObject, initialScale * _killIconInitialRelativeScale, _killIconDuration)
+            LeanTween.scale(_killIcon.gameObject, _killIconInitialScale * _killIconInitialRelativeScale, _killIconDuration)
                 .setEase(LeanTweenType.easeOutCubic);
 
             // Animate alpha fade out

@@ -4,9 +4,9 @@ using System;
 /// <summary>
 /// Base class for all weapon logic components.
 /// Provides common events and functionality that all weapons share.
-/// Implements IWeaponLogic interface and sits between PredictedIdentity and specific weapon implementations.
+/// Implements IReloadableWeaponLogic interface and sits between PredictedIdentity and specific weapon implementations.
 /// </summary>
-public abstract class BaseWeaponLogic<TInput, TState> : PredictedIdentity<TInput, TState>, IWeaponLogic
+public abstract class BaseWeaponLogic<TInput, TState> : PredictedIdentity<TInput, TState>, IReloadableWeaponLogic
     where TInput : struct, IPredictedData<TInput>
     where TState : struct, IPredictedData<TState>
 {
@@ -15,6 +15,10 @@ public abstract class BaseWeaponLogic<TInput, TState> : PredictedIdentity<TInput
     public event Action OnShoot;
     public event Action OnEquipped;
     public event Action OnHolstered;
+
+    // IReloadableWeaponLogic interface events
+    public event Action onReload;
+    public event Action onReloadComplete;
 
     // IWeaponLogic interface properties - must be overridden by derived classes
     public abstract int CurrentAmmo { get; }
@@ -30,10 +34,6 @@ public abstract class BaseWeaponLogic<TInput, TState> : PredictedIdentity<TInput
     {
         OnHolstered?.Invoke();
     }
-
-    // Additional common events that weapons might use
-    public event Action onReload;
-    public event Action onReloadComplete;
 
     // Protected helpers to invoke events from derived classes
     protected void InvokeOnHit(HitInfo hitInfo)

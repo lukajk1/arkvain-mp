@@ -70,3 +70,20 @@ public interface IWeaponLogic
     /// </summary>
     bool isOwner { get; }
 }
+
+/// <summary>
+/// Extended weapon logic interface that includes reload events.
+/// Not all weapons may support reloading, so this is kept as a separate interface.
+/// </summary>
+public interface IReloadableWeaponLogic : IWeaponLogic
+{
+    /// <summary>
+    /// Event fired when this weapon starts reloading.
+    /// </summary>
+    event Action onReload;
+
+    /// <summary>
+    /// Event fired when this weapon finishes reloading.
+    /// </summary>
+    event Action onReloadComplete;
+}

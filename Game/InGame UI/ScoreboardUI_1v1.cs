@@ -88,6 +88,13 @@ public class ScoreboardUI_1v1 : MonoBehaviour
     {
         if (_scoreManager == null || _scoreText == null) return;
 
+        // Check if dictionaries are initialized (they might be null before server spawns the GameManager)
+        if (_scoreManager.kills.value == null || _scoreManager.deaths.value == null)
+        {
+            _scoreText.text = "Waiting for match to start...";
+            return;
+        }
+
         // Get all players with scores
         var players = _scoreManager.kills.value.Keys
             .Union(_scoreManager.deaths.value.Keys)

@@ -13,11 +13,6 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
     [SerializeField] private AudioClip _shootSound;
 
-    [Header("Hit Effects")]
-    [SerializeField] private GameObject _hitBodyParticles;
-    [SerializeField] private GameObject _hitWallParticles;
-    [SerializeField] private AudioClip _hitSound;
-
     [Header("Reload Effects")]
     [FormerlySerializedAs("_reloadSound")] [SerializeField] private AudioClip _reloadCompleteClip;
     [SerializeField] private AudioClip _passiveShotReadyClip;
@@ -28,14 +23,7 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     private AudioSource _passiveHumObject;
     private void Awake()
     {
-        // Register VFX prefabs with the pool manager
-        if (VFXPoolManager.Instance != null)
-        {
-            if (_hitBodyParticles != null)
-                VFXPoolManager.Instance.RegisterPrefab(_hitBodyParticles);
-            if (_hitWallParticles != null)
-                VFXPoolManager.Instance.RegisterPrefab(_hitWallParticles);
-        }
+
     }
 
 
@@ -68,38 +56,8 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     /// </summary>
     protected override void OnHit(HitInfo hitInfo)
     {
-        // Play appropriate particle effect from pool
-        if (hitInfo.hitPlayer)
-        {
-            // Blood effects and hit sound only for attacker
-            if (_weaponLogic.isOwner)
-            {
-                if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
-                {
-                    VFXPoolManager.Instance.Spawn(_hitBodyParticles, hitInfo.position, Quaternion.identity);
-                }
-
-                if (_hitSound != null)
-                {
-                    SoundManager.Play(new SoundData(_hitSound, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
-                }
-            }
-        }
-        else
-        {
-            // Wall/environment effects for everyone, but only if close enough to local player
-            if (Camera.main != null)
-            {
-                float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
-                if (distanceSqr < _maxVFXDistance * _maxVFXDistance)
-                {
-                    if (_hitWallParticles != null && VFXPoolManager.Instance != null)
-                    {
-                        VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
-                    }
-                }
-            }
-        }
+        // Play hit particles via centralized manager
+        WeaponHitEffectsManager.PlayHitEffect(hitInfo, _weaponLogic.isOwner);
     }
 
     /// <summary>

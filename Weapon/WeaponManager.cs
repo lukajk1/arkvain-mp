@@ -13,9 +13,9 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     public class WeaponPair
     {
         public IWeaponLogic logic;
-        public WeaponVisual visual;
+        public WeaponVisualBase visual;
 
-        public WeaponPair(IWeaponLogic logic, WeaponVisual visual)
+        public WeaponPair(IWeaponLogic logic, WeaponVisualBase visual)
         {
             this.logic = logic;
             this.visual = visual;
@@ -40,9 +40,14 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     [Tooltip("Cooldown in seconds between weapon switches")]
     [SerializeField] private float _weaponSwitchCooldown = 0.3f;
 
+    [Header("Audio")]
+    [Tooltip("Sound to play when switching weapons")]
+    [SerializeField] private AudioClip _weaponSwitchSound;
+
     private WeaponPair[] _weapons;
     private int _primaryIndex;
     private int _secondaryIndex;
+    private bool _isInitialized = false;
 
     /// <summary>
     /// Static event broadcast when a local player's WeaponManager is initialized.
@@ -91,8 +96,9 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 
         Debug.Log("[WeaponManager] All weapons disabled");
 
-        // Enable primary weapon
+        // Enable primary weapon (without sound)
         SwitchToWeaponInternal(_primaryIndex);
+        _isInitialized = true; // Mark as initialized after first weapon is equipped
 
         Debug.Log($"[WeaponManager] Primary weapon enabled (index {_primaryIndex})");
 
@@ -215,6 +221,12 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 
         // Trigger equip
         newWeapon.logic?.TriggerEquipped();
+
+        // Play weapon switch sound (only for owner and after initialization)
+        if (isOwner && _isInitialized && _weaponSwitchSound != null)
+        {
+            SoundManager.Play(new SoundData(_weaponSwitchSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+        }
 
         // Broadcast weapon switch event (only for owner)
         if (isOwner)

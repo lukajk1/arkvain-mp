@@ -1,18 +1,48 @@
 using UnityEngine;
 using Animancer;
+using PurrNet.Prediction;
 
 /// <summary>
-/// Base class for weapon visual components.
+/// Non-generic base class for weapon visuals.
+/// Provides common functionality for showing/hiding viewmodels.
+/// </summary>
+public abstract class WeaponVisualBase : MonoBehaviour
+{
+    [Header("Viewmodel")]
+    [SerializeField] protected GameObject _viewmodel;
+
+    /// <summary>
+    /// Shows the weapon viewmodel.
+    /// </summary>
+    public virtual void Show()
+    {
+        if (_viewmodel != null)
+        {
+            _viewmodel.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// Hides the weapon viewmodel.
+    /// </summary>
+    public virtual void Hide()
+    {
+        if (_viewmodel != null)
+        {
+            _viewmodel.SetActive(false);
+        }
+    }
+}
+
+/// <summary>
+/// Generic base class for weapon visual components.
 /// Handles showing/hiding the weapon viewmodel and provides common animation/audio functionality.
 /// Automatically subscribes to weapon logic events.
 /// </summary>
-public abstract class WeaponVisual<TLogic> : MonoBehaviour where TLogic : IWeaponLogic
+public abstract class WeaponVisual<TLogic> : WeaponVisualBase where TLogic : IWeaponLogic
 {
     [Header("References")]
     [SerializeField] protected TLogic _weaponLogic;
-
-    [Header("Viewmodel")]
-    [SerializeField] protected GameObject _viewmodel;
 
     [Header("Animation (Optional)")]
     [SerializeField] protected AnimancerComponent _animancer;
@@ -41,11 +71,11 @@ public abstract class WeaponVisual<TLogic> : MonoBehaviour where TLogic : IWeapo
         _weaponLogic.OnEquipped += OnEquipped;
         _weaponLogic.OnHolstered += OnHolstered;
 
-        // Subscribe to additional events if available (optional)
-        if (_weaponLogic is BaseWeaponLogic<IPredictedData, IPredictedData> baseLogic)
+        // Subscribe to reload events if available (optional)
+        if (_weaponLogic is IReloadableWeaponLogic reloadableLogic)
         {
-            baseLogic.onReload += OnReload;
-            baseLogic.onReloadComplete += OnReloadComplete;
+            reloadableLogic.onReload += OnReload;
+            reloadableLogic.onReloadComplete += OnReloadComplete;
         }
     }
 
@@ -59,33 +89,11 @@ public abstract class WeaponVisual<TLogic> : MonoBehaviour where TLogic : IWeapo
         _weaponLogic.OnEquipped -= OnEquipped;
         _weaponLogic.OnHolstered -= OnHolstered;
 
-        // Unsubscribe from additional events if available
-        if (_weaponLogic is BaseWeaponLogic<IPredictedData, IPredictedData> baseLogic)
+        // Unsubscribe from reload events if available
+        if (_weaponLogic is IReloadableWeaponLogic reloadableLogic)
         {
-            baseLogic.onReload -= OnReload;
-            baseLogic.onReloadComplete -= OnReloadComplete;
-        }
-    }
-
-    /// <summary>
-    /// Shows the weapon viewmodel.
-    /// </summary>
-    public virtual void Show()
-    {
-        if (_viewmodel != null)
-        {
-            _viewmodel.SetActive(true);
-        }
-    }
-
-    /// <summary>
-    /// Hides the weapon viewmodel.
-    /// </summary>
-    public virtual void Hide()
-    {
-        if (_viewmodel != null)
-        {
-            _viewmodel.SetActive(false);
+            reloadableLogic.onReload -= OnReload;
+            reloadableLogic.onReloadComplete -= OnReloadComplete;
         }
     }
 

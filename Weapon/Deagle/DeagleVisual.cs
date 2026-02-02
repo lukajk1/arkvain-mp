@@ -4,7 +4,7 @@ using UnityEngine;
 /// Handles all visual and audio feedback for the Deagle.
 /// Subscribes to events from DeagleLogic and plays appropriate effects.
 /// </summary>
-public class DeagleVisual : WeaponVisual
+public class DeagleVisual : WeaponVisual<DeagleLogic>
 {
     [Header("References")]
     [SerializeField] private DeagleLogic _deagleLogic;

@@ -2,7 +2,7 @@ using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
 
-public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLogic.ShootState>, IWeaponLogic
+public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogic.ShootState>
 {
     [Header("Stats")]
     [SerializeField] private float _fireRate = 1f;
@@ -20,19 +20,9 @@ public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLo
 
     public float shootCooldown => 1 / _fireRate;
 
-    // IWeaponLogic interface properties
-    public int CurrentAmmo => currentState.currentAmmo;
-    public int MaxAmmo => _clipSize;
-
-    // IWeaponLogic interface events (public for HitmarkerManager)
-    public event System.Action<HitInfo> OnHit;
-    public event System.Action OnShoot;
-    public event System.Action OnEquipped;
-    public event System.Action OnHolstered;
-
-    // Additional events for RailgunVisual
-    public event System.Action onReload;
-    public event System.Action onReloadComplete;
+    // IWeaponLogic interface properties (from BaseWeaponLogic)
+    public override int CurrentAmmo => currentState.currentAmmo;
+    public override int MaxAmmo => _clipSize;
 
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
@@ -68,7 +58,7 @@ public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLo
                 // Reload complete
                 state.currentAmmo = _clipSize;
                 state.isReloading = false;
-                onReloadComplete?.Invoke();
+                InvokeReloadCompleteEvent(); // Call base class helper
             }
             return; // Can't shoot while reloading
         }
@@ -115,6 +105,7 @@ public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLo
         state.reloadTimer = _reloadTime;
         state.isReloading = true;
         _onReloadEvent?.Invoke();
+        InvokeReloadEvent(); // Call base class helper
     }
 
     private void Shoot(ref ShootState state)
@@ -166,7 +157,7 @@ public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLo
     /// </summary>
     private void OnShootEventHandler()
     {
-        OnShoot?.Invoke();
+        InvokeOnShoot();
     }
 
     /// <summary>
@@ -174,7 +165,7 @@ public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLo
     /// </summary>
     private void OnHitEventHandler(HitInfo hitInfo)
     {
-        OnHit?.Invoke(hitInfo);
+        InvokeOnHit(hitInfo);
     }
 
     /// <summary>
@@ -182,24 +173,9 @@ public class RailgunLogic : PredictedIdentity<RailgunLogic.ShootInput, RailgunLo
     /// </summary>
     private void OnReloadEventHandler()
     {
-        onReload?.Invoke();
+        InvokeReloadEvent();
     }
 
-    /// <summary>
-    /// Called by WeaponManager when this weapon is equipped.
-    /// </summary>
-    public void TriggerEquipped()
-    {
-        OnEquipped?.Invoke();
-    }
-
-    /// <summary>
-    /// Called by WeaponManager when this weapon is holstered.
-    /// </summary>
-    public void TriggerHolstered()
-    {
-        OnHolstered?.Invoke();
-    }
 
     protected override void UpdateInput(ref ShootInput input)
     {

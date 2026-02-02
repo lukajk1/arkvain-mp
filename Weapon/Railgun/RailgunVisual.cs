@@ -6,21 +6,8 @@ using Animancer;
 /// Handles all visual and audio feedback for the Railgun.
 /// Subscribes to events from RailgunLogic and plays appropriate effects.
 /// </summary>
-public class RailgunVisual : WeaponVisual
+public class RailgunVisual : WeaponVisual<RailgunLogic>
 {
-    [Header("References")]
-    [SerializeField] private RailgunLogic _railgunLogic;
-    [SerializeField] private AnimancerComponent _animancer;
-
-    [Header("Animation Clips")]
-    [SerializeField] private AnimationClip _equipClip;
-    [SerializeField] private AnimationClip _idleClip;
-    [SerializeField] private AnimationClip _shootClip;
-    [SerializeField] private AnimationClip _reloadClip;
-
-    [Header("Animation Settings")]
-    [SerializeField] private float _defaultFadeDuration = 0.25f;
-    [SerializeField] private float _shootFadeDuration = 0.1f;
 
     [Header("Shoot Effects")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
@@ -39,7 +26,6 @@ public class RailgunVisual : WeaponVisual
     [SerializeField] private float _maxVFXDistance = 50f;
 
     private AudioSource _passiveHumObject;
-    private AnimancerState _currentState;
     private void Awake()
     {
         // Register VFX prefabs with the pool manager
@@ -52,47 +38,13 @@ public class RailgunVisual : WeaponVisual
         }
     }
 
-    private void OnEnable()
-    {
-        if (_railgunLogic == null)
-        {
-            Debug.LogError("[RailgunVisual] RailgunLogic reference is null!");
-            return;
-        }
-
-        // Subscribe to events
-        _railgunLogic.OnShoot += OnShoot;
-        _railgunLogic.OnHit += OnHit;
-        _railgunLogic.OnEquipped += OnEquipped;
-        _railgunLogic.OnHolstered += OnHolstered;
-        _railgunLogic.onReload += OnReload;
-        _railgunLogic.onReloadComplete += OnReloadComplete;
-    }
-
-    private void OnDisable()
-    {
-        if (_railgunLogic == null) return;
-
-        // Unsubscribe from events
-        _railgunLogic.OnShoot -= OnShoot;
-        _railgunLogic.OnHit -= OnHit;
-        _railgunLogic.OnEquipped -= OnEquipped;
-        _railgunLogic.OnHolstered -= OnHolstered;
-        _railgunLogic.onReload -= OnReload;
-        _railgunLogic.onReloadComplete -= OnReloadComplete;
-    }
 
     /// <summary>
     /// Called when the railgun shoots. Plays muzzle flash and shoot sound.
     /// </summary>
-    private void OnShoot()
+    protected override void OnShoot()
     {
-        // Play shoot animation with quick fade, then return to idle
-        if (_animancer != null && _shootClip != null)
-        {
-            var shootState = _animancer.Play(_shootClip, _shootFadeDuration);
-            shootState.Events(this).OnEnd = PlayIdle;
-        }
+        base.OnShoot(); // Plays shoot animation
 
         if (_muzzleFlashParticles != null)
         {
@@ -114,13 +66,13 @@ public class RailgunVisual : WeaponVisual
     /// <summary>
     /// Called when a shot hits something. Plays appropriate particle and sound based on what was hit.
     /// </summary>
-    private void OnHit(HitInfo hitInfo)
+    protected override void OnHit(HitInfo hitInfo)
     {
         // Play appropriate particle effect from pool
         if (hitInfo.hitPlayer)
         {
             // Blood effects and hit sound only for attacker
-            if (_railgunLogic.isOwner)
+            if (_weaponLogic.isOwner)
             {
                 if (_hitBodyParticles != null && VFXPoolManager.Instance != null)
                 {
@@ -153,17 +105,12 @@ public class RailgunVisual : WeaponVisual
     /// <summary>
     /// Called when the railgun starts reloading. Triggers reload animation.
     /// </summary>
-    private void OnReload()
+    protected override void OnReload()
     {
-        // Play reload animation, then return to idle
-        if (_animancer != null && _reloadClip != null)
-        {
-            var reloadState = _animancer.Play(_reloadClip, _defaultFadeDuration);
-            reloadState.Events(this).OnEnd = PlayIdle;
-        }
+        base.OnReload(); // Plays reload animation
     }
-    
-    private void OnReloadComplete()
+
+    protected override void OnReloadComplete()
     {
         if (_reloadCompleteClip != null)
         {
@@ -180,19 +127,9 @@ public class RailgunVisual : WeaponVisual
     /// Called when the railgun is equipped (becomes active weapon).
     /// Plays equip animation and any equip-specific effects.
     /// </summary>
-    private void OnEquipped()
+    protected override void OnEquipped()
     {
-        // Play equip animation, then transition to idle
-        if (_animancer != null && _equipClip != null)
-        {
-            var equipState = _animancer.Play(_equipClip, _defaultFadeDuration);
-            equipState.Events(this).OnEnd = PlayIdle;
-        }
-        else
-        {
-            // If no equip animation, go straight to idle
-            PlayIdle();
-        }
+        base.OnEquipped(); // Plays equip animation
 
         if (_passiveShotReadyClip != null && _passiveHumObject == null) // ensure that there is not a hum already playing
         {
@@ -205,13 +142,9 @@ public class RailgunVisual : WeaponVisual
     /// <summary>
     /// Called when the railgun is holstered (deactivated).
     /// </summary>
-    private void OnHolstered()
+    protected override void OnHolstered()
     {
-        // Stop all animations
-        if (_animancer != null)
-        {
-            _animancer.Stop();
-        }
+        base.OnHolstered(); // Stops animations
 
         if (_passiveHumObject != null)
         {
@@ -220,16 +153,5 @@ public class RailgunVisual : WeaponVisual
         }
 
         Debug.Log("[RailgunVisual] Weapon holstered");
-    }
-
-    /// <summary>
-    /// Plays the idle animation in a loop.
-    /// </summary>
-    private void PlayIdle()
-    {
-        if (_animancer != null && _idleClip != null)
-        {
-            _currentState = _animancer.Play(_idleClip, _defaultFadeDuration);
-        }
     }
 }

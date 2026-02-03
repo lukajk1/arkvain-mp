@@ -19,6 +19,7 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
     [SerializeField] private PlayerMovement _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
+    public float reloadSpeed => _reloadTime;
 
     // IWeaponLogic interface properties (from BaseWeaponLogic)
     public override int CurrentAmmo => currentState.currentAmmo;
@@ -149,7 +150,14 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
             hitPlayer = true;
         }
 
-        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer, isHeadshot = isHeadshot });
+        _onHitEvent?.Invoke(new HitInfo
+        {
+            position = hit.point,
+            hitPlayer = hitPlayer,
+            isHeadshot = isHeadshot,
+            fireDirection = aimDirection,
+            surfaceNormal = hitPlayer ? Vector3.zero : hit.normal
+        });
     }
 
     /// <summary>

@@ -13,8 +13,6 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadSound;
 
-    private int _shotCounter = 0;
-
     private void Awake()
     {
 
@@ -32,9 +30,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             _muzzleFlashParticles.Play();
         }
 
-        // Only play sound every other shot
-        _shotCounter++;
-        if (_shootSound != null && _shotCounter % 2 == 0)
+        if (_shootSound != null)
         {
             SoundManager.Play(new SoundData(_shootSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
         }

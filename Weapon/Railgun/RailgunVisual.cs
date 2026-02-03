@@ -14,11 +14,12 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     [SerializeField] private AudioClip _shootSound;
 
     [Header("Reload Effects")]
+    [SerializeField] private AudioClip _reloadStartClip;
     [FormerlySerializedAs("_reloadSound")] [SerializeField] private AudioClip _reloadCompleteClip;
     [SerializeField] private AudioClip _passiveShotReadyClip;
 
     [Header("VFX Settings")]
-    [SerializeField] private float _maxVFXDistance = 50f;
+    [SerializeField] private Material _chargeMaterial;
 
     private AudioSource _passiveHumObject;
     private void Awake()
@@ -49,6 +50,11 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
             SoundManager.StopLoop(_passiveHumObject);
             _passiveHumObject = null;
         }
+
+        if (_chargeMaterial != null)
+        {
+            _chargeMaterial.SetFloat("_Alpha", 0f);
+        }
     }
 
     /// <summary>
@@ -66,13 +72,28 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     protected override void OnReload()
     {
         base.OnReload(); // Plays reload animation
+
+        if (_chargeMaterial != null)
+        {
+            float delay = _weaponLogic.reloadSpeed - 1.25f;
+            LeanTween.value(gameObject, 0f, 1f, 1.25f)
+                .setDelay(delay)
+                .setOnUpdate((float val) => {
+                    _chargeMaterial.SetFloat("_Alpha", val);
+                });
+        }
+
+        if (_reloadStartClip != null)
+        {
+            SoundManager.Play(new SoundData(_reloadStartClip));
+        }
     }
 
     protected override void OnReloadComplete()
     {
         if (_reloadCompleteClip != null)
         {
-            SoundManager.Play(new SoundData(_reloadCompleteClip, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+            SoundManager.Play(new SoundData(_reloadCompleteClip));
         }
 
         if (_passiveShotReadyClip != null)

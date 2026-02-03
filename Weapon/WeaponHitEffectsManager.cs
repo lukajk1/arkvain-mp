@@ -70,7 +70,9 @@ public class WeaponHitEffectsManager : MonoBehaviour
                 float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
                 if (distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
                 {
-                    VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, Quaternion.identity);
+                    // Orient the particle effect so its Z+ axis aligns with the surface normal
+                    Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);
+                    VFXPoolManager.Instance.Spawn(_hitWallParticles, hitInfo.position, rotation);
                 }
             }
         }

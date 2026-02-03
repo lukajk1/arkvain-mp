@@ -169,7 +169,14 @@ public class CrossbowLogic : PredictedIdentity<CrossbowLogic.ShootInput, Crossbo
             hitPlayer = true;
         }
 
-        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer, isHeadshot = isHeadshot });
+        _onHitEvent?.Invoke(new HitInfo
+        {
+            position = hit.point,
+            hitPlayer = hitPlayer,
+            isHeadshot = isHeadshot,
+            fireDirection = aimDirection,
+            surfaceNormal = hitPlayer ? Vector3.zero : hit.normal
+        });
     }
 
     /// <summary>

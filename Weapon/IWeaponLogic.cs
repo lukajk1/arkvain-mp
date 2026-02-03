@@ -9,6 +9,17 @@ public struct HitInfo
     public Vector3 position;
     public bool hitPlayer;
     public bool isHeadshot;
+
+    /// <summary>
+    /// Direction the shot was fired from (normalized).
+    /// </summary>
+    public Vector3 fireDirection;
+
+    /// <summary>
+    /// Surface normal at hit point (only valid when hitPlayer is false).
+    /// Comes from RaycastHit.normal.
+    /// </summary>
+    public Vector3 surfaceNormal;
 }
 
 /// <summary>

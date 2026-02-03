@@ -151,7 +151,14 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
             hitPlayer = true;
         }
 
-        _onHitEvent?.Invoke(new HitInfo { position = hit.point, hitPlayer = hitPlayer, isHeadshot = isHeadshot });
+        _onHitEvent?.Invoke(new HitInfo
+        {
+            position = hit.point,
+            hitPlayer = hitPlayer,
+            isHeadshot = isHeadshot,
+            fireDirection = aimDirection,
+            surfaceNormal = hitPlayer ? Vector3.zero : hit.normal
+        });
     }
 
     /// <summary>

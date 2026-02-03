@@ -206,7 +206,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             return;
         }
 
-        Debug.Log($"[WeaponManager] Switching to weapon index {index}");
+        //Debug.Log($"[WeaponManager] Switching to weapon index {index}");
 
         // Trigger holster on all weapons before disabling them
         foreach (var weapon in _weapons)
@@ -234,7 +234,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             OnWeaponSwitched?.Invoke(newWeapon.logic);
         }
 
-        Debug.Log($"[WeaponManager] Weapon switch complete. Active weapon index: {index}");
+        //Debug.Log($"[WeaponManager] Weapon switch complete. Active weapon index: {index}");
     }
 
     /// <summary>
@@ -247,7 +247,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         if (logicBehaviour != null)
         {
             logicBehaviour.enabled = active;
-            Debug.Log($"[WeaponManager] {logicBehaviour.GetType().Name}.enabled = {active}");
+            //Debug.Log($"[WeaponManager] {logicBehaviour.GetType().Name}.enabled = {active}");
         }
 
         // Enable/disable visual component and show/hide viewmodel
@@ -258,12 +258,12 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             if (active)
             {
                 weapon.visual.Show();
-                Debug.Log($"[WeaponManager] {weapon.visual.GetType().Name} shown");
+                //Debug.Log($"[WeaponManager] {weapon.visual.GetType().Name} shown");
             }
             else
             {
                 weapon.visual.Hide();
-                Debug.Log($"[WeaponManager] {weapon.visual.GetType().Name} hidden");
+                //Debug.Log($"[WeaponManager] {weapon.visual.GetType().Name} hidden");
             }
         }
     }

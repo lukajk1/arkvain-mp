@@ -11,6 +11,9 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
 
     [Header("Shoot Effects")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
+    [SerializeField] private GameObject _beamLinePrefab;
+    [SerializeField] private float _beamMaxDistance = 300f;
+    [SerializeField] private float _beamDuration = 0.5f;
     [SerializeField] private AudioClip _shootSound;
 
     [Header("Reload Effects")]
@@ -22,6 +25,13 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     [SerializeField] private Material _chargeMaterial;
 
     private AudioSource _passiveHumObject;
+    private HitInfo? _pendingHitInfo;
+
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+    }
+
     private void Awake()
     {
 
@@ -35,9 +45,29 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     {
         base.OnShoot(); // Plays shoot animation
 
-        if (_muzzleFlashParticles != null)
+        // Clear any pending hit info - we'll wait for OnHit to set it
+        _pendingHitInfo = null;
+
+        if (_muzzleFlashParticles != null && !_muzzleFlashParticles.isPlaying)
         {
-            _muzzleFlashParticles.Play();
+            // Ensure the particle system GameObject is active
+            if (!_muzzleFlashParticles.gameObject.activeInHierarchy)
+            {
+                _muzzleFlashParticles.gameObject.SetActive(true);
+            }
+
+            // Clear and restart the particle system
+            _muzzleFlashParticles.Clear();
+            _muzzleFlashParticles.Play(true);
+
+            // Force emit some particles as a fallback
+            _muzzleFlashParticles.Emit(0);
+
+            Debug.Log($"[RailgunVisual] Muzzle flash - IsPlaying: {_muzzleFlashParticles.isPlaying}, ParticleCount: {_muzzleFlashParticles.particleCount}");
+        }
+        else
+        {
+            Debug.LogWarning("[RailgunVisual] Muzzle flash particle system is null!");
         }
 
         if (_shootSound != null)
@@ -55,6 +85,9 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
         {
             _chargeMaterial.SetFloat("_Alpha", 0f);
         }
+
+        // Create beam immediately (will use hit info if available shortly after)
+        StartCoroutine(CreateBeamAfterHit());
     }
 
     /// <summary>
@@ -62,8 +95,72 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     /// </summary>
     protected override void OnHit(HitInfo hitInfo)
     {
+        // Store hit info for beam creation
+        _pendingHitInfo = hitInfo;
+
         // Play hit particles via centralized manager
         WeaponHitEffectsManager.PlayHitEffect(hitInfo, _weaponLogic.isOwner);
+    }
+
+    private System.Collections.IEnumerator CreateBeamAfterHit()
+    {
+        // Wait one frame to allow OnHit to fire and set _pendingHitInfo
+        yield return null;
+
+        if (_beamLinePrefab == null || _muzzleFlashParticles == null)
+            yield break;
+
+        Vector3 startPos = _muzzleFlashParticles.transform.position;
+        Vector3 endPos;
+
+        // Use hit position if we hit something, otherwise shoot forward at max distance
+        if (_pendingHitInfo.HasValue)
+        {
+            endPos = _pendingHitInfo.Value.position;
+        }
+        else
+        {
+            // No hit - beam goes forward at max distance
+            Vector3 forward = _muzzleFlashParticles.transform.forward;
+            endPos = startPos + forward * _beamMaxDistance;
+        }
+
+        CreateBeam(startPos, endPos);
+    }
+
+    private void CreateBeam(Vector3 startPos, Vector3 endPos)
+    {
+        GameObject beamObj = Instantiate(_beamLinePrefab);
+        LineRenderer lineRenderer = beamObj.GetComponent<LineRenderer>();
+
+        if (lineRenderer != null)
+        {
+            lineRenderer.SetPosition(0, startPos);
+            lineRenderer.SetPosition(1, endPos);
+
+            // Store initial color with full alpha
+            Color startColor = lineRenderer.startColor;
+            Color endColor = lineRenderer.endColor;
+
+            // Fade out the line renderer over the beam duration
+            LeanTween.value(beamObj, 1f, 0f, _beamDuration)
+                .setOnUpdate((float alpha) =>
+                {
+                    if (lineRenderer != null)
+                    {
+                        Color newStartColor = startColor;
+                        newStartColor.a = alpha;
+                        Color newEndColor = endColor;
+                        newEndColor.a = alpha;
+
+                        lineRenderer.startColor = newStartColor;
+                        lineRenderer.endColor = newEndColor;
+                    }
+                });
+        }
+
+        // Destroy beam after duration
+        Destroy(beamObj, _beamDuration);
     }
 
     /// <summary>

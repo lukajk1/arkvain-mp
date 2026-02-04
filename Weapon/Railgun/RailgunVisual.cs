@@ -13,7 +13,7 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
     [SerializeField] private GameObject _beamLinePrefab;
     [SerializeField] private float _beamMaxDistance = 300f;
-    [SerializeField] private float _beamDuration = 0.5f;
+    [SerializeField] private float _beamFadeTime = 0.7f;
     [SerializeField] private AudioClip _shootSound;
 
     [Header("Reload Effects")]
@@ -143,7 +143,7 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
             Color endColor = lineRenderer.endColor;
 
             // Fade out the line renderer over the beam duration
-            LeanTween.value(beamObj, 1f, 0f, _beamDuration)
+            LeanTween.value(beamObj, 1f, 0f, _beamFadeTime)
                 .setOnUpdate((float alpha) =>
                 {
                     if (lineRenderer != null)
@@ -160,7 +160,7 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
         }
 
         // Destroy beam after duration
-        Destroy(beamObj, _beamDuration);
+        Destroy(beamObj, _beamFadeTime);
     }
 
     /// <summary>

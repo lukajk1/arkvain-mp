@@ -135,6 +135,8 @@ public abstract class WeaponVisual<TLogic> : WeaponVisualBase where TLogic : IWe
         if (_animancer != null && _shootClip != null)
         {
             var shootState = _animancer.Play(_shootClip, _shootFadeDuration);
+
+            // Set up end event to return to idle
             shootState.Events(this).OnEnd = PlayIdleAnimation;
         }
     }
@@ -148,6 +150,8 @@ public abstract class WeaponVisual<TLogic> : WeaponVisualBase where TLogic : IWe
         if (_animancer != null && _reloadClip != null)
         {
             var reloadState = _animancer.Play(_reloadClip, _defaultFadeDuration);
+
+            // Set up end event to return to idle
             reloadState.Events(this).OnEnd = PlayIdleAnimation;
         }
     }

@@ -10,12 +10,15 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
     [SerializeField] private AudioClip _shootSound;
 
+    [SerializeField] private ParticleSystem _envHitParticles;
+
     [Header("Reload Effects")]
-    [SerializeField] private AudioClip _reloadSound;
+    [SerializeField] private AudioClip _reloadComplete;
 
     private void Awake()
     {
-
+        if (_envHitParticles != null)
+            VFXPoolManager.Instance.RegisterPrefab(_envHitParticles.gameObject);
     }
 
     /// <summary>
@@ -23,7 +26,16 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     /// </summary>
     protected override void OnShoot()
     {
-        base.OnShoot(); // Call base to trigger animation if configured
+        Debug.Log("[CrossbowVisual] OnShoot called");
+        Debug.Log($"[CrossbowVisual] Animancer: {(_animancer != null ? "assigned" : "NULL")}, ShootClip: {(_shootClip != null ? "assigned" : "NULL")}");
+
+        // Immediately stop any currently playing animation and play shoot animation
+        if (_animancer != null && _shootClip != null)
+        {
+            _animancer.Stop();
+            var shootState = _animancer.Play(_shootClip, 0f); // No fade, immediate transition
+            shootState.Events(this).OnEnd = PlayIdleAnimation;
+        }
 
         if (_muzzleFlashParticles != null)
         {
@@ -43,6 +55,17 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     {
         // Play hit particles via centralized manager
         WeaponHitEffectsManager.PlayHitEffect(hitInfo, _weaponLogic.isOwner);
+
+        if (VFXPoolManager.Instance != null && Camera.main != null && _envHitParticles != null)
+        {
+            float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
+            if (distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
+            {
+                // Orient the particle effect so its Z+ axis aligns with the surface normal
+                Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);
+                VFXPoolManager.Instance.Spawn(_envHitParticles.gameObject, hitInfo.position, rotation);
+            }
+        }
     }
 
     /// <summary>
@@ -51,10 +74,15 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     protected override void OnReload()
     {
         base.OnReload(); // Call base to trigger animation if configured
+    }
 
-        if (_reloadSound != null)
+    protected override void OnReloadComplete()
+    {
+        base.OnReloadComplete(); // Call base to trigger animation if configured
+
+        if (_reloadComplete != null)
         {
-            SoundManager.Play(new SoundData(_reloadSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+            SoundManager.Play(new SoundData(_reloadComplete));
         }
     }
 

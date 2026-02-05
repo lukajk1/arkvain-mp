@@ -65,6 +65,14 @@ public class VFXPoolManager : MonoBehaviour
                     ps.Clear(); // Clear existing particles
                     ps.time = 0f; // Reset simulation time
                 }
+
+                // Reset all trail renderers in hierarchy
+                TrailRenderer[] trailRenderers = obj.GetComponentsInChildren<TrailRenderer>();
+                foreach (var trail in trailRenderers)
+                {
+                    trail.Clear(); // Clear trail positions to prevent snapping
+                    trail.emitting = true; // Enable emission for use
+                }
             },
             actionOnRelease: (obj) =>
             {
@@ -73,6 +81,13 @@ public class VFXPoolManager : MonoBehaviour
                 foreach (var ps in particleSystems)
                 {
                     ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                }
+
+                // Stop all trail renderers from emitting
+                TrailRenderer[] trailRenderers = obj.GetComponentsInChildren<TrailRenderer>();
+                foreach (var trail in trailRenderers)
+                {
+                    trail.emitting = false; // Disable emission when returning to pool
                 }
 
                 obj.SetActive(false);

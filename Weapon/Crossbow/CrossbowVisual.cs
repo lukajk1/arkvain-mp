@@ -9,16 +9,25 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     [Header("Shoot Effects")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
     [SerializeField] private AudioClip _shootSound;
+    [SerializeField] private GameObject _bulletPrefab;
+    [SerializeField] private Transform _bulletTrailOrigin;
+    [SerializeField] private float _bulletMaxDistance = 100f;
 
     [SerializeField] private ParticleSystem _envHitParticles;
 
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadComplete;
 
+    private Coroutine _activeBulletCoroutine;
+    private GameObject _activeBulletObject;
+
     private void Awake()
     {
         if (_envHitParticles != null)
             VFXPoolManager.Instance.RegisterPrefab(_envHitParticles.gameObject);
+
+        if (_bulletPrefab != null)
+            VFXPoolManager.Instance.RegisterPrefab(_bulletPrefab, initialCapacity: 30, maxSize: 50);
     }
 
     /// <summary>
@@ -46,6 +55,21 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
         {
             SoundManager.Play(new SoundData(_shootSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
         }
+
+        // Spawn bullet that travels to max distance (will be stopped early by OnHit if something is hit)
+        if (_bulletPrefab != null && Camera.main != null && VFXPoolManager.Instance != null)
+        {
+            Vector3 startPos = _bulletTrailOrigin.position;
+            Vector3 endPos = startPos + Camera.main.transform.forward * _bulletMaxDistance;
+            Quaternion rotation = Quaternion.LookRotation(Camera.main.transform.forward);
+            GameObject bulletObj = VFXPoolManager.Instance.Spawn(_bulletPrefab, startPos, rotation);
+
+            if (bulletObj != null)
+            {
+                _activeBulletObject = bulletObj;
+                _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(bulletObj, startPos, endPos));
+            }
+        }
     }
 
     /// <summary>
@@ -65,6 +89,14 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
                 Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);
                 VFXPoolManager.Instance.Spawn(_envHitParticles.gameObject, hitInfo.position, rotation);
             }
+        }
+
+        // Stop the active bullet early and redirect it to the actual hit position
+        if (_activeBulletCoroutine != null && _activeBulletObject != null)
+        {
+            StopCoroutine(_activeBulletCoroutine);
+            Vector3 currentPos = _activeBulletObject.transform.position;
+            _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(_activeBulletObject, currentPos, hitInfo.position));
         }
     }
 
@@ -93,5 +125,45 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     {
         base.OnEquipped(); // Call base to trigger animation if configured
         Show(); // Show the viewmodel
+    }
+
+    /// <summary>
+    /// Called when the crossbow is holstered (deactivated).
+    /// </summary>
+    protected override void OnHolstered()
+    {
+        base.OnHolstered(); // Stops animations
+    }
+
+    /// <summary>
+    /// Animates the bullet from start to end position, then returns it to the pool.
+    /// </summary>
+    private System.Collections.IEnumerator AnimateBulletToHit(GameObject bulletObj, Vector3 startPos, Vector3 endPos)
+    {
+        float distance = Vector3.Distance(startPos, endPos);
+        float speed = 100f; // Units per second
+        float duration = distance / speed;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            bulletObj.transform.position = Vector3.Lerp(startPos, endPos, t);
+            yield return null;
+        }
+
+        // Ensure final position is exact
+        bulletObj.transform.position = endPos;
+
+        // Return to pool after arrival
+        if (VFXPoolManager.Instance != null)
+        {
+            VFXPoolManager.Instance.Return(bulletObj);
+        }
+
+        // Clear active references
+        _activeBulletCoroutine = null;
+        _activeBulletObject = null;
     }
 }

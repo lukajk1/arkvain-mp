@@ -142,19 +142,30 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
             Color startColor = lineRenderer.startColor;
             Color endColor = lineRenderer.endColor;
 
-            // Fade out the line renderer over the beam duration
+            // Store initial width
+            float initialStartWidth = lineRenderer.startWidth;
+            float initialEndWidth = lineRenderer.endWidth;
+            float targetStartWidth = initialStartWidth / 3f;
+            float targetEndWidth = initialEndWidth / 3f;
+
+            // Fade out the line renderer and shrink width over the beam duration
             LeanTween.value(beamObj, 1f, 0f, _beamFadeTime)
-                .setOnUpdate((float alpha) =>
+                .setOnUpdate((float t) =>
                 {
                     if (lineRenderer != null)
                     {
+                        // Lerp alpha
                         Color newStartColor = startColor;
-                        newStartColor.a = alpha;
+                        newStartColor.a = t;
                         Color newEndColor = endColor;
-                        newEndColor.a = alpha;
+                        newEndColor.a = t;
 
                         lineRenderer.startColor = newStartColor;
                         lineRenderer.endColor = newEndColor;
+
+                        // Lerp width from initial to 1/3 size
+                        lineRenderer.startWidth = Mathf.Lerp(targetStartWidth, initialStartWidth, t);
+                        lineRenderer.endWidth = Mathf.Lerp(targetEndWidth, initialEndWidth, t);
                     }
                 });
         }

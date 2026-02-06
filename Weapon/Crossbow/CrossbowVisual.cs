@@ -12,6 +12,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     [SerializeField] private GameObject _bulletPrefab;
     [SerializeField] private Transform _bulletTrailOrigin;
     [SerializeField] private float _bulletMaxDistance = 100f;
+    [SerializeField] private float _bulletSpeed = 100f;
 
     [SerializeField] private ParticleSystem _envHitParticles;
 
@@ -83,7 +84,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
         if (VFXPoolManager.Instance != null && Camera.main != null && _envHitParticles != null)
         {
             float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
-            if (distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
+            if (!hitInfo.hitPlayer && distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
             {
                 // Orient the particle effect so its Z+ axis aligns with the surface normal
                 Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);
@@ -141,8 +142,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     private System.Collections.IEnumerator AnimateBulletToHit(GameObject bulletObj, Vector3 startPos, Vector3 endPos)
     {
         float distance = Vector3.Distance(startPos, endPos);
-        float speed = 100f; // Units per second
-        float duration = distance / speed;
+        float duration = distance / _bulletSpeed;
         float elapsed = 0f;
 
         while (elapsed < duration)

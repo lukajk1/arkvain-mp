@@ -5,11 +5,14 @@ using UnityEngine;
 
 public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
-    [SerializeField] private int _maxHealth;
+    [SerializeField] public int _maxHealth;
 
     public static event Action<PlayerID?> OnPlayerDeath;
     public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)
     public static Action KillAllPlayers;
+
+    // Event for when local player health is ready
+    public static event Action<PlayerHealth> OnLocalPlayerHealthReady;
 
     // Event for health changes (currentHealth, maxHealth)
     public event Action<int, int> OnHealthChanged;
@@ -21,6 +24,12 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         base.LateAwake();
 
         _onDamageTaken = new PredictedEvent<DamageInfo>(predictionManager, this);
+
+        // Broadcast to UI if this is the local player
+        if (isOwner)
+        {
+            OnLocalPlayerHealthReady?.Invoke(this);
+        }
     }
 
     protected override void OnDestroy()

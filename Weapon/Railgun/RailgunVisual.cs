@@ -63,11 +63,11 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
             // Force emit some particles as a fallback
             _muzzleFlashParticles.Emit(0);
 
-            Debug.Log($"[RailgunVisual] Muzzle flash - IsPlaying: {_muzzleFlashParticles.isPlaying}, ParticleCount: {_muzzleFlashParticles.particleCount}");
+            //Debug.Log($"[RailgunVisual] Muzzle flash - IsPlaying: {_muzzleFlashParticles.isPlaying}, ParticleCount: {_muzzleFlashParticles.particleCount}");
         }
         else
         {
-            Debug.LogWarning("[RailgunVisual] Muzzle flash particle system is null!");
+            //Debug.LogWarning("[RailgunVisual] Muzzle flash particle system is null!");
         }
 
         if (_shootSound != null)
@@ -223,7 +223,7 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
             _passiveHumObject = SoundManager.StartLoop(new SoundData(_passiveShotReadyClip, isLooping: true));
         }
 
-        Debug.Log("[RailgunVisual] Weapon equipped");
+        //Debug.Log("[RailgunVisual] Weapon equipped");
     }
 
     /// <summary>
@@ -239,6 +239,6 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
             _passiveHumObject = null;
         }
 
-        Debug.Log("[RailgunVisual] Weapon holstered");
+        //Debug.Log("[RailgunVisual] Weapon holstered");
     }
 }

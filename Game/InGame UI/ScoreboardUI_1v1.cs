@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using PurrNet;
 using System.Linq;
@@ -14,14 +15,16 @@ public class ScoreboardUI_1v1 : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _scoreText;
     [SerializeField] private GameObject _matchResultObject;
     [SerializeField] private TextMeshProUGUI _matchResultText;
+    [SerializeField] private Image _glowBehindText;
 
     [Header("Format")]
     [SerializeField] private string _scoreFormat = "Player {0}: {1} / Player {2}: {3}";
-    [SerializeField] private string _victoryMessage = "VICTORY!";
+    [SerializeField] private string _victoryMessage = "VICTORY";
     [SerializeField] private string _defeatMessage = "DEFEAT";
 
     [Header("Settings")]
     [SerializeField] private float _updateInterval = 0.5f; // Update UI every 0.5 seconds
+    [SerializeField] private Color _defeatColor;
 
     private float _updateTimer;
     private PlayerID? _player1ID;
@@ -136,6 +139,11 @@ public class ScoreboardUI_1v1 : MonoBehaviour
 
         // Set appropriate message
         _matchResultText.text = isLocalPlayerWinner ? _victoryMessage : _defeatMessage;
+        if (!isLocalPlayerWinner)
+        {
+            _matchResultText.color = _defeatColor;
+            _glowBehindText.color = _defeatColor;
+        }
 
         // Show the match result object
         _matchResultObject.SetActive(true);

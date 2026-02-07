@@ -36,9 +36,6 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     /// </summary>
     protected override void OnShoot()
     {
-        Debug.Log("[CrossbowVisual] OnShoot called");
-        Debug.Log($"[CrossbowVisual] Animancer: {(_animancer != null ? "assigned" : "NULL")}, ShootClip: {(_shootClip != null ? "assigned" : "NULL")}");
-
         // Immediately stop any currently playing animation and play shoot animation
         if (_animancer != null && _shootClip != null)
         {
@@ -49,12 +46,20 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
 
         if (_muzzleFlashParticles != null)
         {
-            _muzzleFlashParticles.Play();
+            if (!_muzzleFlashParticles.gameObject.activeInHierarchy)
+            {
+                _muzzleFlashParticles.gameObject.SetActive(true);
+            }
+            _muzzleFlashParticles.Clear();
+            _muzzleFlashParticles.Play(true);
+
+            // Force emit some particles as a fallback
+            _muzzleFlashParticles.Emit(10);
         }
 
         if (_shootSound != null)
         {
-            SoundManager.Play(new SoundData(_shootSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+            SoundManager.Play(new SoundData(_shootSound));
         }
 
         // Spawn bullet that travels to max distance (will be stopped early by OnHit if something is hit)
@@ -118,6 +123,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             SoundManager.Play(new SoundData(_reloadComplete));
         }
     }
+
 
     /// <summary>
     /// Called when the crossbow becomes the active weapon. Shows the viewmodel.

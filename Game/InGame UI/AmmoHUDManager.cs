@@ -6,22 +6,34 @@ public class AmmoHUDManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _ammoText;
     [SerializeField] private string _ammoFormat = "{0} / {1}"; // "12 / 30" format
 
+    [SerializeField] private TextMeshProUGUI _healthText;
+
+
     private IWeaponLogic _currentWeapon;
     private WeaponManager _weaponManager;
+    private PlayerHealth _localPlayerHealth;
 
     private void OnEnable()
     {
         WeaponManager.OnLocalWeaponManagerReady += OnWeaponManagerReady;
+        PlayerHealth.OnLocalPlayerHealthReady += OnLocalPlayerHealthReady;
     }
 
     private void OnDisable()
     {
         WeaponManager.OnLocalWeaponManagerReady -= OnWeaponManagerReady;
+        PlayerHealth.OnLocalPlayerHealthReady -= OnLocalPlayerHealthReady;
 
         // Unsubscribe from weapon switch event
         if (_weaponManager != null)
         {
             _weaponManager.OnWeaponSwitched -= OnWeaponSwitched;
+        }
+
+        // Unsubscribe from health changes
+        if (_localPlayerHealth != null)
+        {
+            _localPlayerHealth.OnHealthChanged -= OnHealthChanged;
         }
     }
 
@@ -53,6 +65,25 @@ public class AmmoHUDManager : MonoBehaviour
     private void OnWeaponSwitched(IWeaponLogic newWeapon)
     {
         _currentWeapon = newWeapon;
+    }
+
+    private void OnLocalPlayerHealthReady(PlayerHealth playerHealth)
+    {
+        _localPlayerHealth = playerHealth;
+
+        // Subscribe to health changes
+        _localPlayerHealth.OnHealthChanged += OnHealthChanged;
+
+        // Initialize health text with current values
+        OnHealthChanged(_localPlayerHealth.currentState.health, _localPlayerHealth._maxHealth);
+    }
+
+    private void OnHealthChanged(int currentHealth, int maxHealth)
+    {
+        if (_healthText != null)
+        {
+            _healthText.text = $"{currentHealth}";
+        }
     }
 
     private void Update()

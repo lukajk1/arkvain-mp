@@ -4,7 +4,7 @@ using UnityEngine.Rendering.Universal;
 
 public class RenderFeatureToggler : MonoBehaviour
 {
-    [SerializeField] private ScriptableRendererFeature _targetFeature;
+    [SerializeField] private ScriptableRendererFeature _ssGrayscale;
 
     public static RenderFeatureToggler Instance { get; private set; }
 
@@ -21,9 +21,9 @@ public class RenderFeatureToggler : MonoBehaviour
     }
     public static void ToggleFeature(bool active)
     {
-        if (Instance._targetFeature != null)
+        if (Instance._ssGrayscale != null)
         {
-            Instance._targetFeature.SetActive(active);
+            Instance._ssGrayscale.SetActive(active);
         }
     }
 }

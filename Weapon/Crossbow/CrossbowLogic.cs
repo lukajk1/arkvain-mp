@@ -100,7 +100,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
             return;
         }
 
-        Debug.Log($"[CrossbowLogic] SHOOT! Input received. Cooldown: {shootCooldown}s");
+        //Debug.Log($"[CrossbowLogic] SHOOT! Input received. Cooldown: {shootCooldown}s");
 
         state.cooldownTimer = shootCooldown;
 
@@ -121,7 +121,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
 
     private void Shoot(ref ShootState state)
     {
-        Debug.Log("[CrossbowLogic] Shoot() called");
+        //Debug.Log("[CrossbowLogic] Shoot() called");
 
         _onShootEvent?.Invoke();
 
@@ -132,16 +132,16 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
 
         var position = transform.TransformPoint(_centerOfCamera);
 
-        Debug.Log($"[CrossbowLogic] Raycast from {position}, direction {aimDirection}, layermask {_shotLayerMask.value}");
+        //Debug.Log($"[CrossbowLogic] Raycast from {position}, direction {aimDirection}, layermask {_shotLayerMask.value}");
 
         // add a slight forward offset to origin of ray
         if (!Physics.Raycast(position + aimDirection * 0.5f, aimDirection, out RaycastHit hit, Mathf.Infinity, _shotLayerMask, QueryTriggerInteraction.Ignore))
         {
-            Debug.Log("[CrossbowLogic] Raycast missed - no hit");
+            //Debug.Log("[CrossbowLogic] Raycast missed - no hit");
             return;
         }
 
-        Debug.Log($"[CrossbowLogic] Raycast HIT: {hit.collider.gameObject.name} on layer {hit.collider.gameObject.layer}");
+        //Debug.Log($"[CrossbowLogic] Raycast HIT: {hit.collider.gameObject.name} on layer {hit.collider.gameObject.layer}");
 
         // Use hit.collider.gameObject instead of hit.transform.gameObject
         // because hit.transform returns the root parent, not the GameObject with the collider
@@ -208,7 +208,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
 
         if (attackPressed)
         {
-            Debug.Log("[CrossbowLogic] UpdateInput: Attack button IS pressed");
+            //Debug.Log("[CrossbowLogic] UpdateInput: Attack button IS pressed");
         }
 
         input.shoot |= attackPressed;

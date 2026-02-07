@@ -124,21 +124,21 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             // Direct selection: Primary weapon
             if (input.selectPrimary && state.currentWeaponIndex != _primaryIndex)
             {
-                Debug.Log("[WeaponManager] Input: Select Primary");
+                //Debug.Log("[WeaponManager] Input: Select Primary");
                 targetIndex = _primaryIndex;
                 weaponChanged = true;
             }
             // Direct selection: Secondary weapon
             else if (input.selectSecondary && state.currentWeaponIndex != _secondaryIndex)
             {
-                Debug.Log("[WeaponManager] Input: Select Secondary");
+                //Debug.Log("[WeaponManager] Input: Select Secondary");
                 targetIndex = _secondaryIndex;
                 weaponChanged = true;
             }
             // Quick switch: Toggle between primary and secondary
             else if (input.quickSwitch)
             {
-                Debug.Log("[WeaponManager] Input: Quick Switch");
+                //Debug.Log("[WeaponManager] Input: Quick Switch");
                 targetIndex = (state.currentWeaponIndex == _primaryIndex)
                     ? _secondaryIndex
                     : _primaryIndex;
@@ -147,14 +147,14 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             // Scroll up: Previous weapon with wrap-around
             else if (input.scrollUp)
             {
-                Debug.Log("[WeaponManager] Input: Scroll Up");
+                //Debug.Log("[WeaponManager] Input: Scroll Up");
                 targetIndex = state.currentWeaponIndex == _primaryIndex ? _secondaryIndex : _primaryIndex;
                 weaponChanged = true;
             }
             // Scroll down: Next weapon with wrap-around
             else if (input.scrollDown)
             {
-                Debug.Log("[WeaponManager] Input: Scroll Down");
+                //Debug.Log("[WeaponManager] Input: Scroll Down");
                 targetIndex = state.currentWeaponIndex == _primaryIndex ? _secondaryIndex : _primaryIndex;
                 weaponChanged = true;
             }

@@ -100,7 +100,7 @@ public class VFXPoolManager : MonoBehaviour
         );
 
         _pools.Add(prefab, pool);
-        Debug.Log($"[VFXPoolManager] Registered pool for prefab: {prefab.name} (capacity: {capacity}, max: {max})");
+        //Debug.Log($"[VFXPoolManager] Registered pool for prefab: {prefab.name} (capacity: {capacity}, max: {max})");
     }
 
     /// <summary>

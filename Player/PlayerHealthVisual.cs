@@ -138,6 +138,6 @@ public class PlayerHealthVisual : MonoBehaviour
             .setEase(LeanTweenType.easeOutCubic)
             .setOnComplete(() => Destroy(damageFlash.gameObject));
 
-        Debug.Log($"[PlayerHealthVisual] Created damage flash from {previousPercent:F2} to {currentPercent:F2}");
+        //Debug.Log($"[PlayerHealthVisual] Created damage flash from {previousPercent:F2} to {currentPercent:F2}");
     }
 }

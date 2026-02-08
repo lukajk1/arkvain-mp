@@ -25,6 +25,8 @@ public class ClientGame : MonoBehaviour
         }
     }
 
+    public static Camera _mainCamera;
+
     private static List<object> cursorLockList = new();
 
     // the distance at which to stop rendering environmental hit effects
@@ -42,6 +44,11 @@ public class ClientGame : MonoBehaviour
     private void Start()
     {
         CursorLockState = CursorLockMode.Locked;
+    }
+
+    public void RegisterMainCamera(Camera camera)
+    {
+        _mainCamera = camera;
     }
 
     public static void ModifyCursorUnlockList(bool isAdding, object obj)

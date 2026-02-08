@@ -25,10 +25,10 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
         _onDamageTaken = new PredictedEvent<DamageInfo>(predictionManager, this);
 
-        // Broadcast to UI if this is the local player
+        // Register with HUD if this is the local player
         if (isOwner)
         {
-            OnLocalPlayerHealthReady?.Invoke(this);
+            HUDManager.Instance?.RegisterPlayerHealth(this);
         }
     }
 
@@ -53,6 +53,12 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     private void OnDisable()
     {
         KillAllPlayers -= OnKillAllPlayers;
+
+        // Unregister from HUD if this is the local player
+        if (isOwner && HUDManager.Instance != null)
+        {
+            HUDManager.Instance.UnregisterPlayerHealth(this);
+        }
     }
 
 

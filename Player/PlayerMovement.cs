@@ -24,17 +24,6 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
         _onJump = new PredictedEvent(predictionManager, this);
         _onLand = new PredictedEvent(predictionManager, this);
-
-        if (isOwner)
-        {
-            _camera.Init();
-            Debug.Log("initalize camera" + _camera.gameObject.GetInstanceID());
-        }
-        else
-        {
-            Destroy(_camera.gameObject);
-            Debug.Log("spawned char is not locally controlled. destroyed camera");
-        }
     }
 
 

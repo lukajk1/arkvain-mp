@@ -1,8 +1,10 @@
 using UnityEngine;
 using TMPro;
 
-public class AmmoHUDManager : MonoBehaviour
+public class HUDManager : MonoBehaviour
 {
+    public static HUDManager Instance { get; private set; }
+
     [SerializeField] private TextMeshProUGUI _ammoText;
     [SerializeField] private string _ammoFormat = "{0} / {1}"; // "12 / 30" format
 
@@ -13,16 +15,25 @@ public class AmmoHUDManager : MonoBehaviour
     private WeaponManager _weaponManager;
     private PlayerHealth _localPlayerHealth;
 
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Debug.LogError("Multiple HUDManager instances detected! Destroying duplicate.");
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
     private void OnEnable()
     {
         WeaponManager.OnLocalWeaponManagerReady += OnWeaponManagerReady;
-        PlayerHealth.OnLocalPlayerHealthReady += OnLocalPlayerHealthReady;
     }
 
     private void OnDisable()
     {
         WeaponManager.OnLocalWeaponManagerReady -= OnWeaponManagerReady;
-        PlayerHealth.OnLocalPlayerHealthReady -= OnLocalPlayerHealthReady;
 
         // Unsubscribe from weapon switch event
         if (_weaponManager != null)
@@ -34,6 +45,26 @@ public class AmmoHUDManager : MonoBehaviour
         if (_localPlayerHealth != null)
         {
             _localPlayerHealth.OnHealthChanged -= OnHealthChanged;
+        }
+    }
+
+    public void RegisterPlayerHealth(PlayerHealth playerHealth)
+    {
+        _localPlayerHealth = playerHealth;
+
+        // Subscribe to health changes
+        _localPlayerHealth.OnHealthChanged += OnHealthChanged;
+
+        // Initialize health text with current values
+        OnHealthChanged(_localPlayerHealth.currentState.health, _localPlayerHealth._maxHealth);
+    }
+
+    public void UnregisterPlayerHealth(PlayerHealth playerHealth)
+    {
+        if (_localPlayerHealth == playerHealth)
+        {
+            _localPlayerHealth.OnHealthChanged -= OnHealthChanged;
+            _localPlayerHealth = null;
         }
     }
 
@@ -67,16 +98,6 @@ public class AmmoHUDManager : MonoBehaviour
         _currentWeapon = newWeapon;
     }
 
-    private void OnLocalPlayerHealthReady(PlayerHealth playerHealth)
-    {
-        _localPlayerHealth = playerHealth;
-
-        // Subscribe to health changes
-        _localPlayerHealth.OnHealthChanged += OnHealthChanged;
-
-        // Initialize health text with current values
-        OnHealthChanged(_localPlayerHealth.currentState.health, _localPlayerHealth._maxHealth);
-    }
 
     private void OnHealthChanged(int currentHealth, int maxHealth)
     {

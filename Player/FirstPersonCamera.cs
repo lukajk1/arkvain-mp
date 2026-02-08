@@ -7,13 +7,13 @@ public class FirstPersonCamera : MonoBehaviour
 {
     [SerializeField] float _maxLookAngle = 80f;
     [SerializeField] Camera _camera;
-    [SerializeField] InputActionReference _lookAction;
 
     [HideInInspector] public static Transform mainCameraTransform;
     public static event Action OnCameraInitialized;
 
     Vector2 _currentRotation;
     bool _initialized;
+    InputAction _cachedLookAction;
 
     public Vector3 forward => Quaternion.Euler(_currentRotation.x, _currentRotation.y, 0) * Vector3.forward;
 
@@ -29,12 +29,8 @@ public class FirstPersonCamera : MonoBehaviour
         if (GetComponent<AudioListener>() == null)
             gameObject.AddComponent<AudioListener>();
 
-        if (_lookAction != null)
-        {
-            _lookAction.action.Enable();
-        }
-
         mainCameraTransform = transform;
+        _cachedLookAction = InputManager.Instance.Player.Look;
         OnCameraInitialized?.Invoke();
     }
 
@@ -42,11 +38,7 @@ public class FirstPersonCamera : MonoBehaviour
     {
         if (!_initialized) return;
 
-        Vector2 lookDelta = Vector2.zero;
-        if (_lookAction != null)
-        {
-            lookDelta = _lookAction.action.ReadValue<Vector2>();
-        }
+        Vector2 lookDelta = _cachedLookAction.ReadValue<Vector2>();
 
         // Normalize delta based on mouse DPI to get consistent physical movement
         // Input System gives delta in pixels, so divide by DPI to get physical distance in inches
@@ -55,6 +47,7 @@ public class FirstPersonCamera : MonoBehaviour
 
         // Convert physical distance (inches) to degrees based on cm/360 setting
         // targetCm360 is how many cm for a 360° turn
+        // 2.54 cm/1 inch
         float inchesPerFullRotation = (ClientGame.targetCm360 / 2.54f);
         float degreesPerInch = 360f / inchesPerFullRotation;
 

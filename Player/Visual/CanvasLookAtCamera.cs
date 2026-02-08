@@ -2,22 +2,23 @@ using UnityEngine;
 
 public class CanvasLookAtCamera : MonoBehaviour
 {
-    private Transform _cam;
-
-    private void Awake()
-    {
-        _cam = Camera.main?.transform;
-    }
-
+    private Transform _cachedCameraTransform;
     private void LateUpdate()
     {
-        if (!_cam) {
-            _cam = Camera.main?.transform;
-            if (!_cam) return;
+        // Cache the camera transform reference
+        if (_cachedCameraTransform == null)
+        {
+            if (ClientGame._mainCamera == null) return;
+            _cachedCameraTransform = ClientGame._mainCamera.transform;
         }
 
-        Vector3 dir = _cam.position - transform.position;
+        Vector3 dir = _cachedCameraTransform.position - transform.position;
         dir.y = 0;
-        transform.rotation = Quaternion.LookRotation(dir);
+
+        if (dir.sqrMagnitude > 0.0001f) // Only rotate if there's meaningful distance
+        {
+            transform.rotation = Quaternion.LookRotation(dir);
+        }
     }
+
 }

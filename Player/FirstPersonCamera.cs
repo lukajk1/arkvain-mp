@@ -9,7 +9,6 @@ public class FirstPersonCamera : MonoBehaviour
     [SerializeField] Camera _camera;
 
     [HideInInspector] public static Transform mainCameraTransform;
-    public static event Action OnCameraInitialized;
 
     Vector2 _currentRotation;
     bool _initialized;
@@ -31,7 +30,6 @@ public class FirstPersonCamera : MonoBehaviour
 
         mainCameraTransform = transform;
         _cachedLookAction = InputManager.Instance.Player.Look;
-        OnCameraInitialized?.Invoke();
     }
 
     void LateUpdate()

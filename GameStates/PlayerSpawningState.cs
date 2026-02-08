@@ -12,8 +12,11 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
 
     private int _currentSpawnPoint;
 
-    public override void Enter()
+    public override void ViewEnter(bool isVerified)
     {
+        if (!isVerified) return;
+
+        //Debug.Log("entered player spawning state QQQ");
 
         for (var i = 0; i < predictionManager.players.currentState.players.Count; i++)
         {

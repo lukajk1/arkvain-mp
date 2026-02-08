@@ -49,6 +49,7 @@ public class ClientGame : MonoBehaviour
     public void RegisterMainCamera(Camera camera)
     {
         _mainCamera = camera;
+        Debug.Log("new maincamera registered");
     }
 
     public static void ModifyCursorUnlockList(bool isAdding, object obj)

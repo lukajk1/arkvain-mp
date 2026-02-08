@@ -24,7 +24,7 @@ public class VisualsManager : StatelessPredictedIdentity
         if (isOwner && ClientGame._mainCamera == _mainCamera)
         {
             ClientGame._mainCamera = null;
-            Debug.Log("[VisualsManager] Cleared main camera reference on destroy");
+            //Debug.Log("[VisualsManager] Cleared main camera reference on destroy");
         }
     }
 

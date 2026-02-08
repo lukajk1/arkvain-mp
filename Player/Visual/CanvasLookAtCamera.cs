@@ -22,7 +22,7 @@ public class CanvasLookAtCamera : MonoBehaviour
                 if (foundCamera != null && ClientGame.Instance != null)
                 {
                     ClientGame.Instance.RegisterMainCamera(foundCamera);
-                    Debug.Log($"[CanvasLookAtCamera] Found and registered camera: {foundCamera.name}");
+                    //Debug.Log($"[CanvasLookAtCamera] Found and registered camera: {foundCamera.name}");
                 }
                 else
                 {

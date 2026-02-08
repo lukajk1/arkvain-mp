@@ -44,6 +44,9 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     [Tooltip("Sound to play when switching weapons")]
     [SerializeField] private AudioClip _weaponSwitchSound;
 
+    [Header("Viewmodel Sway")]
+    [SerializeField] private ViewmodelSway _viewmodelSway;
+
     private WeaponPair[] _weapons;
     private int _primaryIndex;
     private int _secondaryIndex;
@@ -222,6 +225,13 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         // Trigger equip
         newWeapon.logic?.TriggerEquipped();
 
+        // Update viewmodel sway to use the new weapon's viewmodel
+        if (_viewmodelSway != null && newWeapon.visual != null)
+        {
+            Transform viewmodelTransform = newWeapon.visual.transform;
+            _viewmodelSway.SetViewmodel(viewmodelTransform);
+        }
+
         // Play weapon switch sound (only for owner and after initialization)
         if (isOwner && _isInitialized && _weaponSwitchSound != null)
         {
@@ -340,6 +350,10 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             Debug.LogWarning("[WeaponManager] Secondary weapon index out of range! Must be 0-3.");
         if (_primaryWeaponIndex == _secondaryWeaponIndex)
             Debug.LogWarning("[WeaponManager] Primary and secondary weapon indices are the same!");
+
+        // Validate viewmodel sway
+        if (_viewmodelSway == null)
+            Debug.LogWarning("[WeaponManager] ViewmodelSway reference is missing! Viewmodel sway/bob will not work.");
     }
 #endif
 }

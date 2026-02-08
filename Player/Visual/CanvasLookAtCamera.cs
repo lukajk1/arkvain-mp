@@ -8,7 +8,27 @@ public class CanvasLookAtCamera : MonoBehaviour
         // Cache the camera transform reference
         if (_cachedCameraTransform == null)
         {
-            if (ClientGame._mainCamera == null) return;
+            // Check if camera exists and is not destroyed
+            if (ClientGame._mainCamera == null || !ClientGame._mainCamera)
+            {
+                // Try to find and register a camera in the scene
+                Camera foundCamera = Camera.main;
+                if (foundCamera == null)
+                {
+                    // Fallback: find any enabled camera
+                    foundCamera = FindFirstObjectByType<Camera>();
+                }
+
+                if (foundCamera != null && ClientGame.Instance != null)
+                {
+                    ClientGame.Instance.RegisterMainCamera(foundCamera);
+                    Debug.Log($"[CanvasLookAtCamera] Found and registered camera: {foundCamera.name}");
+                }
+                else
+                {
+                    return;
+                }
+            }
             _cachedCameraTransform = ClientGame._mainCamera.transform;
         }
 

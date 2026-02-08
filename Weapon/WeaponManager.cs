@@ -65,7 +65,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     {
         base.LateAwake();
 
-        Debug.Log("[WeaponManager] LateAwake started");
+        //Debug.Log("[WeaponManager] LateAwake started");
 
         // Build weapon array from references (all 4 weapons)
         _weapons = new WeaponPair[]
@@ -86,7 +86,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             _secondaryIndex = (_primaryIndex + 1) % _weapons.Length;
         }
 
-        Debug.Log($"[WeaponManager] Weapon array built with {_weapons.Length} weapons. Primary: {_primaryIndex}, Secondary: {_secondaryIndex}");
+        //Debug.Log($"[WeaponManager] Weapon array built with {_weapons.Length} weapons. Primary: {_primaryIndex}, Secondary: {_secondaryIndex}");
 
         // Disable all weapons initially
         foreach (var weapon in _weapons)
@@ -94,19 +94,19 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
             SetWeaponActive(weapon, false);
         }
 
-        Debug.Log("[WeaponManager] All weapons disabled");
+        //Debug.Log("[WeaponManager] All weapons disabled");
 
         // Enable primary weapon (without sound)
         SwitchToWeaponInternal(_primaryIndex);
         _isInitialized = true; // Mark as initialized after first weapon is equipped
 
-        Debug.Log($"[WeaponManager] Primary weapon enabled (index {_primaryIndex})");
+        //Debug.Log($"[WeaponManager] Primary weapon enabled (index {_primaryIndex})");
 
         // Broadcast initialization for owner only
         if (isOwner)
         {
             OnLocalWeaponManagerReady?.Invoke(this);
-            Debug.Log("[WeaponManager] Broadcast OnLocalWeaponManagerReady");
+            //Debug.Log("[WeaponManager] Broadcast OnLocalWeaponManagerReady");
         }
     }
 

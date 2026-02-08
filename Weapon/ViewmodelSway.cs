@@ -35,8 +35,10 @@ public class ViewmodelSway : MonoBehaviour
 
     [Header("Bobbing")]
     [SerializeField] private float _speedCurve;
-    private float CurveSin => Mathf.Sin(_speedCurve);
-    private float CurveCos => Mathf.Cos(_speedCurve);
+    [Tooltip("Higher values make the bob motion snap faster at peaks (0 = smooth sine wave)")]
+    [SerializeField] private float _bobSharpness = 2f;
+    private float CurveSin => Mathf.Pow(Mathf.Abs(Mathf.Sin(_speedCurve)), _bobSharpness) * Mathf.Sign(Mathf.Sin(_speedCurve));
+    private float CurveCos => Mathf.Pow(Mathf.Abs(Mathf.Cos(_speedCurve)), _bobSharpness) * Mathf.Sign(Mathf.Cos(_speedCurve));
 
     [SerializeField] private Vector3 _travelLimit = Vector3.one * 0.025f;
     [SerializeField] private Vector3 _bobLimit = Vector3.one * 0.01f;

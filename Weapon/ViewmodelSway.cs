@@ -34,9 +34,9 @@ public class ViewmodelSway : MonoBehaviour
     [SerializeField] private float _rotationSmooth = 12f;
 
     [Header("Bobbing")]
-    [SerializeField] private float _speedCurve;
     [Tooltip("Higher values make the bob motion snap faster at peaks (0 = smooth sine wave)")]
     [SerializeField] private float _bobSharpness = 2f;
+    private float _speedCurve;
     private float CurveSin => Mathf.Pow(Mathf.Abs(Mathf.Sin(_speedCurve)), _bobSharpness) * Mathf.Sign(Mathf.Sin(_speedCurve));
     private float CurveCos => Mathf.Pow(Mathf.Abs(Mathf.Cos(_speedCurve)), _bobSharpness) * Mathf.Sign(Mathf.Cos(_speedCurve));
 
@@ -96,6 +96,13 @@ public class ViewmodelSway : MonoBehaviour
     /// </summary>
     public void SetViewmodel(Transform viewmodel)
     {
+        // Reset previous viewmodel to its initial position before switching
+        if (_currentViewmodel != null)
+        {
+            _currentViewmodel.localPosition = _initialPosition;
+            _currentViewmodel.localRotation = _initialRotation;
+        }
+
         _currentViewmodel = viewmodel;
 
         // Store initial position and rotation when switching viewmodels
@@ -142,8 +149,7 @@ public class ViewmodelSway : MonoBehaviour
 
     private void ApplyPositionAndRotation()
     {
-        // Apply sway and bob relative to initial position
-        Vector3 targetPosition = _initialPosition + _swayPos + _bobPosition;
+        Vector3 targetPosition = _initialPosition + (_swayPos + _bobPosition);
         _currentViewmodel.localPosition = Vector3.Lerp(
             _currentViewmodel.localPosition,
             targetPosition,
@@ -165,6 +171,12 @@ public class ViewmodelSway : MonoBehaviour
         float movementMagnitude = Mathf.Abs(_walkInput.x) + Mathf.Abs(_walkInput.y);
 
         _speedCurve += Time.deltaTime * (isGrounded ? movementMagnitude * _bobExaggeration : 1f) + 0.01f;
+
+        // Wrap speed curve to prevent indefinite growth (sin/cos repeat every 2π)
+        if (_speedCurve > Mathf.PI * 2f)
+        {
+            _speedCurve -= Mathf.PI * 2f;
+        }
 
         _bobPosition.x = (CurveCos * _bobLimit.x * (isGrounded ? 1 : 0)) - (_walkInput.x * _travelLimit.x);
         _bobPosition.y = (CurveSin * _bobLimit.y) - (_walkInput.y * _travelLimit.y);

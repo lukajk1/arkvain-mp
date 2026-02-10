@@ -12,7 +12,7 @@ public class TestRenderFeatureToggle : MonoBehaviour
     void Update()
     {
         if (Input.GetKey(KeyCode.G)) {
-            RenderFeatureToggler.ToggleFeature(true);
+            ScreenspaceEffectManager.SetGrayscale(true);
         }
     }
 }

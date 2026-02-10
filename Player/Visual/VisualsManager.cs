@@ -1,4 +1,5 @@
 using UnityEngine;
+using PurrNet;
 using PurrNet.Prediction;
 
 public class VisualsManager : StatelessPredictedIdentity
@@ -15,6 +16,26 @@ public class VisualsManager : StatelessPredictedIdentity
     [Header("Camera")]
     [SerializeField] private Camera _mainCamera;
     [SerializeField] private FirstPersonCamera _firstPersonCamera;
+    [SerializeField] private GameObject _deadPlayerPrefab;
+
+    private void OnEnable()
+    {
+        PlayerHealth.OnPlayerDeath += OnLocalPlayerDeath;
+        ScreenspaceEffectManager.SetGrayscale(false);
+
+    }
+
+    private void OnDisable()
+    {
+        PlayerHealth.OnPlayerDeath -= OnLocalPlayerDeath;
+    }
+
+    private void OnLocalPlayerDeath(PlayerID? playerId)
+    {
+        if (!isOwner) return;
+        if (_deadPlayerPrefab != null)
+            Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
+    }
 
     protected override void OnDestroy()
     {
@@ -36,7 +57,7 @@ public class VisualsManager : StatelessPredictedIdentity
 
         if (isOwner)
         {
-            Debug.Log("[VisualsManager] This is the owner, setting up local player visuals");
+            //Debug.Log("[VisualsManager] This is the owner, setting up local player visuals");
 
             // Disable mesh renderers for local player
             foreach (var renderer in _skinnedMeshRenderers)
@@ -81,7 +102,7 @@ public class VisualsManager : StatelessPredictedIdentity
         }
         else
         {
-            Debug.Log("[VisualsManager] This is NOT the owner, destroying camera");
+            //Debug.Log("[VisualsManager] This is NOT the owner, destroying camera");
 
             if (_weaponViewmodel != null) _weaponViewmodel.enabled = false;
 

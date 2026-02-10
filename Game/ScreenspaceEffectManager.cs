@@ -2,13 +2,21 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-public class RenderFeatureToggler : MonoBehaviour
+public class ScreenspaceEffectManager : MonoBehaviour
 {
     [SerializeField] private ScriptableRendererFeature _ssGrayscale;
     [SerializeField] private Material _ssDamageMaterial;
-    private float _thresholdToShowSSamage = 0.4f;
+    [SerializeField] private Volume _postProcessVolume;
+    [SerializeField] private float _deathBloomIntensity = 8f;
+    [SerializeField] private float _deathBloomDuration = 0.5f;
 
-    public static RenderFeatureToggler Instance { get; private set; }
+
+    private float _thresholdToShowSSDamage = 0.4f;
+
+    private Bloom _bloom;
+    private float _defaultBloomIntensity;
+
+    public static ScreenspaceEffectManager Instance { get; private set; }
 
     private PlayerHealth _localPlayerHealth;
 
@@ -24,7 +32,11 @@ public class RenderFeatureToggler : MonoBehaviour
         }
 
         if (_ssDamageMaterial != null) _ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
-        
+
+        if (_postProcessVolume != null && _postProcessVolume.profile.TryGet(out _bloom))
+        {
+            _defaultBloomIntensity = _bloom.intensity.value;
+        }
     }
 
     private void OnEnable()
@@ -41,6 +53,11 @@ public class RenderFeatureToggler : MonoBehaviour
         {
             _localPlayerHealth.OnHealthChanged -= OnHealthChanged;
         }
+
+        // Reset render features since ScriptableRendererFeature assets persist across play sessions
+        if (_ssGrayscale != null) _ssGrayscale.SetActive(false);
+        if (_ssDamageMaterial != null) _ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
+        if (_bloom != null) _bloom.intensity.value = _defaultBloomIntensity;
     }
 
     private void OnLocalPlayerHealthReady(PlayerHealth playerHealth)
@@ -58,7 +75,7 @@ public class RenderFeatureToggler : MonoBehaviour
 
         float healthRatio = (float)currentHealth / maxHealth;
 
-        if (healthRatio < _thresholdToShowSSamage)
+        if (healthRatio < _thresholdToShowSSDamage)
         {
             _ssDamageMaterial.SetFloat("_vignette_darkening", 0.3f);
         }
@@ -67,11 +84,22 @@ public class RenderFeatureToggler : MonoBehaviour
             _ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
         }
     }
-    public static void ToggleFeature(bool active)
+    public static void SetGrayscale(bool active)
     {
         if (Instance._ssGrayscale != null)
         {
             Instance._ssGrayscale.SetActive(active);
         }
+    }
+
+    public static void FlashBloom()
+    {
+        if (Instance._bloom == null) return;
+
+        LeanTween.cancel(Instance.gameObject);
+        Instance._bloom.intensity.value = Instance._deathBloomIntensity;
+        LeanTween.value(Instance.gameObject, Instance._deathBloomIntensity, Instance._defaultBloomIntensity, Instance._deathBloomDuration)
+            .setOnUpdate(val => Instance._bloom.intensity.value = val)
+            .setEase(LeanTweenType.easeOutExpo);
     }
 }

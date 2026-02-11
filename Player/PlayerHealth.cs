@@ -9,8 +9,6 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     public static event Action<PlayerID?> OnPlayerDeath;
     public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)
-    public static Action RespawnAllPlayers;
-
     // Event for when local player health is ready
     public static event Action<PlayerHealth> OnLocalPlayerHealthReady;
 
@@ -47,12 +45,12 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     private void OnEnable()
     {
-        RespawnAllPlayers += OnRespawnAllPlayers;
+        GameEvents.RespawnAllPlayers += OnRespawnAllPlayers;
     }
 
     private void OnDisable()
     {
-        RespawnAllPlayers -= OnRespawnAllPlayers;
+        GameEvents.RespawnAllPlayers -= OnRespawnAllPlayers;
 
         // Unregister from HUD if this is the local player
         if (isOwner && HUDManager.Instance != null)

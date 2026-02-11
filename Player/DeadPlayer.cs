@@ -4,12 +4,12 @@ public class DeadPlayer : MonoBehaviour
 {
     private void OnEnable()
     {
-        PlayerHealth.RespawnAllPlayers += OnRespawnAllPlayers;
+        GameEvents.RespawnAllPlayers += OnRespawnAllPlayers;
     }
 
     private void OnDisable()
     {
-        PlayerHealth.RespawnAllPlayers -= OnRespawnAllPlayers;
+        GameEvents.RespawnAllPlayers -= OnRespawnAllPlayers;
     }
 
     private void OnRespawnAllPlayers()

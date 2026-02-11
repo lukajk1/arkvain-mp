@@ -25,7 +25,7 @@ public class RoundEndedState : PredictedStateNode<RoundEndedState.RoundEndState>
             state.roundRestartTimer -= delta;
             if (state.roundRestartTimer <= 0)
             {
-                PlayerHealth.RespawnAllPlayers?.Invoke();
+                GameEvents.RespawnAllPlayers?.Invoke();
                 machine.Next();
             }
         }

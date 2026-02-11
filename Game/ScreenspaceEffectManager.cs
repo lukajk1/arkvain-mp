@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using QFSW.QC;
 
 public class ScreenspaceEffectManager : MonoBehaviour
 {
@@ -37,6 +38,10 @@ public class ScreenspaceEffectManager : MonoBehaviour
         {
             _defaultBloomIntensity = _bloom.intensity.value;
         }
+    }
+    private void Start()
+    {
+        QuantumRegistry.RegisterObject<MonoBehaviour>(this);
     }
 
     private void OnEnable()
@@ -84,6 +89,7 @@ public class ScreenspaceEffectManager : MonoBehaviour
             _ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
         }
     }
+    [Command("set-grayscale")]
     public static void SetGrayscale(bool active)
     {
         if (Instance._ssGrayscale != null)

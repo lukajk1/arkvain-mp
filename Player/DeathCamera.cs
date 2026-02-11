@@ -10,8 +10,6 @@ public class DeathCamera : MonoBehaviour
     {
         _yRotation = transform.eulerAngles.y;
         _cachedLookAction = InputManager.Instance.Player.Look;
-        ScreenspaceEffectManager.SetGrayscale(true);
-        ScreenspaceEffectManager.FlashBloom();
     }
 
     private void LateUpdate()

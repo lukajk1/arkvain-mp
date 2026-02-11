@@ -9,6 +9,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     public static event Action<PlayerID?> OnPlayerDeath;
     public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)
+    public event Action<PlayerID?> OnDeath;
     // Event for when local player health is ready
     public static event Action<PlayerHealth> OnLocalPlayerHealthReady;
 
@@ -63,6 +64,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     private void Die(PlayerID? attacker = null)
     {
         OnPlayerDeath?.Invoke(owner);
+        OnDeath?.Invoke(owner);
 
         // Broadcast kill event if there was an attacker
         if (attacker.HasValue && owner.HasValue)

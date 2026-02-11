@@ -18,21 +18,26 @@ public class VisualsManager : StatelessPredictedIdentity
     [SerializeField] private FirstPersonCamera _firstPersonCamera;
     [SerializeField] private GameObject _deadPlayerPrefab;
 
+    [SerializeField] private PlayerHealth _playerHealth;
+
     private void OnEnable()
     {
-        PlayerHealth.OnPlayerDeath += OnLocalPlayerDeath;
+        if (_playerHealth != null)
+            _playerHealth.OnDeath += OnPlayerDeath;
         ScreenspaceEffectManager.SetGrayscale(false);
-
     }
 
     private void OnDisable()
     {
-        PlayerHealth.OnPlayerDeath -= OnLocalPlayerDeath;
+        if (_playerHealth != null)
+            _playerHealth.OnDeath -= OnPlayerDeath;
     }
 
-    private void OnLocalPlayerDeath(PlayerID? playerId)
+    private void OnPlayerDeath(PlayerID? playerId)
     {
+        // should only fire if this instance is the local player--logic below this only pertains to this case
         if (!isOwner) return;
+        Debug.Log("WWW this shoudl run on one client");
         if (_deadPlayerPrefab != null)
             Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
     }

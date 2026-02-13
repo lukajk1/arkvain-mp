@@ -60,7 +60,7 @@ public class PlayerHealthVisual : MonoBehaviour
     private void UpdateHealthBar(int currentHealth, int maxHealth)
     {
         float newHealthPercent = (float)currentHealth / maxHealth;
-        Debug.Log($"[PlayerHealthVisual] UpdateHealthBar called — health: {currentHealth}/{maxHealth}, isOwner: {_playerHealth.isOwner}");
+        //Debug.Log($"[PlayerHealthVisual] UpdateHealthBar called — health: {currentHealth}/{maxHealth}, isOwner: {_playerHealth.isOwner}");
 
         if (_playerHealth.isOwner)
         {

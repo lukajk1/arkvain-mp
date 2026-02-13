@@ -2,7 +2,7 @@ using UnityEngine;
 using PurrNet;
 using PurrNet.Prediction;
 
-public class VisualsManager : StatelessPredictedIdentity
+public class PlayerVisualsManager : StatelessPredictedIdentity
 {
     [SerializeField] private SkinnedMeshRenderer[] _skinnedMeshRenderers;
     [SerializeField] private MeshRenderer[] _meshRenderers;
@@ -24,7 +24,6 @@ public class VisualsManager : StatelessPredictedIdentity
     {
         if (_playerHealth != null)
             _playerHealth.OnDeath += OnPlayerDeath;
-        ScreenspaceEffectManager.SetGrayscale(false);
     }
 
     private void OnDisable()
@@ -118,5 +117,9 @@ public class VisualsManager : StatelessPredictedIdentity
                 Debug.Log("[VisualsManager] Destroyed camera for non-owner");
             }
         }
+
+        // if screen was gray from previous death, reset it
+        ScreenspaceEffectManager.SetGrayscale(false);
+
     }
 }

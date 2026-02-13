@@ -99,7 +99,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
             }
         }
 
-        currentState.health += change;
+        currentState.health = Mathf.Max(0, currentState.health + change);
 
         // Fire damage event if taking damage (negative change)
         if (change < 0)
@@ -118,13 +118,17 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         //Debug.Log($"health changed to {currentState.health}");
     }
 
-    // visuals can be called multiple times if they are being called directly in Simulate(). Using updateview() prevents that from ocurring.
+    private int _lastBroadcastHealth = -1;
+
     protected override void UpdateView(HealthState viewState, HealthState? verified)
     {
         base.UpdateView(viewState, verified);
 
-        // Fire event for visual components to update
-        OnHealthChanged?.Invoke(currentState.health, _maxHealth);
+        if (viewState.health != _lastBroadcastHealth)
+        {
+            _lastBroadcastHealth = viewState.health;
+            OnHealthChanged?.Invoke(viewState.health, _maxHealth);
+        }
     }
 
     public struct HealthState : IPredictedData<PlayerHealth.HealthState>

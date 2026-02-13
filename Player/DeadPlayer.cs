@@ -4,6 +4,7 @@ public class DeadPlayer : MonoBehaviour
 {
     private void Start()
     {
+        Debug.Log("this should be called HHH");
         ScreenspaceEffectManager.SetGrayscale(true);
         ScreenspaceEffectManager.FlashBloom();
     }

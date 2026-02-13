@@ -34,10 +34,12 @@ public class ScreenspaceEffectManager : MonoBehaviour
         {
             _defaultBloomIntensity = _bloom.intensity.value;
         }
+
     }
     private void Start()
     {
         QuantumRegistry.RegisterObject<MonoBehaviour>(this);
+
     }
 
     private void OnDisable()

@@ -10,10 +10,6 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     public static event Action<PlayerID?> OnPlayerDeath;
     public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)
     public event Action<PlayerID?> OnDeath;
-    // Event for when local player health is ready
-    public static event Action<PlayerHealth> OnLocalPlayerHealthReady;
-
-    // Event for health changes (currentHealth, maxHealth)
     public event Action<int, int> OnHealthChanged;
 
     [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
@@ -23,12 +19,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         base.LateAwake();
 
         _onDamageTaken = new PredictedEvent<DamageInfo>(predictionManager, this);
-
-        // Register with HUD if this is the local player
-        if (isOwner)
-        {
-            HUDManager.Instance?.RegisterPlayerHealth(this);
-        }
+        if (isOwner) gameObject.name = "local player";
     }
 
     protected override void OnDestroy()
@@ -52,12 +43,6 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     private void OnDisable()
     {
         GameEvents.RespawnAllPlayers -= OnRespawnAllPlayers;
-
-        // Unregister from HUD if this is the local player
-        if (isOwner && HUDManager.Instance != null)
-        {
-            HUDManager.Instance.UnregisterPlayerHealth(this);
-        }
     }
 
 

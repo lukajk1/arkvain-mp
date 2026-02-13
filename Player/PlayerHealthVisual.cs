@@ -12,6 +12,9 @@ public class PlayerHealthVisual : MonoBehaviour
     [SerializeField] private Slider _healthSlider;
     [SerializeField] private Image _damageFlashPrefab;
 
+    [Header("Screen Effects")]
+    [SerializeField] private float _thresholdToShowSSDamage = 0.4f;
+
     [Header("Damage Flash Settings")]
     [SerializeField] private Transform _damageFlashContainer;
     [SerializeField] private float _damageFlashScaleY = 2f;
@@ -35,6 +38,11 @@ public class PlayerHealthVisual : MonoBehaviour
         if (_playerHealth != null)
         {
             _playerHealth.OnHealthChanged += UpdateHealthBar;
+            Debug.Log("[PlayerHealthVisual] Subscribed to OnHealthChanged");
+        }
+        else
+        {
+            Debug.LogWarning("[PlayerHealthVisual] _playerHealth is null in OnEnable — reference not assigned");
         }
     }
 
@@ -51,9 +59,16 @@ public class PlayerHealthVisual : MonoBehaviour
     /// </summary>
     private void UpdateHealthBar(int currentHealth, int maxHealth)
     {
-        if (_healthSlider == null) return;
-
         float newHealthPercent = (float)currentHealth / maxHealth;
+        Debug.Log($"[PlayerHealthVisual] UpdateHealthBar called — health: {currentHealth}/{maxHealth}, isOwner: {_playerHealth.isOwner}");
+
+        if (_playerHealth.isOwner)
+        {
+            ScreenspaceEffectManager.SetScreenDamage(newHealthPercent < _thresholdToShowSSDamage);
+            HUDManager.Instance?.SetHealthReadout(currentHealth, maxHealth);
+        }
+
+        if (_healthSlider == null) return;
 
         // Calculate current breakpoint (0 = 100%, 1 = 90%, 2 = 80%, etc.)
         int currentBreakpoint = Mathf.FloorToInt((1f - newHealthPercent) * _healthBreakpoints);

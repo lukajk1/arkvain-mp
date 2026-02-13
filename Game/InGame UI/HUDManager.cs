@@ -10,10 +10,8 @@ public class HUDManager : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI _healthText;
 
-
     private IWeaponLogic _currentWeapon;
     private WeaponManager _weaponManager;
-    private PlayerHealth _localPlayerHealth;
 
     private void Awake()
     {
@@ -35,37 +33,16 @@ public class HUDManager : MonoBehaviour
     {
         WeaponManager.OnLocalWeaponManagerReady -= OnWeaponManagerReady;
 
-        // Unsubscribe from weapon switch event
         if (_weaponManager != null)
         {
             _weaponManager.OnWeaponSwitched -= OnWeaponSwitched;
         }
-
-        // Unsubscribe from health changes
-        if (_localPlayerHealth != null)
-        {
-            _localPlayerHealth.OnHealthChanged -= OnHealthChanged;
-        }
     }
 
-    public void RegisterPlayerHealth(PlayerHealth playerHealth)
+    public void SetHealthReadout(int currentHealth, int maxHealth)
     {
-        _localPlayerHealth = playerHealth;
-
-        // Subscribe to health changes
-        _localPlayerHealth.OnHealthChanged += OnHealthChanged;
-
-        // Initialize health text with current values
-        OnHealthChanged(_localPlayerHealth.currentState.health, _localPlayerHealth._maxHealth);
-    }
-
-    public void UnregisterPlayerHealth(PlayerHealth playerHealth)
-    {
-        if (_localPlayerHealth == playerHealth)
-        {
-            _localPlayerHealth.OnHealthChanged -= OnHealthChanged;
-            _localPlayerHealth = null;
-        }
+        if (_healthText != null)
+            _healthText.text = $"{currentHealth}";
     }
 
     private void OnWeaponManagerReady(WeaponManager weaponManager)
@@ -98,14 +75,6 @@ public class HUDManager : MonoBehaviour
         _currentWeapon = newWeapon;
     }
 
-
-    private void OnHealthChanged(int currentHealth, int maxHealth)
-    {
-        if (_healthText != null)
-        {
-            _healthText.text = $"{currentHealth}";
-        }
-    }
 
     private void Update()
     {

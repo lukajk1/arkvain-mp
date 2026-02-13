@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using PurrNet;
 using PurrNet.Prediction;
 using PurrNet.Prediction.StateMachine;
 using System.Collections.Generic;
@@ -22,7 +23,7 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
         {
             PredictedObjectID? newPlayer;
 
-            var player = predictionManager.players.currentState.players[i];
+            PlayerID player = predictionManager.players.currentState.players[i];
 
             if (spawnPoints.Count > 0)
             {

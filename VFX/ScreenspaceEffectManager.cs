@@ -12,14 +12,10 @@ public class ScreenspaceEffectManager : MonoBehaviour
     [SerializeField] private float _deathBloomDuration = 0.5f;
 
 
-    private float _thresholdToShowSSDamage = 0.4f;
-
     private Bloom _bloom;
     private float _defaultBloomIntensity;
 
     public static ScreenspaceEffectManager Instance { get; private set; }
-
-    private PlayerHealth _localPlayerHealth;
 
     private void Awake()
     {
@@ -44,51 +40,32 @@ public class ScreenspaceEffectManager : MonoBehaviour
         QuantumRegistry.RegisterObject<MonoBehaviour>(this);
     }
 
-    private void OnEnable()
-    {
-        PlayerHealth.OnLocalPlayerHealthReady += OnLocalPlayerHealthReady;
-    }
-
     private void OnDisable()
     {
-        PlayerHealth.OnLocalPlayerHealthReady -= OnLocalPlayerHealthReady;
-
-        // Unsubscribe from health changes
-        if (_localPlayerHealth != null)
-        {
-            _localPlayerHealth.OnHealthChanged -= OnHealthChanged;
-        }
-
         // Reset render features since ScriptableRendererFeature assets persist across play sessions
         if (_ssGrayscale != null) _ssGrayscale.SetActive(false);
         if (_ssDamageMaterial != null) _ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
         if (_bloom != null) _bloom.intensity.value = _defaultBloomIntensity;
     }
 
-    private void OnLocalPlayerHealthReady(PlayerHealth playerHealth)
+    [Command("set-screendamage")]
+    public static void SetScreenDamage(bool value)
     {
-        _localPlayerHealth = playerHealth;
-
-        // Subscribe to health changes
-        _localPlayerHealth.OnHealthChanged += OnHealthChanged;
-    }
-
-    private void OnHealthChanged(int currentHealth, int maxHealth)
-    {
-        if (_ssDamageMaterial == null)
+        if (Instance._ssDamageMaterial == null)
             return;
 
-        float healthRatio = (float)currentHealth / maxHealth;
-
-        if (healthRatio < _thresholdToShowSSDamage)
+        if (value)
         {
-            _ssDamageMaterial.SetFloat("_vignette_darkening", 0.3f);
+            Instance._ssDamageMaterial.SetFloat("_vignette_darkening", 0.3f);
+
         }
         else
         {
-            _ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
+            Instance._ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
+
         }
     }
+
     [Command("set-grayscale")]
     public static void SetGrayscale(bool active)
     {

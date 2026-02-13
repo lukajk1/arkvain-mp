@@ -9,6 +9,7 @@ public class HUDManager : MonoBehaviour
     [SerializeField] private string _ammoFormat = "{0} / {1}"; // "12 / 30" format
 
     [SerializeField] private TextMeshProUGUI _healthText;
+    [SerializeField] private TextMeshProUGUI _velocityText;
 
     private IWeaponLogic _currentWeapon;
     private WeaponManager _weaponManager;
@@ -43,6 +44,12 @@ public class HUDManager : MonoBehaviour
     {
         if (_healthText != null)
             _healthText.text = $"{currentHealth}";
+    }
+
+    public void SetVelocityReadout(Vector3 velocity)
+    {
+        if (_velocityText != null)
+            _velocityText.text = $"{velocity.magnitude:F1}";
     }
 
     private void OnWeaponManagerReady(WeaponManager weaponManager)

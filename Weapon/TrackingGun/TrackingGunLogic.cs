@@ -249,10 +249,6 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
     {
         var position = transform.TransformPoint(_centerOfCamera);
 
-        // Draw origin sphere
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(position, 0.1f);
-
         if (!Application.isPlaying) return;
         if (_playerMovement == null) return;
 

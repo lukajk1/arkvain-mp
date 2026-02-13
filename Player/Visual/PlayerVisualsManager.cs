@@ -19,6 +19,9 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private GameObject _deadPlayerPrefab;
 
     [SerializeField] private PlayerHealth _playerHealth;
+    [SerializeField] private PlayerManualMovement _playerMovement;
+
+    [SerializeField] private bool showVelocity;
 
     private void OnEnable()
     {
@@ -120,6 +123,13 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
         // if screen was gray from previous death, reset it
         ScreenspaceEffectManager.SetGrayscale(false);
+    }
 
+    private void Update()
+    {
+        if (!isOwner || !showVelocity || _playerMovement == null) return;
+
+        var velocity = _playerMovement._rigidbody.linearVelocity;
+        HUDManager.Instance?.SetVelocityReadout(velocity);
     }
 }

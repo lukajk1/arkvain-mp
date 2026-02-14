@@ -2,11 +2,14 @@ using UnityEngine;
 
 public class DeadPlayer : MonoBehaviour
 {
+    [SerializeField] private AudioClip onDeathClip;
     private void Start()
     {
         Debug.Log("this should be called HHH");
         ScreenspaceEffectManager.SetGrayscale(true);
         ScreenspaceEffectManager.FlashBloom();
+
+        if (onDeathClip != null) SoundManager.Play(new SoundData(onDeathClip, varyPitch: false, varyVolume: false));
     }
     private void OnEnable()
     {

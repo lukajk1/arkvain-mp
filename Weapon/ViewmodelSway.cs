@@ -7,7 +7,7 @@ using UnityEngine;
 public class ViewmodelSway : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private PlayerMovement _playerMovement;
+    [SerializeField] private PlayerManualMovement _playerMovement;
 
     [Header("Feature Toggles")]
     [Tooltip("Turn positional sway (on camera movement) on/off")]
@@ -200,18 +200,4 @@ public class ViewmodelSway : MonoBehaviour
             ? _bobRotationMultiplier.z * CurveCos * _walkInput.x
             : 0;
     }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (_playerMovement == null)
-        {
-            // Try to find PlayerMovement in parent hierarchy
-            _playerMovement = GetComponentInParent<PlayerMovement>();
-
-            if (_playerMovement == null)
-                Debug.LogWarning("[ViewmodelSway] PlayerMovement reference is missing!");
-        }
-    }
-#endif
 }

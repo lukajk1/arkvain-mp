@@ -98,7 +98,7 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
         Shoot(ref state);
 
         // Consume ammo
-        state.currentAmmo--;
+        //state.currentAmmo--;
     }
 
     private void StartReload(ref ShootState state)

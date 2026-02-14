@@ -108,7 +108,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
         Shoot(ref state);
 
         // Consume ammo
-        state.currentAmmo--;
+        //state.currentAmmo--;
     }
 
     private void StartReload(ref ShootState state)

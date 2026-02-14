@@ -76,7 +76,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
 
             _rigidbody.AddForce(-Physics.gravity * _rigidbody.rb.mass);
 
-            if (input.moveDirection.sqrMagnitude > 0)
+            if (input.moveDirection.sqrMagnitude > 0 && !input.jump)
                 state.slopeStickCooldown = _slopeStickDuration;
 
             if (state.slopeStickCooldown > 0)

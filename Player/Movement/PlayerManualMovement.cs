@@ -9,6 +9,8 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     [SerializeField] private float _airAccelerationMultiplier = 0.5f;
     [SerializeField] private float _jumpForce = 5f;
     [SerializeField] private float _planarDamping = 10f;
+
+    [Header("Groud")]
     [SerializeField] private float _groundDrag = 8f;
     [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private float _jumpCooldown = 0.2f;
@@ -16,13 +18,12 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
 
     [Header("Slope Handling")]
     [SerializeField] private float _maxSlopeAngle = 40f;
-    [SerializeField] private float _slopeRaycastDist = 0.5f;
     [SerializeField] private float _slopeStickForce = 80f;
     [SerializeField] private float _slopeStickDuration = 0.15f;
     private RaycastHit _slopeHit;
 
 
-    [Header("Ext References")]
+    [Header("External References")]
     [SerializeField] private LayerMask _groundMask;
     [SerializeField] private FirstPersonCamera _camera;
     [SerializeField] public PredictedRigidbody _rigidbody;
@@ -48,12 +49,29 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
 
         bool isGrounded = IsGrounded();
 
+        // SNAP LOGIC: If we were grounded and aren't jumping, check for a slope transition
+        if (!isGrounded && state.wasGrounded && state.jumpCooldown <= 0)
+        {
+            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit snapHit, _groundCheckRadius * 2f, _groundMask))
+            {
+                isGrounded = true;
+                // Manually push the position down or apply a heavy burst of downward force
+                _rigidbody.AddForce(Vector3.down * _slopeStickForce * 2f, ForceMode.Acceleration);
+            }
+        }
+
         Vector3 moveDir = transform.forward * input.moveDirection.y + transform.right * input.moveDirection.x;
 
         bool onSlope = OnSlope();
 
         if (isGrounded && onSlope)
         {
+            // Use the slope's normal to find the correct "forward" and "right" on the incline
+            Vector3 slopeRight = Vector3.Cross(_slopeHit.normal, Vector3.up);
+            Vector3 slopeForward = Vector3.Cross(slopeRight, _slopeHit.normal);
+
+            // Reverse logic if moving backward/left
+            // Or more simply, project your existing moveDir correctly:
             moveDir = GetSlopeMoveDirection(moveDir);
 
             _rigidbody.AddForce(-Physics.gravity * _rigidbody.rb.mass);
@@ -62,7 +80,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
                 state.slopeStickCooldown = _slopeStickDuration;
 
             if (state.slopeStickCooldown > 0)
-                _rigidbody.AddForce(Vector3.down * _slopeStickForce);
+                _rigidbody.AddForce(-_slopeHit.normal * _slopeStickForce); // Stick TO the normal, not just down
         }
 
         Vector3 targetVel = moveDir * _moveSpeed;
@@ -114,7 +132,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
 
     private bool OnSlope()
     {
-        if (Physics.Raycast(transform.position, Vector3.down, out _slopeHit, _slopeRaycastDist, _groundMask))
+        if (Physics.Raycast(transform.position, Vector3.down, out _slopeHit, _groundCheckRadius, _groundMask))
         {
             float angle = Vector3.Angle(Vector3.up, _slopeHit.normal);
             return angle < _maxSlopeAngle && angle != 0;
@@ -165,8 +183,9 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         Gizmos.color = Color.white;
         Gizmos.DrawWireSphere(transform.position, _groundCheckRadius);
 
+        // slope raycast
         Gizmos.color = Color.yellow;
-        Gizmos.DrawRay(transform.position, Vector3.down * 0.4f);
+        Gizmos.DrawRay(transform.position, Vector3.down * _groundCheckRadius);
     }
 
     public struct State : IPredictedData<State>

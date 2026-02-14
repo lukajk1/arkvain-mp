@@ -79,7 +79,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             if (input.moveDirection.sqrMagnitude > 0 && !input.jump)
                 state.slopeStickCooldown = _slopeStickDuration;
 
-            if (state.slopeStickCooldown > 0)
+            if (state.slopeStickCooldown > 0 && !input.jump)
                 _rigidbody.AddForce(-_slopeHit.normal * _slopeStickForce); // Stick TO the normal, not just down
         }
 
@@ -109,6 +109,14 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             state.landCooldown = _landCooldown; // Prevent landing event right after jump
             _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
             _onJump.Invoke();
+        }
+
+        if (input.launchImpulse != Vector3.zero)
+        {
+            state.jumpCooldown = _jumpCooldown;
+            state.landCooldown = _landCooldown;
+            _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0, _rigidbody.velocity.z); // clear vertical before launch
+            _rigidbody.AddForce(input.launchImpulse, ForceMode.Impulse);
         }
 
         state.wasGrounded = isGrounded;
@@ -146,11 +154,24 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         return Vector3.ProjectOnPlane(moveDir, _slopeHit.normal).normalized;
     }
 
+    private Vector3? _pendingLaunchImpulse;
+
+    public void QueueLaunchImpulse(Vector3 impulse)
+    {
+        _pendingLaunchImpulse = impulse;
+    }
+
     // this will call every frame
     protected override void UpdateInput(ref MoveInput input)
     {
         // if a or/(|=) b, a = true
         input.jump |= InputManager.Instance.Player.Jump.IsPressed();
+
+        if (_pendingLaunchImpulse.HasValue)
+        {
+            input.launchImpulse = _pendingLaunchImpulse.Value;
+            _pendingLaunchImpulse = null;
+        }
     }
 
     // this runs each tick (as opposed to each frame)
@@ -176,6 +197,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     protected override void ModifyExtrapolatedInput(ref MoveInput input)
     {
         input.jump = false;
+        input.launchImpulse = Vector3.zero;
     }
 
     private void OnDrawGizmosSelected()
@@ -203,6 +225,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         public Vector2 moveDirection;
         public Vector3? cameraForward;
         public bool jump;
+        public Vector3 launchImpulse;
 
         public void Dispose() { }
     }

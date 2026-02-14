@@ -17,6 +17,8 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     [Header("Slope Handling")]
     [SerializeField] private float _maxSlopeAngle = 40f;
     [SerializeField] private float _slopeRaycastDist = 0.5f;
+    [SerializeField] private float _slopeStickForce = 80f;
+    [SerializeField] private float _slopeStickDuration = 0.15f;
     private RaycastHit _slopeHit;
 
 
@@ -42,16 +44,26 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     {
         state.jumpCooldown -= delta;
         state.landCooldown -= delta;
+        state.slopeStickCooldown -= delta;
 
         bool isGrounded = IsGrounded();
 
         Vector3 moveDir = transform.forward * input.moveDirection.y + transform.right * input.moveDirection.x;
 
         bool onSlope = OnSlope();
-        Debug.Log($"onslope: {onSlope}");
 
         if (isGrounded && onSlope)
+        {
             moveDir = GetSlopeMoveDirection(moveDir);
+
+            _rigidbody.AddForce(-Physics.gravity * _rigidbody.rb.mass);
+
+            if (input.moveDirection.sqrMagnitude > 0)
+                state.slopeStickCooldown = _slopeStickDuration;
+
+            if (state.slopeStickCooldown > 0)
+                _rigidbody.AddForce(Vector3.down * _slopeStickForce);
+        }
 
         Vector3 targetVel = moveDir * _moveSpeed;
         float accel = isGrounded ? _acceleration : _acceleration * _airAccelerationMultiplier;
@@ -162,6 +174,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         public float jumpCooldown;
         public bool wasGrounded;
         public float landCooldown;
+        public float slopeStickCooldown;
 
         public void Dispose() { }
     }

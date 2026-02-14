@@ -49,7 +49,7 @@ public class HUDManager : MonoBehaviour
     public void SetVelocityReadout(Vector3 velocity)
     {
         if (_velocityText != null)
-            _velocityText.text = $"{velocity.magnitude:F1}";
+            _velocityText.text = $"{new Vector3(velocity.x, 0, velocity.z).magnitude:F1}";
     }
 
     private void OnWeaponManagerReady(WeaponManager weaponManager)

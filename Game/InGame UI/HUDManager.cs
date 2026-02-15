@@ -88,6 +88,18 @@ public class HUDManager : MonoBehaviour
         _currentWeapon = newWeapon;
     }
 
+    public void SetAbilityCooldown(float normalizedCooldown)
+    {
+        if (_abilityCooldown != null)
+            _abilityCooldown.fillAmount = normalizedCooldown;
+    }
+
+    public void HideAbilityUI()
+    {
+        if (_abilityCooldownParentToHide != null)
+            _abilityCooldownParentToHide.SetActive(false);
+    }
+
 
     private void Update()
     {

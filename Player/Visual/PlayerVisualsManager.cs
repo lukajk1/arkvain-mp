@@ -60,9 +60,11 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         }
     }
 
-    private void Awake()
+    private void Start()
     {
         _ability = _abilityLogic as IAbility;
+        if (_ability == null)
+            HUDManager.Instance?.HideAbilityUI();
     }
 
     protected override void LateAwake()
@@ -137,9 +139,15 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
     private void Update()
     {
-        if (!isOwner || !showVelocity || _playerMovement == null) return;
+        if (!isOwner) return;
 
-        var velocity = _playerMovement._rigidbody.linearVelocity;
-        HUDManager.Instance?.SetVelocityReadout(velocity);
+        if (showVelocity && _playerMovement != null)
+        {
+            var velocity = _playerMovement._rigidbody.linearVelocity;
+            HUDManager.Instance?.SetVelocityReadout(velocity);
+        }
+
+        if (_ability != null)
+            HUDManager.Instance?.SetAbilityCooldown(_ability.CooldownNormalized);
     }
 }

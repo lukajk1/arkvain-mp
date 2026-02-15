@@ -11,6 +11,12 @@ public class ScreenspaceEffectManager : MonoBehaviour
     [SerializeField] private float _deathBloomIntensity = 8f;
     [SerializeField] private float _deathBloomDuration = 0.5f;
 
+    [Header("Screen Damage Flash")]
+    [SerializeField] private float _damageFlashPeak = 0.3f;
+    [SerializeField] private float _damageFlashPeakLowHealth = 0.45f;
+    [SerializeField] private float _damageBaselineLowHealth = 0.3f;
+    [SerializeField] private float _damageFlashDuration = 0.3f;
+
 
     private Bloom _bloom;
     private float _defaultBloomIntensity;
@@ -51,21 +57,12 @@ public class ScreenspaceEffectManager : MonoBehaviour
     }
 
     [Command("set-screendamage")]
-    public static void SetScreenDamage(bool value)
+    public static void SetScreenDamage(float value)
     {
         if (Instance._ssDamageMaterial == null)
             return;
 
-        if (value)
-        {
-            Instance._ssDamageMaterial.SetFloat("_vignette_darkening", 0.3f);
-
-        }
-        else
-        {
-            Instance._ssDamageMaterial.SetFloat("_vignette_darkening", 0f);
-
-        }
+        Instance._ssDamageMaterial.SetFloat("_vignette_darkening", value);
     }
 
     [Command("set-grayscale")]
@@ -86,5 +83,19 @@ public class ScreenspaceEffectManager : MonoBehaviour
         LeanTween.value(Instance.gameObject, Instance._deathBloomIntensity, Instance._defaultBloomIntensity, Instance._deathBloomDuration)
             .setOnUpdate(val => Instance._bloom.intensity.value = val)
             .setEase(LeanTweenType.easeOutExpo);
+    }
+
+    public static void FlashScreenDamage(bool lowHealth)
+    {
+        if (Instance._ssDamageMaterial == null) return;
+
+        float baseline = lowHealth ? Instance._damageBaselineLowHealth : 0f;
+        float peak = lowHealth ? Instance._damageFlashPeakLowHealth : Instance._damageFlashPeak;
+
+        LeanTween.cancel(Instance.gameObject, false);
+        Instance._ssDamageMaterial.SetFloat("_vignette_darkening", peak);
+        LeanTween.value(Instance.gameObject, peak, baseline, Instance._damageFlashDuration)
+            .setOnUpdate(val => Instance._ssDamageMaterial.SetFloat("_vignette_darkening", val))
+            .setEase(LeanTweenType.easeOutCubic);
     }
 }

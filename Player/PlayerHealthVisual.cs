@@ -15,7 +15,7 @@ public class PlayerHealthVisual : MonoBehaviour
     [Header("Screen Effects")]
     [SerializeField] private float _thresholdToShowSSDamage = 0.4f;
 
-    [Header("Damage Flash Settings")]
+    [Header("Healthbar Tick Down")]
     [SerializeField] private Transform _damageFlashContainer;
     [SerializeField] private float _damageFlashScaleY = 2f;
     [SerializeField] private float _damageFlashDuration = 0.3f;
@@ -64,7 +64,8 @@ public class PlayerHealthVisual : MonoBehaviour
 
         if (_playerHealth.isOwner)
         {
-            ScreenspaceEffectManager.SetScreenDamage(newHealthPercent < _thresholdToShowSSDamage);
+            bool lowHealth = newHealthPercent < _thresholdToShowSSDamage;
+            ScreenspaceEffectManager.FlashScreenDamage(lowHealth);
             HUDManager.Instance?.SetHealthReadout(currentHealth, maxHealth);
         }
 

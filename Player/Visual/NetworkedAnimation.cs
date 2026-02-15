@@ -25,6 +25,9 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     public enum JumpPhase { None, JumpStart, Airborne, Landing }
 
+    [Header("Blending")]
+    [SerializeField] private float _landToLocomotionFade = 0.15f;
+
     [Header("Parameter Smoothing")]
     [SerializeField] private StringAsset _parameterX;
     [SerializeField] private StringAsset _parameterY;
@@ -193,7 +196,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
                 landEvents.OnEnd = OnLandingEnd;
                 break;
             case JumpPhase.None:
-                if (_mixerState != null) _animancer.Play(_mixerState);
+                if (_mixerState != null) _animancer.Play(_mixerState, _landToLocomotionFade);
                 Debug.Log("[NetworkedAnimation] Returning to locomotion mixer");
                 break;
         }

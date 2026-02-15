@@ -33,7 +33,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private AudioClip _onJumpClip;
     [SerializeField] private AudioClip _onLandClip;
     [SerializeField] private List<AudioClip> _footstepClips;
-    [SerializeField] private float _footstepInterval = 2.2f;
+    [SerializeField] private float _footstepDistBetweenPlays = 2.2f;
 
     private float _footstepDistance;
 
@@ -194,7 +194,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             var vel = _playerMovement._rigidbody.linearVelocity;
             _footstepDistance += new Vector3(vel.x, 0f, vel.z).magnitude * Time.deltaTime;
 
-            if (_footstepDistance >= _footstepInterval)
+            if (_footstepDistance >= _footstepDistBetweenPlays)
             {
                 _footstepDistance = 0f;
                 var clip = _footstepClips[Random.Range(0, _footstepClips.Count)];

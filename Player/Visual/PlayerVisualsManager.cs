@@ -2,6 +2,7 @@ using UnityEngine;
 using PurrNet;
 using PurrNet.Prediction;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 public class PlayerVisualsManager : StatelessPredictedIdentity
 {
@@ -31,7 +32,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [Header("Sound")]
     [SerializeField] private AudioClip _onJumpClip;
     [SerializeField] private AudioClip _onLandClip;
-    [SerializeField] private AudioClip _footstepClip;
+    [SerializeField] private List<AudioClip> _footstepClips;
 
     private void OnEnable()
     {
@@ -43,15 +44,33 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     {
         if (_playerHealth != null)
             _playerHealth.OnDeath -= OnPlayerDeath;
+        if (_playerMovement != null)
+        {
+            _playerMovement._onJump.RemoveListener(OnJump);
+            _playerMovement._onLand.RemoveListener(OnLand);
+        }
     }
 
     private void OnPlayerDeath(PlayerID? playerId)
     {
         // should only fire if this instance is the local player--logic below this only pertains to this case
         if (!isOwner) return;
-        Debug.Log("WWW this shoudl run on one client");
+        //Debug.Log("WWW this shoudl run on one client");
         if (_deadPlayerPrefab != null)
             Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
+    }
+
+    private void OnJump()
+    {
+        Debug.Log("jump called");
+        if (_onJumpClip != null)
+            SoundManager.Play(new SoundData(_onJumpClip, varyPitch: false, varyVolume: false));
+    }
+
+    private void OnLand()
+    {
+        if (_onLandClip != null)
+            SoundManager.Play(new SoundData(_onLandClip, varyPitch: false, varyVolume: false));
     }
 
     protected override void OnDestroy()
@@ -81,6 +100,11 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     {
         base.LateAwake();
 
+        if (_playerMovement != null)
+        {
+            _playerMovement._onJump.AddListener(OnJump);
+            _playerMovement._onLand.AddListener(OnLand);
+        }
 
         Debug.Log($"[VisualsManager] LateAwake - isOwner: {isOwner}, Owner: {owner}, ClientGame.Instance: {ClientGame.Instance != null}, MainCamera: {_mainCamera != null}, FirstPersonCamera: {_firstPersonCamera != null}");
 

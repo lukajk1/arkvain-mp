@@ -14,11 +14,16 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 {
     [Header("Animation Setup")]
     [SerializeField] private AnimancerComponent _animancer;
+    [SerializeField] private PlayerManualMovement _playerMovement;
 
     // Transition indices in the library
     [Header("Transition Indices")]
     [SerializeField] private byte _locomotionMixerIndex = 0;
-    [SerializeField] private byte _jumpIndex = 1;
+    [SerializeField] private byte _jumpStartIndex = 1;
+    [SerializeField] private byte _airborneIndex = 2;
+    [SerializeField] private byte _landingIndex = 3;
+
+    public enum JumpPhase { None, JumpStart, Airborne, Landing }
 
     [Header("Parameter Smoothing")]
     [SerializeField] private StringAsset _parameterX;
@@ -27,10 +32,22 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     private SmoothedVector2Parameter _smoothedParameter;
     private Vector2MixerState _mixerState;
+    private JumpPhase _pendingPhase = JumpPhase.None;
 
     protected override void LateAwake()
     {
         base.LateAwake();
+
+        if (_playerMovement != null)
+        {
+            _playerMovement._onJump.AddListener(OnJump);
+            _playerMovement._onLand.AddListener(OnLand);
+            Debug.Log("[NetworkedAnimation] Subscribed to _onJump and _onLand");
+        }
+        else
+        {
+            Debug.LogError("[NetworkedAnimation] _playerMovement is null — jump/land events will not fire!");
+        }
 
         Debug.Log($"[NetworkedAnimation] LateAwake started on {gameObject.name}");
 
@@ -38,12 +55,6 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
         {
             _animancer = GetComponent<AnimancerComponent>();
             Debug.Log($"[NetworkedAnimation] AnimancerComponent: {(_animancer != null ? "Found" : "NULL!")}");
-        }
-
-        if (_animancer == null)
-        {
-            Debug.LogError($"[NetworkedAnimation] No AnimancerComponent found on {gameObject.name}!");
-            return;
         }
 
         // Get the transition library from the AnimancerComponent
@@ -120,6 +131,16 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     protected override void Simulate(AnimInput input, ref AnimState state, float delta)
     {
+        if (input.hasPhaseRequest && input.requestedPhase != state.jumpPhase)
+        {
+            Debug.Log($"[NetworkedAnimation] Simulate applying phase: {input.requestedPhase}");
+            state.jumpPhase = input.requestedPhase;
+            PlayJumpPhase(state.jumpPhase);
+        }
+
+        if (state.jumpPhase != JumpPhase.None)
+            return;
+
         // Set the target value for smoothed parameters from input
         if (_smoothedParameter != null)
         {
@@ -134,11 +155,6 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
             state.moveDirectionY = _mixerState.Parameter.y;
             state.mixerTime = _mixerState.Time;
             state.mixerSpeed = _mixerState.Speed;
-
-            //if (input.moveDirection.sqrMagnitude > 0.01f)
-            //{
-            //    Debug.Log($"[NetworkedAnimation] Simulate - Input: ({input.moveDirection.x:F2}, {input.moveDirection.y:F2}), Mixer: ({state.moveDirectionX:F2}, {state.moveDirectionY:F2}), Time: {state.mixerTime:F2}");
-            //}
         }
         else
         {
@@ -148,10 +164,53 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
         }
     }
 
+    private void PlayJumpPhase(JumpPhase phase)
+    {
+        if (_animancer == null) return;
+
+        switch (phase)
+        {
+            case JumpPhase.JumpStart:
+                if (!_animancer.Graph.Transitions.TryGetTransition(_jumpStartIndex, out var jumpGroup))
+                { Debug.LogError($"[NetworkedAnimation] JumpStart transition not found at index {_jumpStartIndex}"); return; }
+                var jumpState = _animancer.Play(jumpGroup.Transition);
+                Debug.Log("[NetworkedAnimation] Playing JumpStart");
+                jumpState.Events(this, out AnimancerEvent.Sequence jumpEvents);
+                jumpEvents.OnEnd = OnJumpStartEnd;
+                break;
+            case JumpPhase.Airborne:
+                if (!_animancer.Graph.Transitions.TryGetTransition(_airborneIndex, out var airGroup))
+                { Debug.LogError($"[NetworkedAnimation] Airborne transition not found at index {_airborneIndex}"); return; }
+                _animancer.Play(airGroup.Transition);
+                Debug.Log("[NetworkedAnimation] Playing Airborne");
+                break;
+            case JumpPhase.Landing:
+                if (!_animancer.Graph.Transitions.TryGetTransition(_landingIndex, out var landGroup))
+                { Debug.LogError($"[NetworkedAnimation] Landing transition not found at index {_landingIndex}"); return; }
+                var landState = _animancer.Play(landGroup.Transition);
+                Debug.Log("[NetworkedAnimation] Playing Landing");
+                landState.Events(this, out AnimancerEvent.Sequence landEvents);
+                landEvents.OnEnd = OnLandingEnd;
+                break;
+            case JumpPhase.None:
+                if (_mixerState != null) _animancer.Play(_mixerState);
+                Debug.Log("[NetworkedAnimation] Returning to locomotion mixer");
+                break;
+        }
+    }
+
+    private bool _hasPendingPhase = false;
+
     protected override void UpdateInput(ref AnimInput input)
     {
-        // Poll movement input every frame (accumulates until GetFinalInput)
-        // This matches PlayerMovement's pattern
+        if (_hasPendingPhase)
+        {
+            Debug.Log($"[NetworkedAnimation] UpdateInput consuming pendingPhase: {_pendingPhase}");
+            input.requestedPhase = _pendingPhase;
+            input.hasPhaseRequest = true;
+            _pendingPhase = JumpPhase.None;
+            _hasPendingPhase = false;
+        }
     }
 
     protected override void GetFinalInput(ref AnimInput input)
@@ -176,8 +235,8 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     protected override void ModifyExtrapolatedInput(ref AnimInput input)
     {
-        // Allow extrapolation of movement for smooth animation
-        // Unlike jump/shoot which should not be extrapolated
+        input.requestedPhase = JumpPhase.None;
+        input.hasPhaseRequest = false;
     }
 
     /// <summary>
@@ -211,13 +270,18 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
             return;
         }
 
-        // 2. Apply parameters
+        // 2. Restore jump phase animation if mid-air
+        if (state.jumpPhase != JumpPhase.None)
+        {
+            PlayJumpPhase(state.jumpPhase);
+            return;
+        }
+
+        // 3. Apply locomotion mixer parameters
         _mixerState.Parameter = new Vector2(state.moveDirectionX, state.moveDirectionY);
         _mixerState.Time = state.mixerTime;
         _mixerState.Speed = state.mixerSpeed;
-
-        // 3. Apply Weight
-        _mixerState.Weight = state.weight; // <--- APPLY THIS
+        _mixerState.Weight = state.weight;
 
         // 4. Update smoothed target to match visual snap
         if (_smoothedParameter != null)
@@ -226,11 +290,53 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
         }
     }
 
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        if (_playerMovement != null)
+        {
+            _playerMovement._onJump.RemoveListener(OnJump);
+            _playerMovement._onLand.RemoveListener(OnLand);
+        }
+    }
+
+    private void SetPendingPhase(JumpPhase phase)
+    {
+        _pendingPhase = phase;
+        _hasPendingPhase = true;
+    }
+
+    private void OnJump()
+    {
+        Debug.Log("[NetworkedAnimation] OnJump fired, setting pending JumpStart");
+        SetPendingPhase(JumpPhase.JumpStart);
+    }
+
+    private void OnJumpStartEnd()
+    {
+        Debug.Log("[NetworkedAnimation] OnJumpStartEnd fired, setting pending Airborne");
+        SetPendingPhase(JumpPhase.Airborne);
+    }
+
+    private void OnLand()
+    {
+        Debug.Log("[NetworkedAnimation] OnLand fired, setting pending Landing");
+        SetPendingPhase(JumpPhase.Landing);
+    }
+
+    private void OnLandingEnd()
+    {
+        Debug.Log("[NetworkedAnimation] OnLandingEnd fired, returning to None");
+        SetPendingPhase(JumpPhase.None);
+    }
+
     #region Data Structures
 
     public struct AnimInput : IPredictedData<AnimInput>
     {
         public Vector2 moveDirection;
+        public JumpPhase requestedPhase;
+        public bool hasPhaseRequest;
 
         public void Dispose()
         {
@@ -245,6 +351,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
         public float mixerSpeed; // Sync the mixer's speed
         public float weight;
         public byte locomotionMixerIndex;
+        public JumpPhase jumpPhase;
 
         public void Dispose()
         {

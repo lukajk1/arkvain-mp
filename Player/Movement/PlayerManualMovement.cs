@@ -120,8 +120,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             state.movementState = MovementState.Jumping;
             _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
             _onJump.Invoke();
-            Debug.Log("jump called in movement");
-
+            //Debug.Log("jump called in movement");
         }
 
         // Transition Jumping -> Airborne once we leave the ground

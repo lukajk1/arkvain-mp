@@ -30,7 +30,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
     {
         base.LateAwake();
 
-        Debug.Log("[CrossbowLogic] LateAwake started");
+        //Debug.Log("[CrossbowLogic] LateAwake started");
 
         _onShootEvent = new PredictedEvent(predictionManager, this);
         _onShootEvent.AddListener(OnShootEventHandler);
@@ -39,7 +39,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
         _onReloadEvent = new PredictedEvent(predictionManager, this);
         _onReloadEvent.AddListener(OnReloadEventHandler);
 
-        Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}");
+        //Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}");
     }
 
     protected override void OnDestroy()

@@ -81,7 +81,8 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
 
             // Reverse logic if moving backward/left
             // Or more simply, project your existing moveDir correctly:
-            moveDir = GetSlopeMoveDirection(moveDir);
+            if (!input.jump)
+                moveDir = GetSlopeMoveDirection(moveDir);
 
             // don't apply gravity cancellation while on slop if jumping
             if (!input.jump)
@@ -92,7 +93,11 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
 
             if (state.slopeStickCooldown > 0 && !input.jump)
                 _rigidbody.AddForce(-_slopeHit.normal * _slopeStickForce); // Stick TO the normal, not just down
+
         }
+
+        if (isGrounded && input.moveDirection.sqrMagnitude == 0 && !input.jump)
+            _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0f, _rigidbody.velocity.z);
 
         Vector3 targetVel = moveDir * _moveSpeed;
         float accel = isGrounded ? _acceleration : _acceleration * _airAccelerationMultiplier;
@@ -120,6 +125,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             state.jumpCooldown = _jumpCooldown;
             state.landCooldown = _landCooldown; // Prevent landing event right after jump
             state.movementState = MovementState.Jumping;
+            _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0f, _rigidbody.velocity.z);
             _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
             _onJump.Invoke();
             //Debug.Log("jump called in movement");

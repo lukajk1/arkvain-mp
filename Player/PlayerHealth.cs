@@ -64,6 +64,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
             if (scoreManager != null)
             {
                 scoreManager.RecordKill(attacker.Value, owner.Value);
+                HUDManager.Instance?.BroadcastEvent("Killed by testplayer");
             }
         }
 

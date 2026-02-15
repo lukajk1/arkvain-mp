@@ -135,8 +135,10 @@ public class HUDManager : MonoBehaviour
         Vector2 targetPos = _broadcastStartAnchoredPos + Vector2.up * _broadcastRiseDistance;
         _broadcastTweenId = LeanTween.move(_broadcastText.rectTransform, targetPos, _broadcastDuration)
             .setEase(LeanTweenType.easeOutCubic).id;
-        _broadcastAlphaTweenId = LeanTween.alphaText(_broadcastText.rectTransform, 0f, _broadcastDuration)
-            .setEase(LeanTweenType.easeInCubic).id;
+        _broadcastAlphaTweenId = LeanTween.value(gameObject, 1f, 0f, _broadcastDuration)
+            .setEase(LeanTweenType.easeInCubic)
+            .setOnUpdate((float val) => _broadcastText.alpha = val)
+            .setOnComplete(() => _broadcastText.alpha = 0f).id;
     }
 
     private void Update()

@@ -15,11 +15,13 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     protected override void Simulate(DashInput input, ref State state, float delta)
     {
         state.cooldown -= delta;
+        state.dashFired = false;
         state.triedDashOnCooldown = false;
 
         if (input.dash && state.cooldown <= 0f)
         {
             state.cooldown = _dashCooldown;
+            state.dashFired = true;
             var dir = (transform.forward * input.dashDirection.y + transform.right * input.dashDirection.x).normalized;
             _movement.QueueLaunchImpulse(dir * _dashForce);
         }
@@ -29,22 +31,22 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
         }
     }
 
-    private float? _lastViewCooldown;
+    private bool _lastDashFired;
     private bool _lastTriedDashOnCooldown;
 
     protected override void UpdateView(State viewState, State? verified)
     {
         base.UpdateView(viewState, verified);
 
-        if (_lastViewCooldown.HasValue)
+        if (viewState.dashFired && !_lastDashFired)
         {
-            if (viewState.cooldown > _lastViewCooldown.Value)
-                SoundManager.Play(new SoundData(_dashClip, varyPitch: false, varyVolume: false));
-            else if (viewState.triedDashOnCooldown && !_lastTriedDashOnCooldown)
-                SoundManager.Play(new SoundData(_cooldownNotUpClip, varyPitch: false, varyVolume: false));
+            SoundManager.Play(new SoundData(_dashClip, varyPitch: false, varyVolume: false));
+            Debug.Log("dashed");
         }
+        else if (viewState.triedDashOnCooldown && !_lastTriedDashOnCooldown)
+            SoundManager.Play(new SoundData(_cooldownNotUpClip, varyPitch: false, varyVolume: false));
 
-        _lastViewCooldown = viewState.cooldown;
+        _lastDashFired = viewState.dashFired;
         _lastTriedDashOnCooldown = viewState.triedDashOnCooldown;
     }
 
@@ -68,6 +70,7 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     public struct State : IPredictedData<State>
     {
         public float cooldown;
+        public bool dashFired;
         public bool triedDashOnCooldown;
         public void Dispose() { }
     }

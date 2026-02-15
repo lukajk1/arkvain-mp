@@ -17,6 +17,15 @@ public class HUDManager : MonoBehaviour
     [SerializeField] private GameObject _abilityCooldownParentToHide;
     [SerializeField] private Image _abilityCooldown;
 
+    [Header("Center Display Broadcasts")]
+    [SerializeField] private TextMeshProUGUI _broadcastText;
+    [SerializeField] private float _broadcastRiseDistance = 80f;
+    [SerializeField] private float _broadcastDuration = 1.2f;
+
+    private int _broadcastTweenId = -1;
+    private int _broadcastAlphaTweenId = -1;
+    private Vector2 _broadcastStartAnchoredPos;
+
     private IWeaponLogic _currentWeapon;
     private WeaponManager _weaponManager;
 
@@ -29,6 +38,15 @@ public class HUDManager : MonoBehaviour
             return;
         }
         Instance = this;
+    }
+
+    private void Start()
+    {
+        if (_broadcastText != null)
+        {
+            _broadcastStartAnchoredPos = _broadcastText.rectTransform.anchoredPosition;
+            _broadcastText.alpha = 0f;
+        }
     }
 
     private void OnEnable()
@@ -102,6 +120,24 @@ public class HUDManager : MonoBehaviour
             _abilityCooldownParentToHide.SetActive(false);
     }
 
+
+    public void BroadcastEvent(string message)
+    {
+        if (_broadcastText == null) return;
+
+        if (_broadcastTweenId != -1) LeanTween.cancel(_broadcastTweenId);
+        if (_broadcastAlphaTweenId != -1) LeanTween.cancel(_broadcastAlphaTweenId);
+
+        _broadcastText.text = message;
+        _broadcastText.alpha = 1f;
+        _broadcastText.rectTransform.anchoredPosition = _broadcastStartAnchoredPos;
+
+        Vector2 targetPos = _broadcastStartAnchoredPos + Vector2.up * _broadcastRiseDistance;
+        _broadcastTweenId = LeanTween.move(_broadcastText.rectTransform, targetPos, _broadcastDuration)
+            .setEase(LeanTweenType.easeOutCubic).id;
+        _broadcastAlphaTweenId = LeanTween.alphaText(_broadcastText.rectTransform, 0f, _broadcastDuration)
+            .setEase(LeanTweenType.easeInCubic).id;
+    }
 
     private void Update()
     {

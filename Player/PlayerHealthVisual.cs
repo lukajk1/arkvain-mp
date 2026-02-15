@@ -37,7 +37,7 @@ public class PlayerHealthVisual : MonoBehaviour
     {
         if (_playerHealth != null)
         {
-            _playerHealth.OnHealthChanged += UpdateHealthBar;
+            _playerHealth.OnHealthChanged += OnHealthChanged;
             Debug.Log("[PlayerHealthVisual] Subscribed to OnHealthChanged");
         }
         else
@@ -50,14 +50,14 @@ public class PlayerHealthVisual : MonoBehaviour
     {
         if (_playerHealth != null)
         {
-            _playerHealth.OnHealthChanged -= UpdateHealthBar;
+            _playerHealth.OnHealthChanged -= OnHealthChanged;
         }
     }
 
     /// <summary>
     /// Updates the health bar visual based on current health percentage.
     /// </summary>
-    private void UpdateHealthBar(int currentHealth, int maxHealth)
+    private void OnHealthChanged(int currentHealth, int maxHealth)
     {
         float newHealthPercent = (float)currentHealth / maxHealth;
         //Debug.Log($"[PlayerHealthVisual] UpdateHealthBar called — health: {currentHealth}/{maxHealth}, isOwner: {_playerHealth.isOwner}");

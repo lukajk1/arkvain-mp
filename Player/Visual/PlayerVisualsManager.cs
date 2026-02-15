@@ -28,6 +28,11 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
     [SerializeField] private bool showVelocity;
 
+    [Header("Sound")]
+    [SerializeField] private AudioClip _onJumpClip;
+    [SerializeField] private AudioClip _onLandClip;
+    [SerializeField] private AudioClip _footstepClip;
+
     private void OnEnable()
     {
         if (_playerHealth != null)

@@ -3,6 +3,15 @@ using PurrNet.Prediction;
 
 public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveInput, PlayerManualMovement.State>
 {
+    public enum MovementState
+    {
+        Grounded,
+        Airborne,
+        Jumping
+    }
+
+    public MovementState CurrentMovementState { get; private set; } = MovementState.Grounded;
+
     [Header("Values")]
     [HideInInspector] public float _moveSpeed = 4.2f;
     [SerializeField] private float _acceleration = 20f;
@@ -96,9 +105,10 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             _rigidbody.velocity = new Vector3(targetVel.x, _rigidbody.velocity.y, targetVel.z);
         }
 
-        // Detect landing: was not grounded last tick, but grounded now, and cooldown expired
+        // Detect landing: was airborne last tick, grounded now, cooldown expired
         if (!state.wasGrounded && isGrounded && state.landCooldown <= 0)
         {
+            state.movementState = MovementState.Grounded;
             _onLand.Invoke();
             state.landCooldown = _landCooldown;
         }
@@ -107,9 +117,22 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         {
             state.jumpCooldown = _jumpCooldown;
             state.landCooldown = _landCooldown; // Prevent landing event right after jump
+            state.movementState = MovementState.Jumping;
             _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
             _onJump.Invoke();
         }
+
+        // Transition Jumping -> Airborne once we leave the ground
+        if (state.movementState == MovementState.Jumping && !isGrounded)
+            state.movementState = MovementState.Airborne;
+
+        // If grounded and not mid-jump, ensure state reflects that
+        if (isGrounded && state.movementState != MovementState.Jumping)
+            state.movementState = MovementState.Grounded;
+        else if (!isGrounded && state.movementState == MovementState.Grounded)
+            state.movementState = MovementState.Airborne;
+
+        CurrentMovementState = state.movementState;
 
         if (input.launchImpulse != Vector3.zero)
         {
@@ -216,6 +239,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         public bool wasGrounded;
         public float landCooldown;
         public float slopeStickCooldown;
+        public MovementState movementState;
 
         public void Dispose() { }
     }

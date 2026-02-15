@@ -6,6 +6,7 @@ using UnityEngine;
 public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
     [SerializeField] public int _maxHealth;
+    [SerializeField] private float _killZoneY = -35f;
 
     public static event Action<PlayerID?> OnPlayerDeath;
     public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)
@@ -119,7 +120,17 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         //Debug.Log($"health changed to {currentState.health}");
     }
 
+    protected override void Simulate(ref HealthState state, float delta)
+    {
+        if (!state.isDead && transform.position.y < _killZoneY)
+        {
+            state.health = 0;
+            state.isDead = true;
+        }
+    }
+
     private int _lastBroadcastHealth = -1;
+    private bool _lastDead = false;
 
     protected override void UpdateView(HealthState viewState, HealthState? verified)
     {
@@ -130,11 +141,18 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
             _lastBroadcastHealth = viewState.health;
             OnHealthChanged?.Invoke(viewState.health, _maxHealth);
         }
+
+        if (viewState.isDead && !_lastDead)
+        {
+            _lastDead = true;
+            Die();
+        }
     }
 
     public struct HealthState : IPredictedData<PlayerHealth.HealthState>
     {
         public int health;
+        public bool isDead;
 
         public void Dispose() { }
 

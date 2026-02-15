@@ -1,8 +1,10 @@
 using UnityEngine;
 using PurrNet.Prediction;
 
-public class DashAbility : PredictedIdentity<DashAbility.DashInput, DashAbility.State>
+public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.State>
 {
+    public override float CooldownNormalized => _dashCooldown > 0f ? Mathf.Clamp01(1f - currentState.cooldown / _dashCooldown) : 1f;
+
     [SerializeField] private PlayerManualMovement _movement;
     [SerializeField] private float _dashForce = 12f;
     [SerializeField] private float _dashCooldown = 1f;
@@ -27,6 +29,7 @@ public class DashAbility : PredictedIdentity<DashAbility.DashInput, DashAbility.
     }
 
     private float? _lastViewCooldown;
+    private bool _lastTriedDashOnCooldown;
 
     protected override void UpdateView(State viewState, State? verified)
     {
@@ -36,14 +39,12 @@ public class DashAbility : PredictedIdentity<DashAbility.DashInput, DashAbility.
         {
             if (viewState.cooldown > _lastViewCooldown.Value)
                 SoundManager.Play(new SoundData(_dashClip, varyPitch: false, varyVolume: false));
-            else if (viewState.triedDashOnCooldown)
-            {
+            else if (viewState.triedDashOnCooldown && !_lastTriedDashOnCooldown)
                 SoundManager.Play(new SoundData(_cooldownNotUpClip, varyPitch: false, varyVolume: false));
-                Debug.Log("played sound");
-            }
         }
 
         _lastViewCooldown = viewState.cooldown;
+        _lastTriedDashOnCooldown = viewState.triedDashOnCooldown;
     }
 
 
@@ -70,7 +71,7 @@ public class DashAbility : PredictedIdentity<DashAbility.DashInput, DashAbility.
         public void Dispose() { }
     }
 
-    public struct DashInput : IPredictedData
+    public struct DashInput : IPredictedData<DashInput>
     {
         public bool dash;
         public Vector2 dashDirection;

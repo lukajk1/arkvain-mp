@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class HUDManager : MonoBehaviour
 {
@@ -10,6 +11,11 @@ public class HUDManager : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI _healthText;
     [SerializeField] private TextMeshProUGUI _velocityText;
+
+    [Header("Ability")]
+    [SerializeField] private TextMeshProUGUI _abilityCooldownText;
+    [SerializeField] private GameObject _abilityCooldownParentToHide;
+    [SerializeField] private Image _abilityCooldown;
 
     private IWeaponLogic _currentWeapon;
     private WeaponManager _weaponManager;

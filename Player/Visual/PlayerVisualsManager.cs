@@ -21,6 +21,10 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private PlayerHealth _playerHealth;
     [SerializeField] private PlayerManualMovement _playerMovement;
 
+    [Header("Ability")]
+    [SerializeField] private MonoBehaviour _abilityLogic;
+    public IAbility _ability;
+
     [SerializeField] private bool showVelocity;
 
     private void OnEnable()
@@ -56,9 +60,15 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         }
     }
 
+    private void Awake()
+    {
+        _ability = _abilityLogic as IAbility;
+    }
+
     protected override void LateAwake()
     {
         base.LateAwake();
+
 
         Debug.Log($"[VisualsManager] LateAwake - isOwner: {isOwner}, Owner: {owner}, ClientGame.Instance: {ClientGame.Instance != null}, MainCamera: {_mainCamera != null}, FirstPersonCamera: {_firstPersonCamera != null}");
 

@@ -7,6 +7,7 @@ public struct SoundData
     public AudioClip clip;
     public Vector3 soundPos;
     public float volume;
+    public float pitch;
     public SoundBlend soundBlend;
     public Type type;
 
@@ -23,6 +24,7 @@ public struct SoundData
         Vector3? soundPos = null,
         SoundBlend blend = SoundBlend.NonSpatial,
         float volume = 1f, // not sure if I even want this as an option.. better to normalize and bake it into the clip directly
+        float pitch = 1f,
         float minDist = 4.5f,
         float maxDist = 100f,
         bool isLooping = false,
@@ -33,6 +35,7 @@ public struct SoundData
         this.clip = clip;
         this.soundPos = soundPos ?? Vector3.zero; // assign vec3.zero if null. Can't be assigned as a default in the parameter declaration
         this.volume = volume;
+        this.pitch = pitch;
         this.type = type;
         this.soundBlend = blend;
         this.minDist = minDist;

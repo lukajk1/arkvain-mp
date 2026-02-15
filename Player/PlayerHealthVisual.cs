@@ -1,3 +1,5 @@
+using NUnit.Framework;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,8 +24,13 @@ public class PlayerHealthVisual : MonoBehaviour
     [SerializeField] private int _healthBreakpoints = 10;
     [SerializeField] private float _cascadeDelay = 0.05f;
 
+    [Header("SFX")]
+    [SerializeField] private List<AudioClip> hurtSFX;
+    [SerializeField] private float _hurtSFXCooldown = 0.3f;
+
     private float _previousHealthPercent = 1f;
     private int _previousBreakpoint = -1;
+    private float _lastHurtSFXTime = -999f;
 
     private void Awake()
     {
@@ -35,6 +42,10 @@ public class PlayerHealthVisual : MonoBehaviour
 
     private void OnEnable()
     {
+        _previousBreakpoint = -1;
+        _previousHealthPercent = 1f;
+        ScreenspaceEffectManager.SetScreenDamage(0f);
+
         if (_playerHealth != null)
         {
             _playerHealth.OnHealthChanged += OnHealthChanged;
@@ -64,8 +75,18 @@ public class PlayerHealthVisual : MonoBehaviour
 
         if (_playerHealth.isOwner)
         {
-            bool lowHealth = newHealthPercent < _thresholdToShowSSDamage;
-            ScreenspaceEffectManager.FlashScreenDamage(lowHealth);
+            if (_previousBreakpoint != -1 && newHealthPercent < _previousHealthPercent)
+            {
+                bool lowHealth = newHealthPercent < _thresholdToShowSSDamage;
+                ScreenspaceEffectManager.FlashScreenDamage(lowHealth);
+
+                if (hurtSFX != null && hurtSFX.Count > 0 && Time.time - _lastHurtSFXTime >= _hurtSFXCooldown)
+                {
+                    _lastHurtSFXTime = Time.time;
+                    var clip = hurtSFX[Random.Range(0, hurtSFX.Count)];
+                    SoundManager.Play(new SoundData(clip, pitch: 0.4f));
+                }
+            }
             HUDManager.Instance?.SetHealthReadout(currentHealth, maxHealth);
         }
 

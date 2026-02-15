@@ -96,7 +96,7 @@ public class SoundManager : MonoBehaviour
 
         // Reset to defaults before applying new settings
         audioSource.volume = sound.volume;
-        audioSource.pitch = 1f;
+        audioSource.pitch = sound.pitch;
 
         if (sound.varyVolume)
         {

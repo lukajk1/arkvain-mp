@@ -83,7 +83,9 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             // Or more simply, project your existing moveDir correctly:
             moveDir = GetSlopeMoveDirection(moveDir);
 
-            _rigidbody.AddForce(-Physics.gravity * _rigidbody.rb.mass);
+            // don't apply gravity cancellation while on slop if jumping
+            if (!input.jump)
+                _rigidbody.AddForce(-Physics.gravity * _rigidbody.rb.mass);
 
             if (input.moveDirection.sqrMagnitude > 0 && !input.jump)
                 state.slopeStickCooldown = _slopeStickDuration;

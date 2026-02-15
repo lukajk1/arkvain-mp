@@ -208,7 +208,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     {
         if (_hasPendingPhase)
         {
-            Debug.Log($"[NetworkedAnimation] UpdateInput consuming pendingPhase: {_pendingPhase}");
+            //Debug.Log($"[NetworkedAnimation] UpdateInput consuming pendingPhase: {_pendingPhase}");
             input.requestedPhase = _pendingPhase;
             input.hasPhaseRequest = true;
             _pendingPhase = JumpPhase.None;
@@ -311,25 +311,25 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     private void OnJump()
     {
-        Debug.Log("[NetworkedAnimation] OnJump fired, setting pending JumpStart");
+        //Debug.Log("[NetworkedAnimation] OnJump fired, setting pending JumpStart");
         SetPendingPhase(JumpPhase.JumpStart);
     }
 
     private void OnJumpStartEnd()
     {
-        Debug.Log("[NetworkedAnimation] OnJumpStartEnd fired, setting pending Airborne");
+        //Debug.Log("[NetworkedAnimation] OnJumpStartEnd fired, setting pending Airborne");
         SetPendingPhase(JumpPhase.Airborne);
     }
 
     private void OnLand()
     {
-        Debug.Log("[NetworkedAnimation] OnLand fired, setting pending Landing");
+        //Debug.Log("[NetworkedAnimation] OnLand fired, setting pending Landing");
         SetPendingPhase(JumpPhase.Landing);
     }
 
     private void OnLandingEnd()
     {
-        Debug.Log("[NetworkedAnimation] OnLandingEnd fired, returning to None");
+        //Debug.Log("[NetworkedAnimation] OnLandingEnd fired, returning to None");
         SetPendingPhase(JumpPhase.None);
     }
 

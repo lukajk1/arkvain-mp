@@ -30,6 +30,8 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
                 var spawnPoint = spawnPoints[_currentSpawnPoint];
                 _currentSpawnPoint = (_currentSpawnPoint + 1) % spawnPoints.Count;
                 newPlayer = hierarchy.Create(_playerPrefab, spawnPoint.position, spawnPoint.rotation, player);
+                Debug.Log($"Spawn World Rot: {spawnPoint.rotation.eulerAngles}");
+                Debug.Log($"Spawn Local Rot: {spawnPoint.localRotation.eulerAngles}");
             }
             else
             {

@@ -14,6 +14,7 @@ public class HUDManager : MonoBehaviour
 
     [Header("Ability")]
     [SerializeField] private TextMeshProUGUI _abilityCooldownText;
+    [SerializeField] private TextMeshProUGUI _abilityBindingName;
     [SerializeField] private GameObject _abilityCooldownParentToHide;
     [SerializeField] private Image _abilityCooldown;
 
@@ -120,6 +121,11 @@ public class HUDManager : MonoBehaviour
             _abilityCooldownParentToHide.SetActive(false);
     }
 
+    public void SetAbilityBindingName(string name)
+    {
+        if (_abilityBindingName != null)
+            _abilityBindingName.text = name;    
+    }
 
     public void BroadcastEvent(string message)
     {

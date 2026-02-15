@@ -1,6 +1,7 @@
 using UnityEngine;
 using PurrNet;
 using PurrNet.Prediction;
+using UnityEngine.InputSystem;
 
 public class PlayerVisualsManager : StatelessPredictedIdentity
 {
@@ -65,6 +66,10 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         _ability = _abilityLogic as IAbility;
         if (_ability == null)
             HUDManager.Instance?.HideAbilityUI();
+        else
+        {
+            HUDManager.Instance?.SetAbilityBindingName(InputManager.Instance.Player.UseAbility.GetBindingDisplayString());
+        }
     }
 
     protected override void LateAwake()

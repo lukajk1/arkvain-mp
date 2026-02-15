@@ -4,6 +4,7 @@ using PurrNet.Prediction;
 public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.State>
 {
     public override float CooldownNormalized => _dashCooldown > 0f ? Mathf.Clamp01(1f - currentState.cooldown / _dashCooldown) : 1f;
+    public override float CooldownRemaining => Mathf.Max(0f, currentState.cooldown);
 
     [SerializeField] private PlayerManualMovement _movement;
     [SerializeField] private float _dashForce = 12f;

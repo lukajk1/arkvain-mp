@@ -88,10 +88,12 @@ public class HUDManager : MonoBehaviour
         _currentWeapon = newWeapon;
     }
 
-    public void SetAbilityCooldown(float normalizedCooldown)
+    public void SetAbilityCooldown(float normalizedCooldown, float remainingSeconds)
     {
         if (_abilityCooldown != null)
             _abilityCooldown.fillAmount = normalizedCooldown;
+        if (_abilityCooldownText != null)
+            _abilityCooldownText.text = remainingSeconds > 0f ? remainingSeconds.ToString("F1") : string.Empty;
     }
 
     public void HideAbilityUI()

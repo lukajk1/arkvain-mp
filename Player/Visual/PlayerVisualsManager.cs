@@ -148,6 +148,6 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         }
 
         if (_ability != null)
-            HUDManager.Instance?.SetAbilityCooldown(_ability.CooldownNormalized);
+            HUDManager.Instance?.SetAbilityCooldown(_ability.CooldownNormalized, _ability.CooldownRemaining);
     }
 }

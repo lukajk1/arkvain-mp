@@ -6,4 +6,5 @@ public abstract class BaseAbilityLogic<TInput, TState> : PredictedIdentity<TInpu
     where TState : struct, IPredictedData<TState>
 {
     public abstract float CooldownNormalized { get; }
+    public abstract float CooldownRemaining { get; }
 }

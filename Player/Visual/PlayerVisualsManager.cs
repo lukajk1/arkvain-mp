@@ -33,6 +33,9 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private AudioClip _onJumpClip;
     [SerializeField] private AudioClip _onLandClip;
     [SerializeField] private List<AudioClip> _footstepClips;
+    [SerializeField] private float _footstepInterval = 2.2f;
+
+    private float _footstepDistance;
 
     private void OnEnable()
     {
@@ -62,13 +65,14 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
     private void OnJump()
     {
-        Debug.Log("jump called");
+        //Debug.Log("jump called");
         if (_onJumpClip != null)
             SoundManager.Play(new SoundData(_onJumpClip, varyPitch: false, varyVolume: false));
     }
 
     private void OnLand()
     {
+        _footstepDistance = 0f;
         if (_onLandClip != null)
             SoundManager.Play(new SoundData(_onLandClip, varyPitch: false, varyVolume: false));
     }
@@ -183,5 +187,19 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
         if (_ability != null)
             HUDManager.Instance?.SetAbilityCooldown(_ability.CooldownNormalized, _ability.CooldownRemaining);
+
+        if (_playerMovement != null && _footstepClips.Count > 0
+            && _playerMovement.CurrentMovementState == PlayerManualMovement.MovementState.Grounded)
+        {
+            var vel = _playerMovement._rigidbody.linearVelocity;
+            _footstepDistance += new Vector3(vel.x, 0f, vel.z).magnitude * Time.deltaTime;
+
+            if (_footstepDistance >= _footstepInterval)
+            {
+                _footstepDistance = 0f;
+                var clip = _footstepClips[Random.Range(0, _footstepClips.Count)];
+                SoundManager.Play(new SoundData(clip, varyPitch: false, varyVolume: false));
+            }
+        }
     }
 }

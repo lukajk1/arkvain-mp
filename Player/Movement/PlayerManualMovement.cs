@@ -250,7 +250,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         }
         if (input.cameraForward.HasValue)
         {
-            input.cameraForward.Value.Normalize();
+            input.cameraForward = input.cameraForward.Value.normalized;
         }
     }
 

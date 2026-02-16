@@ -14,13 +14,13 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     [SerializeField] private AudioClip _dashClip;
     [SerializeField] private AudioClip _cooldownNotUpClip;
 
-    [HideInInspector] public PredictedEvent _onDash;
+    [HideInInspector] public PredictedEvent<Vector3> _onDash;
     [HideInInspector] public PredictedEvent _onDashCooldownNotUp;
 
     protected override void LateAwake()
     {
         base.LateAwake();
-        _onDash = new PredictedEvent(predictionManager, this);
+        _onDash = new PredictedEvent<Vector3>(predictionManager, this);
         _onDashCooldownNotUp = new PredictedEvent(predictionManager, this);
 
         _onDash.AddListener(OnDash);
@@ -47,10 +47,12 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
                 ? Mathf.Max(0f, hit.distance - skinWidth)
                 : _dashDistance;
 
-            _rigidbody.position = _rigidbody.position + dir * travelDistance;
+            Vector3 origin = _rigidbody.position;
+            Vector3 destination = origin + dir * travelDistance;
+            _rigidbody.position = destination;
             _rigidbody.linearVelocity = Vector3.zero;
 
-            _onDash.Invoke();
+            _onDash.Invoke(origin);
         }
         else if (input.dash && state.cooldown > 0f)
         {
@@ -58,12 +60,12 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
         }
     }
 
-    private void OnDash()
+    private void OnDash(Vector3 origin)
     {
         if (isOwner)
             SoundManager.PlayNonDiegetic(_dashClip, varyPitch: false, varyVolume: false);
         else
-            SoundManager.PlayDiegetic(_dashClip, transform.position, varyPitch: false, varyVolume: false);
+            SoundManager.PlayDiegetic(_dashClip, _rigidbody.position, varyPitch: false, varyVolume: false);
     }
 
     private void OnDashCooldownNotUp()

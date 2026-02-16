@@ -12,45 +12,49 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     [SerializeField] private AudioClip _dashClip;
     [SerializeField] private AudioClip _cooldownNotUpClip;
 
+    [HideInInspector] public PredictedEvent _onDash;
+    [HideInInspector] public PredictedEvent _onDashCooldownNotUp;
+
+    protected override void LateAwake()
+    {
+        base.LateAwake();
+        _onDash = new PredictedEvent(predictionManager, this);
+        _onDashCooldownNotUp = new PredictedEvent(predictionManager, this);
+
+        _onDash.AddListener(OnDash);
+        _onDashCooldownNotUp.AddListener(OnDashCooldownNotUp);
+    }
+
     protected override void Simulate(DashInput input, ref State state, float delta)
     {
         state.cooldown -= delta;
-        state.dashFired = false;
-        state.triedDashOnCooldown = false;
 
         if (input.dash && state.cooldown <= 0f)
         {
             state.cooldown = _dashCooldown;
-            state.dashFired = true;
             var dir = (transform.forward * input.dashDirection.y + transform.right * input.dashDirection.x).normalized;
             _movement.QueueBlink(dir, _dashDistance);
+            _onDash.Invoke();
         }
         else if (input.dash && state.cooldown > 0f)
         {
-            state.triedDashOnCooldown = true;
+            _onDashCooldownNotUp.Invoke();
         }
     }
 
-    private bool _lastDashFired;
-    private bool _lastTriedDashOnCooldown;
-
-    protected override void UpdateView(State viewState, State? verified)
+    private void OnDash()
     {
-        base.UpdateView(viewState, verified);
-
-        if (viewState.dashFired && !_lastDashFired)
-        {
+        if (isOwner)
             SoundManager.Play(new SoundData(_dashClip, varyPitch: false, varyVolume: false));
-            Debug.Log("dashed");
-        }
-        else if (viewState.triedDashOnCooldown && !_lastTriedDashOnCooldown)
-            SoundManager.Play(new SoundData(_cooldownNotUpClip, varyPitch: false, varyVolume: false));
-
-        _lastDashFired = viewState.dashFired;
-        // last tried dash is for visual feedback only--cd not up sound, etc
-        _lastTriedDashOnCooldown = viewState.triedDashOnCooldown;
+        else
+            SoundManager.Play(new SoundData(_dashClip, varyPitch: false, varyVolume: false, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
     }
 
+    private void OnDashCooldownNotUp()
+    {
+        if (isOwner)
+            SoundManager.Play(new SoundData(_cooldownNotUpClip, varyPitch: false, varyVolume: false));
+    }
 
     protected override void GetFinalInput(ref DashInput input)
     {
@@ -71,8 +75,6 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     public struct State : IPredictedData<State>
     {
         public float cooldown;
-        public bool dashFired;
-        public bool triedDashOnCooldown;
         public void Dispose() { }
     }
 

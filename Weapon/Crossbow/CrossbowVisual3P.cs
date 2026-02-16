@@ -27,6 +27,15 @@ public class CrossbowVisual3P : MonoBehaviour
 
         if (_bulletPrefab != null)
             VFXPoolManager.Instance.RegisterPrefab(_bulletPrefab, initialCapacity: 30, maxSize: 50);
+
+        if (_muzzleFlashParticles != null && diegeticMuzzlePosition != null)
+        {
+            _muzzleFlashParticles = Instantiate(_muzzleFlashParticles);
+            _muzzleFlashParticles.transform.position = diegeticMuzzlePosition.position;
+            _muzzleFlashParticles.transform.rotation = diegeticMuzzlePosition.rotation;
+            _muzzleFlashParticles.Stop();
+            _muzzleFlashParticles.Clear();
+        }
     }
 
     private void OnEnable()
@@ -53,9 +62,8 @@ public class CrossbowVisual3P : MonoBehaviour
     {
         if (_muzzleFlashParticles != null)
         {
-            if (!_muzzleFlashParticles.gameObject.activeInHierarchy)
-                _muzzleFlashParticles.gameObject.SetActive(true);
-
+            _muzzleFlashParticles.transform.position = diegeticMuzzlePosition.position;
+            _muzzleFlashParticles.transform.rotation = diegeticMuzzlePosition.rotation;
             _muzzleFlashParticles.Clear();
             _muzzleFlashParticles.Play(true);
             _muzzleFlashParticles.Emit(10);

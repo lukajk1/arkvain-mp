@@ -39,6 +39,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private GameObject _thirdPCrossbowVisuals;
 
     private float _footstepDistance;
+    private bool _jumpEventsSubscribed;
 
     private void OnEnable()
     {
@@ -50,10 +51,11 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     {
         if (_playerHealth != null)
             _playerHealth.OnDeath -= OnPlayerDeath;
-        if (_playerMovement != null)
+        if (_jumpEventsSubscribed && _playerMovement != null && _playerMovement._onJump != null)
         {
             _playerMovement._onJump.RemoveListener(OnJump);
             _playerMovement._onLand.RemoveListener(OnLand);
+            _jumpEventsSubscribed = false;
         }
     }
     private void Start()
@@ -70,12 +72,6 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     protected override void LateAwake()
     {
         base.LateAwake();
-
-        if (_playerMovement != null)
-        {
-            _playerMovement._onJump.AddListener(OnJump);
-            _playerMovement._onLand.AddListener(OnLand);
-        }
 
         Debug.Log($"[VisualsManager] LateAwake - isOwner: {isOwner}, Owner: {owner}, ClientGame.Instance: {ClientGame.Instance != null}, MainCamera: {_mainCamera != null}, FirstPersonCamera: {_firstPersonCamera != null}");
 
@@ -159,14 +155,24 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     {
         //Debug.Log("jump called");
         if (_onJumpClip != null)
-            SoundManager.Play(new SoundData(_onJumpClip, varyPitch: false, varyVolume: false));
+        {
+            if (isOwner)
+                SoundManager.PlayNonDiegetic(_onJumpClip, varyPitch: false, varyVolume: false);
+            else
+                SoundManager.PlayDiegetic(_onJumpClip, transform.position, varyPitch: false, varyVolume: false);
+        }
     }
 
     private void OnLand()
     {
         _footstepDistance = 0f;
         if (_onLandClip != null)
-            SoundManager.Play(new SoundData(_onLandClip, varyPitch: false, varyVolume: false));
+        {
+            if (isOwner)
+                SoundManager.PlayNonDiegetic(_onLandClip, varyPitch: false, varyVolume: false);
+            else
+                SoundManager.PlayDiegetic(_onLandClip, transform.position, varyPitch: false, varyVolume: false);
+        }
     }
 
     protected override void OnDestroy()
@@ -183,16 +189,12 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
     private void Update()
     {
-        if (!isOwner) return;
-
-        if (showVelocity && _playerMovement != null)
+        if (!_jumpEventsSubscribed && _playerMovement != null && _playerMovement._onJump != null)
         {
-            var velocity = _playerMovement._rigidbody.linearVelocity;
-            HUDManager.Instance?.SetVelocityReadout(velocity);
+            _playerMovement._onJump.AddListener(OnJump);
+            _playerMovement._onLand.AddListener(OnLand);
+            _jumpEventsSubscribed = true;
         }
-
-        if (_ability != null)
-            HUDManager.Instance?.SetAbilityCooldown(_ability.CooldownNormalized, _ability.CooldownRemaining);
 
         if (_playerMovement != null && _footstepClips.Count > 0
             && _playerMovement.CurrentMovementState == PlayerManualMovement.MovementState.Grounded)
@@ -204,8 +206,22 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             {
                 _footstepDistance = 0f;
                 var clip = _footstepClips[Random.Range(0, _footstepClips.Count)];
-                SoundManager.Play(new SoundData(clip, varyPitch: false, varyVolume: false));
+                if (isOwner)
+                    SoundManager.PlayNonDiegetic(clip, varyPitch: false, varyVolume: false);
+                else
+                    SoundManager.PlayDiegetic(clip, transform.position, varyPitch: false, varyVolume: false);
             }
         }
+
+        if (!isOwner) return;
+
+        if (showVelocity && _playerMovement != null)
+        {
+            var velocity = _playerMovement._rigidbody.linearVelocity;
+            HUDManager.Instance?.SetVelocityReadout(velocity);
+        }
+
+        if (_ability != null)
+            HUDManager.Instance?.SetAbilityCooldown(_ability.CooldownNormalized, _ability.CooldownRemaining);
     }
 }

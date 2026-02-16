@@ -35,6 +35,9 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private List<AudioClip> _footstepClips;
     [SerializeField] private float _footstepDistBetweenPlays = 2.2f;
 
+    [Header("3rd person visuals")]
+    [SerializeField] private GameObject _thirdPCrossbowVisuals;
+
     private float _footstepDistance;
 
     private void OnEnable()
@@ -53,42 +56,6 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             _playerMovement._onLand.RemoveListener(OnLand);
         }
     }
-
-    private void OnPlayerDeath(PlayerID? playerId)
-    {
-        // should only fire if this instance is the local player--logic below this only pertains to this case
-        if (!isOwner) return;
-        //Debug.Log("WWW this shoudl run on one client");
-        if (_deadPlayerPrefab != null)
-            Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
-    }
-
-    private void OnJump()
-    {
-        //Debug.Log("jump called");
-        if (_onJumpClip != null)
-            SoundManager.Play(new SoundData(_onJumpClip, varyPitch: false, varyVolume: false));
-    }
-
-    private void OnLand()
-    {
-        _footstepDistance = 0f;
-        if (_onLandClip != null)
-            SoundManager.Play(new SoundData(_onLandClip, varyPitch: false, varyVolume: false));
-    }
-
-    protected override void OnDestroy()
-    {
-        base.OnDestroy();
-
-        // Clear camera reference if we registered it
-        if (isOwner && ClientGame._mainCamera == _mainCamera)
-        {
-            ClientGame._mainCamera = null;
-            //Debug.Log("[VisualsManager] Cleared main camera reference on destroy");
-        }
-    }
-
     private void Start()
     {
         _ability = _abilityLogic as IAbility;
@@ -156,6 +123,9 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             {
                 Debug.LogError("[VisualsManager] _mainCamera is null!");
             }
+
+            // do not show additional muzzle flash + projs for first person
+            Destroy(_thirdPCrossbowVisuals);
         }
         else
         {
@@ -173,6 +143,42 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
         // if screen was gray from previous death, reset it
         ScreenspaceEffectManager.SetGrayscale(false);
+    }
+
+
+    private void OnPlayerDeath(PlayerID? playerId)
+    {
+        // should only fire if this instance is the local player--logic below this only pertains to this case
+        if (!isOwner) return;
+        //Debug.Log("WWW this shoudl run on one client");
+        if (_deadPlayerPrefab != null)
+            Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
+    }
+
+    private void OnJump()
+    {
+        //Debug.Log("jump called");
+        if (_onJumpClip != null)
+            SoundManager.Play(new SoundData(_onJumpClip, varyPitch: false, varyVolume: false));
+    }
+
+    private void OnLand()
+    {
+        _footstepDistance = 0f;
+        if (_onLandClip != null)
+            SoundManager.Play(new SoundData(_onLandClip, varyPitch: false, varyVolume: false));
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+
+        // Clear camera reference if we registered it
+        if (isOwner && ClientGame._mainCamera == _mainCamera)
+        {
+            ClientGame._mainCamera = null;
+            //Debug.Log("[VisualsManager] Cleared main camera reference on destroy");
+        }
     }
 
     private void Update()

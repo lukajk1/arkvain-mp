@@ -7,8 +7,8 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     public override float CooldownRemaining => Mathf.Max(0f, currentState.cooldown);
 
     [SerializeField] private PlayerManualMovement _movement;
-    [SerializeField] private float _dashForce = 12f;
-    [SerializeField] private float _dashCooldown = 1f;
+    [SerializeField] private float _dashDistance = 12f;
+    [SerializeField] private float _dashCooldown = 5f;
     [SerializeField] private AudioClip _dashClip;
     [SerializeField] private AudioClip _cooldownNotUpClip;
 
@@ -23,7 +23,7 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
             state.cooldown = _dashCooldown;
             state.dashFired = true;
             var dir = (transform.forward * input.dashDirection.y + transform.right * input.dashDirection.x).normalized;
-            _movement.QueueLaunchImpulse(dir * _dashForce);
+            _movement.QueueBlink(dir, _dashDistance);
         }
         else if (input.dash && state.cooldown > 0f)
         {

@@ -38,6 +38,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     [SerializeField] private LayerMask _groundMask;
     [SerializeField] private FirstPersonCamera _camera;
     [SerializeField] public PredictedRigidbody _rigidbody;
+    [SerializeField] private CapsuleCollider _capsule;
     //events
     [HideInInspector] public PredictedEvent _onJump;
     [HideInInspector] public PredictedEvent _onLand;
@@ -158,12 +159,27 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
 
         CurrentMovementState = state.movementState;
 
-        if (input.launchImpulse != Vector3.zero)
+        if (input.blinkDirection != Vector3.zero && !state.blinkConsumed && _capsule != null)
         {
-            state.jumpCooldown = _jumpCooldown;
-            state.landCooldown = _landCooldown;
-            _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0, _rigidbody.velocity.z); // clear vertical before launch
-            _rigidbody.AddForce(input.launchImpulse, ForceMode.Impulse);
+            state.blinkConsumed = true;
+
+            float skinWidth = 0.1f;
+            Vector3 capsuleCenter = _rigidbody.position + _capsule.center;
+            float halfHeight = Mathf.Max(0f, _capsule.height * 0.5f - _capsule.radius);
+            Vector3 castOriginOffset = -input.blinkDirection * skinWidth;
+            Vector3 point1 = capsuleCenter + Vector3.up * halfHeight + castOriginOffset;
+            Vector3 point2 = capsuleCenter - Vector3.up * halfHeight + castOriginOffset;
+
+            float travelDistance = Physics.CapsuleCast(point1, point2, _capsule.radius, input.blinkDirection, out RaycastHit blinkHit, input.blinkDistance + skinWidth, _groundMask, QueryTriggerInteraction.Ignore)
+                ? Mathf.Max(0f, blinkHit.distance - skinWidth)
+                : input.blinkDistance;
+
+            _rigidbody.position = _rigidbody.position + input.blinkDirection * travelDistance;
+            _rigidbody.velocity = Vector3.zero;
+        }
+        else if (input.blinkDirection == Vector3.zero)
+        {
+            state.blinkConsumed = false;
         }
 
         state.wasGrounded = isGrounded;
@@ -201,11 +217,11 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         return Vector3.ProjectOnPlane(moveDir, _slopeHit.normal).normalized;
     }
 
-    private Vector3? _pendingLaunchImpulse;
+    private (Vector3 direction, float distance)? _pendingBlink;
 
-    public void QueueLaunchImpulse(Vector3 impulse)
+    public void QueueBlink(Vector3 direction, float distance)
     {
-        _pendingLaunchImpulse = impulse;
+        _pendingBlink = (direction, distance);
     }
 
     // this will call every frame
@@ -214,10 +230,11 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         // if a or/(|=) b, a = true
         input.jump |= InputManager.Instance.Player.Jump.IsPressed();
 
-        if (_pendingLaunchImpulse.HasValue)
+        if (_pendingBlink.HasValue)
         {
-            input.launchImpulse = _pendingLaunchImpulse.Value;
-            _pendingLaunchImpulse = null;
+            input.blinkDirection = _pendingBlink.Value.direction;
+            input.blinkDistance = _pendingBlink.Value.distance;
+            _pendingBlink = null;
         }
     }
 
@@ -244,7 +261,8 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     protected override void ModifyExtrapolatedInput(ref MoveInput input)
     {
         input.jump = false;
-        input.launchImpulse = Vector3.zero;
+        input.blinkDirection = Vector3.zero;
+        input.blinkDistance = 0f;
     }
 
     private void OnDrawGizmosSelected()
@@ -264,6 +282,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         public float landCooldown;
         public float slopeStickCooldown;
         public MovementState movementState;
+        public bool blinkConsumed;
 
         public void Dispose() { }
     }
@@ -273,7 +292,8 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         public Vector2 moveDirection;
         public Vector3? cameraForward;
         public bool jump;
-        public Vector3 launchImpulse;
+        public Vector3 blinkDirection;
+        public float blinkDistance;
 
         public void Dispose() { }
     }

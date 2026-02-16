@@ -9,8 +9,8 @@ public class JumpPad : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.TryGetComponent(out PlayerManualMovement movement))
-            movement.QueueLaunchImpulse(LaunchImpulse);
+        //if (other.TryGetComponent(out PlayerManualMovement movement))
+            // movement.QueueLaunchImpulse(LaunchImpulse); // TODO: update to new movement API
     }
 
 #if UNITY_EDITOR

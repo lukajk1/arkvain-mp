@@ -6,7 +6,9 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     public override float CooldownNormalized => _dashCooldown > 0f ? Mathf.Clamp01(1f - currentState.cooldown / _dashCooldown) : 1f;
     public override float CooldownRemaining => Mathf.Max(0f, currentState.cooldown);
 
-    [SerializeField] private PlayerManualMovement _movement;
+    [SerializeField] private PredictedRigidbody _rigidbody;
+    [SerializeField] private CapsuleCollider _capsule;
+    [SerializeField] private LayerMask _groundMask;
     [SerializeField] private float _dashDistance = 12f;
     [SerializeField] private float _dashCooldown = 5f;
     [SerializeField] private AudioClip _dashClip;
@@ -33,7 +35,21 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
         {
             state.cooldown = _dashCooldown;
             var dir = (transform.forward * input.dashDirection.y + transform.right * input.dashDirection.x).normalized;
-            _movement.QueueBlink(dir, _dashDistance);
+
+            float skinWidth = 0.1f;
+            Vector3 capsuleCenter = _rigidbody.position + _capsule.center;
+            float halfHeight = Mathf.Max(0f, _capsule.height * 0.5f - _capsule.radius);
+            Vector3 castOriginOffset = -dir * skinWidth;
+            Vector3 point1 = capsuleCenter + Vector3.up * halfHeight + castOriginOffset;
+            Vector3 point2 = capsuleCenter - Vector3.up * halfHeight + castOriginOffset;
+
+            float travelDistance = Physics.CapsuleCast(point1, point2, _capsule.radius, dir, out RaycastHit hit, _dashDistance + skinWidth, _groundMask, QueryTriggerInteraction.Ignore)
+                ? Mathf.Max(0f, hit.distance - skinWidth)
+                : _dashDistance;
+
+            _rigidbody.position = _rigidbody.position + dir * travelDistance;
+            _rigidbody.linearVelocity = Vector3.zero;
+
             _onDash.Invoke();
         }
         else if (input.dash && state.cooldown > 0f)

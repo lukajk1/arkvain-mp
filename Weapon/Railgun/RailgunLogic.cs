@@ -25,6 +25,7 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
     public override int CurrentAmmo => currentState.currentAmmo;
     public override int MaxAmmo => _clipSize;
 
+    private Transform _selfRoot;
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
     private PredictedEvent _onReloadEvent;
@@ -32,6 +33,7 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
     protected override void LateAwake()
     {
         base.LateAwake();
+        _selfRoot = transform.root;
         _onShootEvent = new PredictedEvent(predictionManager, this);
         _onShootEvent.AddListener(OnShootEventHandler);
         _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
@@ -123,6 +125,9 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
         {
             return;
         }
+
+        if (hit.collider.transform.root == _selfRoot)
+            return;
 
         bool hitPlayer = false;
         bool isHeadshot = false;

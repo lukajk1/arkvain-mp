@@ -31,6 +31,7 @@ public class CrossbowVisual3P : MonoBehaviour
         if (_muzzleFlashParticles != null && diegeticMuzzlePosition != null)
         {
             _muzzleFlashParticles = Instantiate(_muzzleFlashParticles);
+            _muzzleFlashParticles.transform.SetParent(transform.root, worldPositionStays: true);
             _muzzleFlashParticles.transform.position = diegeticMuzzlePosition.position;
             _muzzleFlashParticles.transform.rotation = diegeticMuzzlePosition.rotation;
             _muzzleFlashParticles.Stop();

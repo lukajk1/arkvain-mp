@@ -9,6 +9,7 @@ public class CrossbowVisual3P : MonoBehaviour
     [SerializeField] private CrossbowLogic _weaponLogic;
 
     [Header("Shoot Effects")]
+    [SerializeField] private AudioClip _shootSound;
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
     [SerializeField] private GameObject _bulletPrefab;
     [SerializeField] private Transform diegeticMuzzlePosition;
@@ -61,6 +62,9 @@ public class CrossbowVisual3P : MonoBehaviour
 
     private void OnShoot(Vector3 fireDirection)
     {
+        if (_shootSound != null)
+            SoundManager.PlayDiegetic(_shootSound, transform.position, varyVolume: false);
+
         if (_muzzleFlashParticles != null)
         {
             _muzzleFlashParticles.transform.position = diegeticMuzzlePosition.position;

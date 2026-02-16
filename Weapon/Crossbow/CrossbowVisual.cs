@@ -57,10 +57,8 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             _muzzleFlashParticles.Emit(10);
         }
 
-        if (_shootSound != null)
-        {
-            SoundManager.Play(new SoundData(_shootSound));
-        }
+        if (_shootSound != null && _weaponLogic.isOwner)
+            SoundManager.PlayNonDiegetic(_shootSound, varyVolume: false);
 
         // Spawn bullet that travels to max distance (will be stopped early by OnHit if something is hit)
         if (_bulletPrefab != null && VFXPoolManager.Instance != null)
@@ -120,7 +118,10 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
 
         if (_reloadComplete != null)
         {
-            SoundManager.Play(new SoundData(_reloadComplete));
+            if (_weaponLogic.isOwner)
+                SoundManager.PlayNonDiegetic(_reloadComplete, varyPitch: false, varyVolume: false);
+            else
+                SoundManager.PlayDiegetic(_reloadComplete, transform.position, varyPitch: false, varyVolume: false);
         }
     }
 

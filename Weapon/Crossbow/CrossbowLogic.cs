@@ -22,6 +22,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
     public override int CurrentAmmo => currentState.currentAmmo;
     public override int MaxAmmo => _clipSize;
 
+    private Transform _selfRoot;
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
     private PredictedEvent _onReloadEvent;
@@ -29,6 +30,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
     protected override void LateAwake()
     {
         base.LateAwake();
+        _selfRoot = transform.root;
 
         //Debug.Log("[CrossbowLogic] LateAwake started");
 
@@ -140,6 +142,9 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
             //Debug.Log("[CrossbowLogic] Raycast missed - no hit");
             return;
         }
+
+        if (hit.collider.transform.root == _selfRoot)
+            return;
 
         //Debug.Log($"[CrossbowLogic] Raycast HIT: {hit.collider.gameObject.name} on layer {hit.collider.gameObject.layer}");
 

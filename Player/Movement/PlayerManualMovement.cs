@@ -18,7 +18,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     [SerializeField] private float _airAccelerationMultiplier = 0.5f;
     [SerializeField] private float _jumpForce = 5f;
     [SerializeField] private float _planarDamping = 10f;
-    [Tooltip("Acceleration multiplier when moving opposite to current velocity. 1 = no penalty, 0 = no acceleration when reversing. Scales linearly with angle: 90deg = midpoint, 180deg = this value.")]
+    [Tooltip("Acceleration multiplier applied whenever there is existing horizontal velocity. 1 = no penalty, 0 = no acceleration while moving. Applied uniformly regardless of direction change angle.")]
     [SerializeField] private float _oppositeAccelMultiplier = 0.25f;
 
     [Header("Groud")]
@@ -110,10 +110,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             var curHorizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
             if (curHorizontal.sqrMagnitude > 0.001f)
             {
-                float dot = Vector3.Dot(curHorizontal.normalized, moveDir.normalized); // [-1, 1]
-                float t = (dot + 1f) * 0.5f; // remap to [0, 1]
-                float accelScale = Mathf.Lerp(_oppositeAccelMultiplier, 1f, t);
-                accel *= accelScale;
+                accel *= _oppositeAccelMultiplier;
             }
         }
 

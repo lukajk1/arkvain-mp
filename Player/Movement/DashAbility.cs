@@ -47,6 +47,7 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
             SoundManager.Play(new SoundData(_cooldownNotUpClip, varyPitch: false, varyVolume: false));
 
         _lastDashFired = viewState.dashFired;
+        // last tried dash is for visual feedback only--cd not up sound, etc
         _lastTriedDashOnCooldown = viewState.triedDashOnCooldown;
     }
 

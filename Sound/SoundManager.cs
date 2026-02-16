@@ -145,6 +145,31 @@ public class SoundManager : MonoBehaviour
         }
     }
 
+    public static void PlayDiegetic(
+        AudioClip clip,
+        Vector3 position,
+        SoundData.Type type = SoundData.Type.SFX,
+        float volume = 1f,
+        float minDist = 4.5f,
+        float maxDist = 100f,
+        bool varyPitch = true,
+        bool varyVolume = true)
+    {
+        Play(new SoundData(clip, type: type, soundPos: position, blend: SoundData.SoundBlend.Spatial,
+            volume: volume, minDist: minDist, maxDist: maxDist, varyPitch: varyPitch, varyVolume: varyVolume));
+    }
+
+    public static void PlayNonDiegetic(
+        AudioClip clip,
+        SoundData.Type type = SoundData.Type.SFX,
+        float volume = 1f,
+        bool varyPitch = true,
+        bool varyVolume = true)
+    {
+        Play(new SoundData(clip, type: type, blend: SoundData.SoundBlend.NonSpatial,
+            volume: volume, varyPitch: varyPitch, varyVolume: varyVolume));
+    }
+
     /// <summary>
     /// Starts playing a looping sound and returns the AudioSource for later control.
     /// Call StopLoop() with the returned AudioSource when you want to stop the loop.

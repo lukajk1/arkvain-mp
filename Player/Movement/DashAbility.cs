@@ -45,15 +45,15 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
     private void OnDash()
     {
         if (isOwner)
-            SoundManager.Play(new SoundData(_dashClip, varyPitch: false, varyVolume: false));
+            SoundManager.PlayNonDiegetic(_dashClip, varyPitch: false, varyVolume: false);
         else
-            SoundManager.Play(new SoundData(_dashClip, varyPitch: false, varyVolume: false, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+            SoundManager.PlayDiegetic(_dashClip, transform.position, varyPitch: false, varyVolume: false);
     }
 
     private void OnDashCooldownNotUp()
     {
         if (isOwner)
-            SoundManager.Play(new SoundData(_cooldownNotUpClip, varyPitch: false, varyVolume: false));
+            SoundManager.PlayNonDiegetic(_cooldownNotUpClip, varyPitch: false, varyVolume: false);
     }
 
     protected override void GetFinalInput(ref DashInput input)

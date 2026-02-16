@@ -18,6 +18,14 @@ public class HUDManager : MonoBehaviour
     [SerializeField] private GameObject _abilityCooldownParentToHide;
     [SerializeField] private Image _abilityCooldown;
 
+    [Header("FPS Counter")]
+    [SerializeField] private TextMeshProUGUI _fpsText;
+    [SerializeField] private int _fpsSampleCount = 20;
+
+    private float[] _frameTimes;
+    private int _frameIndex;
+    private bool _fpsBufferFilled;
+
     [Header("Center Display Broadcasts")]
     [SerializeField] private TextMeshProUGUI _broadcastText;
     [SerializeField] private float _broadcastRiseDistance = 80f;
@@ -48,6 +56,8 @@ public class HUDManager : MonoBehaviour
             _broadcastStartAnchoredPos = _broadcastText.rectTransform.anchoredPosition;
             _broadcastText.alpha = 0f;
         }
+
+        _frameTimes = new float[_fpsSampleCount];
     }
 
     private void OnEnable()
@@ -153,5 +163,26 @@ public class HUDManager : MonoBehaviour
         {
             _ammoText.text = string.Format(_ammoFormat, _currentWeapon.CurrentAmmo, _currentWeapon.MaxAmmo);
         }
+
+        UpdateFPS();
+    }
+
+    private void UpdateFPS()
+    {
+        if (_fpsText == null) return;
+
+        _frameTimes[_frameIndex] = Time.unscaledDeltaTime;
+        _frameIndex = (_frameIndex + 1) % _fpsSampleCount;
+        if (_frameIndex == 0) _fpsBufferFilled = true;
+
+        int sampleCount = _fpsBufferFilled ? _fpsSampleCount : _frameIndex;
+        if (sampleCount == 0) return;
+
+        float sum = 0f;
+        for (int i = 0; i < sampleCount; i++)
+            sum += _frameTimes[i];
+
+        float fps = sampleCount / sum;
+        _fpsText.text = $"FPS: {fps.ToString("F1")}";
     }
 }

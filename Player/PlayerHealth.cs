@@ -6,7 +6,7 @@ using UnityEngine;
 public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
     [SerializeField] public int _maxHealth;
-    [SerializeField] private float _killZoneY = -35f;
+    [SerializeField] private float _killZoneY = -25f;
 
     public static event Action<PlayerID?> OnPlayerDeath;
     public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)

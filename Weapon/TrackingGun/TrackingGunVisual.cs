@@ -23,9 +23,9 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
     /// <summary>
     /// Called when the tracking gun shoots. Plays muzzle flash and shoot sound.
     /// </summary>
-    protected override void OnShoot()
+    protected override void OnShoot(Vector3 fireDirection)
     {
-        base.OnShoot(); // Call base to trigger animation if configured
+        base.OnShoot(fireDirection); // Call base to trigger animation if configured
 
         if (_muzzleFlashParticles != null)
         {

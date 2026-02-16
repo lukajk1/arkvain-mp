@@ -58,7 +58,7 @@ public class CrossbowVisual3P : MonoBehaviour
         _weaponLogic.OnHit -= OnHit;
     }
 
-    private void OnShoot()
+    private void OnShoot(Vector3 fireDirection)
     {
         if (_muzzleFlashParticles != null)
         {
@@ -72,9 +72,8 @@ public class CrossbowVisual3P : MonoBehaviour
         if (_bulletPrefab != null && diegeticMuzzlePosition != null && VFXPoolManager.Instance != null)
         {
             Vector3 startPos = diegeticMuzzlePosition.position;
-            Vector3 fireDir = diegeticMuzzlePosition.forward;
-            Vector3 endPos = startPos + fireDir * _bulletMaxDistance;
-            Quaternion rotation = Quaternion.LookRotation(fireDir);
+            Vector3 endPos = startPos + fireDirection * _bulletMaxDistance;
+            Quaternion rotation = Quaternion.LookRotation(fireDirection);
             GameObject bulletObj = VFXPoolManager.Instance.Spawn(_bulletPrefab, startPos, rotation);
 
             if (bulletObj != null)

@@ -51,7 +51,7 @@ public interface IWeaponLogic
     /// Event fired when this weapon is fired/shot.
     /// Subscribe to this for muzzle flash, recoil animations, etc.
     /// </summary>
-    event Action OnShoot;
+    event Action<Vector3> OnShoot;
 
     /// <summary>
     /// Event fired when this weapon is equipped (becomes active).

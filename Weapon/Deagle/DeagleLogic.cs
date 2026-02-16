@@ -30,7 +30,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
 
     // IWeaponLogic interface events (public for HitmarkerManager)
     public event System.Action<HitInfo> OnHit;
-    public event System.Action OnShoot;
+    public event System.Action<Vector3> OnShoot;
     public event System.Action OnEquipped;
     public event System.Action OnHolstered;
 
@@ -121,10 +121,10 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
 
     private void Shoot(ref ShootState state)
     {
-        _onShootEvent?.Invoke();
-
         var aimDirection = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
         state.lastKnownForward = aimDirection;
+
+        _onShootEvent?.Invoke();
 
         var position = transform.TransformPoint(_centerOfCamera);
 
@@ -178,7 +178,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     /// </summary>
     private void OnShootEventHandler()
     {
-        OnShoot?.Invoke();
+        OnShoot?.Invoke(currentState.lastKnownForward);
     }
 
     /// <summary>

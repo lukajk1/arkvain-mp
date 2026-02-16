@@ -173,7 +173,7 @@ public abstract class WeaponVisual<TLogic> : WeaponVisualBase where TLogic : IWe
     /// <summary>
     /// Called when the weapon shoots. Override to add custom shoot behavior.
     /// </summary>
-    protected virtual void OnShoot()
+    protected virtual void OnShoot(Vector3 fireDirection)
     {
         PlayShootAnimation();
     }

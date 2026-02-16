@@ -34,7 +34,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     /// <summary>
     /// Called when the crossbow shoots. Plays muzzle flash and shoot sound (every other shot).
     /// </summary>
-    protected override void OnShoot()
+    protected override void OnShoot(Vector3 fireDirection)
     {
         // Immediately stop any currently playing animation and play shoot animation
         if (_animancer != null && _shootClip != null)
@@ -63,11 +63,11 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
         }
 
         // Spawn bullet that travels to max distance (will be stopped early by OnHit if something is hit)
-        if (_bulletPrefab != null && Camera.main != null && VFXPoolManager.Instance != null)
+        if (_bulletPrefab != null && VFXPoolManager.Instance != null)
         {
             Vector3 startPos = _bulletTrailOrigin.position;
-            Vector3 endPos = startPos + Camera.main.transform.forward * _bulletMaxDistance;
-            Quaternion rotation = Quaternion.LookRotation(Camera.main.transform.forward);
+            Vector3 endPos = startPos + fireDirection * _bulletMaxDistance;
+            Quaternion rotation = Quaternion.LookRotation(fireDirection);
             GameObject bulletObj = VFXPoolManager.Instance.Spawn(_bulletPrefab, startPos, rotation);
 
             if (bulletObj != null)

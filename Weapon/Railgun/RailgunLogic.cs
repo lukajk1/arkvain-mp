@@ -111,10 +111,10 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
 
     private void Shoot(ref ShootState state)
     {
-        _onShootEvent?.Invoke();
-
         var aimDirection = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
         state.lastKnownForward = aimDirection;
+
+        _onShootEvent?.Invoke();
 
         var position = transform.TransformPoint(_centerOfCamera);
 
@@ -165,7 +165,7 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
     /// </summary>
     private void OnShootEventHandler()
     {
-        InvokeOnShoot();
+        InvokeOnShoot(currentState.lastKnownForward);
     }
 
     /// <summary>

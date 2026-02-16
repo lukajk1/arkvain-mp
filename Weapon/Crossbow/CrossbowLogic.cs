@@ -123,12 +123,12 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
     {
         //Debug.Log("[CrossbowLogic] Shoot() called");
 
-        _onShootEvent?.Invoke();
-
         // Use the camera forward direction directly - it already includes visual recoil
         // from the previous tick's UpdateView() call
         var aimDirection = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
         state.lastKnownForward = aimDirection;
+
+        _onShootEvent?.Invoke();
 
         var position = transform.TransformPoint(_centerOfCamera);
 
@@ -177,7 +177,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
     /// </summary>
     private void OnShootEventHandler()
     {
-        InvokeOnShoot();
+        InvokeOnShoot(currentState.lastKnownForward);
     }
 
     /// <summary>

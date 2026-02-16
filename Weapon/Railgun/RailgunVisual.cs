@@ -41,9 +41,9 @@ public class RailgunVisual : WeaponVisual<RailgunLogic>
     /// <summary>
     /// Called when the railgun shoots. Plays muzzle flash and shoot sound.
     /// </summary>
-    protected override void OnShoot()
+    protected override void OnShoot(Vector3 fireDirection)
     {
-        base.OnShoot(); // Plays shoot animation
+        base.OnShoot(fireDirection); // Plays shoot animation
 
         // Clear any pending hit info - we'll wait for OnHit to set it
         _pendingHitInfo = null;

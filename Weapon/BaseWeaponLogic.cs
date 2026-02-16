@@ -1,5 +1,6 @@
 using PurrNet.Prediction;
 using System;
+using UnityEngine;
 
 /// <summary>
 /// Base class for all weapon logic components.
@@ -12,7 +13,7 @@ public abstract class BaseWeaponLogic<TInput, TState> : PredictedIdentity<TInput
 {
     // IWeaponLogic interface events - concrete so they can be invoked
     public event Action<HitInfo> OnHit;
-    public event Action OnShoot;
+    public event Action<Vector3> OnShoot;
     public event Action OnEquipped;
     public event Action OnHolstered;
 
@@ -41,9 +42,9 @@ public abstract class BaseWeaponLogic<TInput, TState> : PredictedIdentity<TInput
         OnHit?.Invoke(hitInfo);
     }
 
-    protected void InvokeOnShoot()
+    protected void InvokeOnShoot(Vector3 fireDirection)
     {
-        OnShoot?.Invoke();
+        OnShoot?.Invoke(fireDirection);
     }
 
     protected void InvokeReloadEvent()

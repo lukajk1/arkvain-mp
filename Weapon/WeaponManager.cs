@@ -22,6 +22,8 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         }
     }
 
+    public bool canSwitch = true;
+
     [Header("Weapon References")]
     [SerializeField] private CrossbowLogic _crossbowLogic;
     [SerializeField] private CrossbowVisual _crossbowVisual;
@@ -51,6 +53,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
     private int _primaryIndex;
     private int _secondaryIndex;
     private bool _isInitialized = false;
+
 
     /// <summary>
     /// Static event broadcast when a local player's WeaponManager is initialized.
@@ -122,7 +125,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
         int targetIndex = state.currentWeaponIndex;
 
         // Only process weapon switch inputs if cooldown has expired
-        if (state.switchCooldown <= 0)
+        if (state.switchCooldown <= 0 && canSwitch)
         {
             // Direct selection: Primary weapon
             if (input.selectPrimary && state.currentWeaponIndex != _primaryIndex)

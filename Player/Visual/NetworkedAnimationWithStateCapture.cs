@@ -354,7 +354,10 @@ public class NetworkedAnimationWithStateCapture : PredictedIdentity<NetworkedAni
 
             case JumpPhase.None:
                 if (_mixerState != null)
-                    _animancer.Play(_mixerState, _landToLocomotionFade);
+                {
+                    var fadeState = _animancer.Play(_mixerState, _landToLocomotionFade);
+                    fadeState.FadeGroup?.SetEasing(Easing.Sine.Out);
+                }
                 break;
         }
     }

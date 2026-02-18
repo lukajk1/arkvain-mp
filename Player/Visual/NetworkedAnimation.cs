@@ -25,6 +25,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     [Header("Animation Setup")]
     [SerializeField] private AnimancerComponent _animancer;
     [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private AvatarMask _layerMask;
 
     [Header("Transition Indices")]
     [SerializeField] private byte _locomotionMixerIndex = 0;
@@ -94,6 +95,9 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
             Debug.LogError($"[NetworkedAnimation] Transition at index {_locomotionMixerIndex} did not produce a Vector2MixerState.");
             return;
         }
+
+        if (_layerMask != null)
+            _animancer.Layers[0].Mask = _layerMask;
 
         if (_animancer.Layers[0].Weight < 0.01f)
             _animancer.Layers[0].Weight = 1f;
@@ -218,7 +222,11 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
         }
 
         if (state.jumpPhase == JumpPhase.None && _smoothedParameter != null)
+        {
+            if (!isOwner)
+                //Debug.Log($"[NA] target: ({state.moveDirectionX:F2}, {state.moveDirectionY:F2}) | current: ({_smoothedParameter.CurrentValue.x:F2}, {_smoothedParameter.CurrentValue.y:F2})");
             _smoothedParameter.TargetValue = new Vector2(state.moveDirectionX, state.moveDirectionY);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -255,7 +263,10 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
             case JumpPhase.None:
                 if (_mixerState != null)
-                    _animancer.Play(_mixerState, _landToLocomotionFade);
+                {
+                    var fadeState = _animancer.Play(_mixerState, _landToLocomotionFade);
+                    fadeState.FadeGroup?.SetEasing(Easing.Sine.Out);
+                }
                 break;
         }
     }

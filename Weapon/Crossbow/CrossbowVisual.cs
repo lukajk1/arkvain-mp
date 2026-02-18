@@ -16,11 +16,17 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
 
     [SerializeField] private ParticleSystem _envHitParticles;
 
+    [Header("Tracer Line")]
+    [SerializeField] private LineRenderer _tracerLine;
+    [SerializeField] private float _tracerDuration = 0.1f;
+
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadComplete;
 
     private Coroutine _activeBulletCoroutine;
     private GameObject _activeBulletObject;
+
+    private Coroutine _tracerCoroutine;
 
     private void Awake()
     {
@@ -52,16 +58,27 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             }
             _muzzleFlashParticles.Clear();
             _muzzleFlashParticles.Play(true);
-
-            // Force emit some particles as a fallback
-            _muzzleFlashParticles.Emit(10);
         }
 
         if (_shootSound != null && _weaponLogic.isOwner)
             SoundManager.PlayNonDiegetic(_shootSound, varyVolume: false);
 
+        // Draw tracer line from muzzle to max range, hide after duration
+        if (_tracerLine != null)
+        {
+            if (_tracerCoroutine != null)
+                StopCoroutine(_tracerCoroutine);
+
+            Vector3 muzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
+            _tracerLine.SetPosition(0, muzzlePos);
+            _tracerLine.SetPosition(1, muzzlePos + fireDirection * _bulletMaxDistance);
+            _tracerLine.enabled = true;
+            _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
+        }
+
         // Spawn bullet that travels to max distance (will be stopped early by OnHit if something is hit)
-        if (_bulletPrefab != null && VFXPoolManager.Instance != null)
+        // disable for now
+        if (false && _bulletPrefab != null && VFXPoolManager.Instance != null)
         {
             Vector3 startPos = _bulletTrailOrigin.position;
             Vector3 endPos = startPos + fireDirection * _bulletMaxDistance;
@@ -81,7 +98,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     /// </summary>
     protected override void OnHit(HitInfo hitInfo)
     {
-        // Play hit particles via centralized manager
+        // Play hit particles via centralized manager (blood effects if applicable)
         WeaponHitEffectsManager.PlayHitEffect(hitInfo, _weaponLogic.isOwner);
 
         if (VFXPoolManager.Instance != null && Camera.main != null && _envHitParticles != null)
@@ -102,6 +119,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             Vector3 currentPos = _activeBulletObject.transform.position;
             _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(_activeBulletObject, currentPos, hitInfo.position));
         }
+
     }
 
     /// <summary>
@@ -172,5 +190,12 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
         // Clear active references
         _activeBulletCoroutine = null;
         _activeBulletObject = null;
+    }
+
+    private System.Collections.IEnumerator HideTracerAfterDelay()
+    {
+        yield return new WaitForSeconds(_tracerDuration);
+        _tracerLine.enabled = false;
+        _tracerCoroutine = null;
     }
 }

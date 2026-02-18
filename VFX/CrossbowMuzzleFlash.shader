@@ -5,6 +5,7 @@ Shader "Custom/CrossbowMuzzleFlash"
         _BaseMap("Base Map", 2D) = "white" {}
         [HDR] _Color("Color", Color) = (1, 1, 1, 1)
         _Opacity("Opacity", Range(0, 1)) = 1
+        [Enum(Front, 2, Back, 1, Both, 0)] _Cull("Render Faces", Float) = 2
     }
 
     SubShader
@@ -21,7 +22,7 @@ Shader "Custom/CrossbowMuzzleFlash"
             Name "Unlit"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            Cull Back
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma vertex vert

@@ -27,6 +27,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     private GameObject _activeBulletObject;
 
     private Coroutine _tracerCoroutine;
+    private Vector3 _tracerMuzzlePos;
 
     private void Awake()
     {
@@ -69,9 +70,9 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             if (_tracerCoroutine != null)
                 StopCoroutine(_tracerCoroutine);
 
-            Vector3 muzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
-            _tracerLine.SetPosition(0, muzzlePos);
-            _tracerLine.SetPosition(1, muzzlePos + fireDirection * _bulletMaxDistance);
+            _tracerMuzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
+            _tracerLine.SetPosition(0, _tracerMuzzlePos);
+            _tracerLine.SetPosition(1, _tracerMuzzlePos + fireDirection * _bulletMaxDistance);
             _tracerLine.enabled = true;
             _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
         }
@@ -120,6 +121,16 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(_activeBulletObject, currentPos, hitInfo.position));
         }
 
+        // Correct tracer end point to actual hit position and restart hide timer
+        if (_tracerLine != null && _tracerLine.enabled)
+        {
+            if (_tracerCoroutine != null)
+                StopCoroutine(_tracerCoroutine);
+
+            _tracerLine.SetPosition(0, _tracerMuzzlePos);
+            _tracerLine.SetPosition(1, hitInfo.position);
+            _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
+        }
     }
 
     /// <summary>

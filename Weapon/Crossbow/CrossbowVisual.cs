@@ -19,6 +19,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     [Header("Tracer Line")]
     [SerializeField] private LineRenderer _tracerLine;
     [SerializeField] private float _tracerDuration = 0.1f;
+    [SerializeField] private float _tracerMinDistance = 3f;
 
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadComplete;
@@ -73,7 +74,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             _tracerMuzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
             _tracerLine.SetPosition(0, _tracerMuzzlePos);
             _tracerLine.SetPosition(1, _tracerMuzzlePos + fireDirection * _bulletMaxDistance);
-            _tracerLine.enabled = true;
+_tracerLine.enabled = true;
             _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
         }
 
@@ -127,9 +128,17 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             if (_tracerCoroutine != null)
                 StopCoroutine(_tracerCoroutine);
 
-            _tracerLine.SetPosition(0, _tracerMuzzlePos);
-            _tracerLine.SetPosition(1, hitInfo.position);
-            _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
+            if (Vector3.Distance(_tracerMuzzlePos, hitInfo.position) < _tracerMinDistance)
+            {
+                _tracerLine.enabled = false;
+                _tracerCoroutine = null;
+            }
+            else
+            {
+                _tracerLine.SetPosition(0, _tracerMuzzlePos);
+                _tracerLine.SetPosition(1, hitInfo.position);
+                _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
+            }
         }
     }
 

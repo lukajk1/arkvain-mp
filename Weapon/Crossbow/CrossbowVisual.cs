@@ -32,6 +32,9 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
 
     private void Awake()
     {
+        if (_tracerLine != null)
+            _tracerLine.enabled = false;
+
         if (_envHitParticles != null)
             VFXPoolManager.Instance.RegisterPrefab(_envHitParticles.gameObject, simSpeed: _envHitSimSpeed);
 

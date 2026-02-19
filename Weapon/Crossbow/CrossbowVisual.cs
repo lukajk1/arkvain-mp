@@ -21,7 +21,6 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     [Header("Tracer Line")]
     [SerializeField] private LineRenderer _tracerLine;
     [SerializeField] private float _tracerDuration = 0.1f;
-    [SerializeField] private float _tracerMinDistance = 3f;
 
     [Header("Reload Effects")]
     [SerializeField] private AudioClip _reloadComplete;
@@ -30,7 +29,6 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     private GameObject _activeBulletObject;
 
     private Coroutine _tracerCoroutine;
-    private Vector3 _tracerMuzzlePos;
 
     private void Awake()
     {
@@ -73,9 +71,9 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
             if (_tracerCoroutine != null)
                 StopCoroutine(_tracerCoroutine);
 
-            _tracerMuzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
-            _tracerLine.SetPosition(0, _tracerMuzzlePos);
-            _tracerLine.SetPosition(1, _tracerMuzzlePos + fireDirection * _bulletMaxDistance);
+            Vector3 muzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
+            _tracerLine.SetPosition(0, muzzlePos);
+            _tracerLine.SetPosition(1, muzzlePos + fireDirection * _bulletMaxDistance);
 _tracerLine.enabled = true;
             _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
         }
@@ -125,24 +123,6 @@ _tracerLine.enabled = true;
             _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(_activeBulletObject, currentPos, hitInfo.position));
         }
 
-        // Correct tracer end point to actual hit position and restart hide timer
-        if (_tracerLine != null && _tracerLine.enabled)
-        {
-            if (_tracerCoroutine != null)
-                StopCoroutine(_tracerCoroutine);
-
-            if (Vector3.Distance(_tracerMuzzlePos, hitInfo.position) < _tracerMinDistance)
-            {
-                _tracerLine.enabled = false;
-                _tracerCoroutine = null;
-            }
-            else
-            {
-                _tracerLine.SetPosition(0, _tracerMuzzlePos);
-                _tracerLine.SetPosition(1, hitInfo.position);
-                _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
-            }
-        }
     }
 
     /// <summary>

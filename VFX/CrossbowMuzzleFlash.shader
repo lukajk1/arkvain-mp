@@ -6,6 +6,7 @@ Shader "Custom/CrossbowMuzzleFlash"
         [HDR] _Color("Color", Color) = (1, 1, 1, 1)
         _Opacity("Opacity", Range(0, 1)) = 1
         [Enum(Front, 2, Back, 1, Both, 0)] _Cull("Render Faces", Float) = 2
+        [Enum(Normal, 4, Always On Top, 8)] _ZTest("Depth Test", Float) = 4
     }
 
     SubShader
@@ -22,6 +23,7 @@ Shader "Custom/CrossbowMuzzleFlash"
             Name "Unlit"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
+            ZTest [_ZTest]
             Cull [_Cull]
 
             HLSLPROGRAM

@@ -15,6 +15,8 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     [SerializeField] private float _bulletSpeed = 100f;
 
     [SerializeField] private ParticleSystem _envHitParticles;
+    [SerializeField] private float _envHitSimSpeed = 1f;
+    [SerializeField] private float _envHitNormalOffset = 0.05f;
 
     [Header("Tracer Line")]
     [SerializeField] private LineRenderer _tracerLine;
@@ -110,7 +112,17 @@ _tracerLine.enabled = true;
             {
                 // Orient the particle effect so its Z+ axis aligns with the surface normal
                 Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);
-                VFXPoolManager.Instance.Spawn(_envHitParticles.gameObject, hitInfo.position, rotation);
+                Vector3 spawnPos = hitInfo.position + hitInfo.surfaceNormal * _envHitNormalOffset;
+                GameObject hitVFX = VFXPoolManager.Instance.Spawn(_envHitParticles.gameObject, spawnPos, rotation);
+                if (hitVFX != null)
+                {
+                    ParticleSystem ps = hitVFX.GetComponent<ParticleSystem>();
+                    if (ps != null)
+                    {
+                        var main = ps.main;
+                        main.simulationSpeed = _envHitSimSpeed;
+                    }
+                }
             }
         }
 

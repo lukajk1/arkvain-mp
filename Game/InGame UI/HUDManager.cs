@@ -1,6 +1,5 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.UI;
 
 public class HUDManager : MonoBehaviour
 {
@@ -11,14 +10,6 @@ public class HUDManager : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI _healthText;
     [SerializeField] private TextMeshProUGUI _velocityText;
-
-    [Header("Ability")]
-    [SerializeField] private TextMeshProUGUI _abilityCooldownText;
-    [SerializeField] private TextMeshProUGUI _abilityBindingName;
-    [SerializeField] private GameObject _abilityCooldownParentToHide;
-    [SerializeField] private Image _abilityCooldown;
-    [SerializeField] private Color _abilityCooldownColor = Color.gray;
-    [SerializeField] private AudioClip _abilityReadySound;
 
     [Header("FPS Counter")]
     [SerializeField] private TextMeshProUGUI _fpsText;
@@ -39,7 +30,6 @@ public class HUDManager : MonoBehaviour
 
     private IWeaponLogic _currentWeapon;
     private WeaponManager _weaponManager;
-    private bool _abilityOnCooldown;
 
     private void Awake()
     {
@@ -121,35 +111,13 @@ public class HUDManager : MonoBehaviour
     }
 
     public void SetAbilityCooldown(float normalizedCooldown, float remainingSeconds)
-    {
-        bool onCooldown = remainingSeconds > 0f;
-
-        if (_abilityCooldown != null)
-        {
-            _abilityCooldown.fillAmount = normalizedCooldown;
-            _abilityCooldown.color = onCooldown ? _abilityCooldownColor : Color.white;
-        }
-
-        if (_abilityCooldownText != null)
-            _abilityCooldownText.text = onCooldown ? remainingSeconds.ToString("F1") : string.Empty;
-
-        if (_abilityOnCooldown && !onCooldown && _abilityReadySound != null)
-            SoundManager.PlayNonDiegetic(_abilityReadySound);
-
-        _abilityOnCooldown = onCooldown;
-    }
+        => AbilityHUDManager.Instance?.SetAbilityCooldown(normalizedCooldown, remainingSeconds);
 
     public void HideAbilityUI()
-    {
-        if (_abilityCooldownParentToHide != null)
-            _abilityCooldownParentToHide.SetActive(false);
-    }
+        => AbilityHUDManager.Instance?.HideAbilityUI();
 
     public void SetAbilityBindingName(string name)
-    {
-        if (_abilityBindingName != null)
-            _abilityBindingName.text = name;    
-    }
+        => AbilityHUDManager.Instance?.SetAbilityBindingName(name);
 
     public void BroadcastEvent(string message)
     {

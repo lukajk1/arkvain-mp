@@ -35,7 +35,7 @@ public class CrossbowVisual : WeaponVisual<CrossbowLogic>
     private void Awake()
     {
         if (_envHitParticles != null)
-            VFXPoolManager.Instance.RegisterPrefab(_envHitParticles.gameObject);
+            VFXPoolManager.Instance.RegisterPrefab(_envHitParticles.gameObject, simSpeed: _envHitSimSpeed);
 
         if (_bulletPrefab != null)
             VFXPoolManager.Instance.RegisterPrefab(_bulletPrefab, initialCapacity: 30, maxSize: 50);
@@ -113,16 +113,7 @@ _tracerLine.enabled = true;
                 // Orient the particle effect so its Z+ axis aligns with the surface normal
                 Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);
                 Vector3 spawnPos = hitInfo.position + hitInfo.surfaceNormal * _envHitNormalOffset;
-                GameObject hitVFX = VFXPoolManager.Instance.Spawn(_envHitParticles.gameObject, spawnPos, rotation);
-                if (hitVFX != null)
-                {
-                    ParticleSystem ps = hitVFX.GetComponent<ParticleSystem>();
-                    if (ps != null)
-                    {
-                        var main = ps.main;
-                        main.simulationSpeed = _envHitSimSpeed;
-                    }
-                }
+                VFXPoolManager.Instance.Spawn(_envHitParticles.gameObject, spawnPos, rotation);
             }
         }
 

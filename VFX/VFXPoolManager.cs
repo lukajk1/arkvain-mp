@@ -22,6 +22,9 @@ public class VFXPoolManager : MonoBehaviour
     // Track spawned objects so we can return them to the correct pool
     private Dictionary<GameObject, GameObject> _spawnedToPrefab = new Dictionary<GameObject, GameObject>();
 
+    // Per-prefab simulation speeds
+    private Dictionary<GameObject, float> _simSpeeds = new Dictionary<GameObject, float>();
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -37,7 +40,7 @@ public class VFXPoolManager : MonoBehaviour
     /// Register a prefab and create a pool for it if it doesn't exist.
     /// Called by weapon visuals and other components during initialization.
     /// </summary>
-    public void RegisterPrefab(GameObject prefab, int initialCapacity = -1, int maxSize = -1)
+    public void RegisterPrefab(GameObject prefab, int initialCapacity = -1, int maxSize = -1, float simSpeed = 1f)
     {
         if (prefab == null)
         {
@@ -47,6 +50,8 @@ public class VFXPoolManager : MonoBehaviour
 
         if (_pools.ContainsKey(prefab))
             return; // Already registered
+
+        _simSpeeds[prefab] = simSpeed;
 
         int capacity = initialCapacity > 0 ? initialCapacity : _defaultInitialCapacity;
         int max = maxSize > 0 ? maxSize : _defaultMaxSize;
@@ -59,11 +64,14 @@ public class VFXPoolManager : MonoBehaviour
                 _spawnedToPrefab[obj] = prefab;
 
                 // Reset all particle systems in hierarchy
+                float speed = _simSpeeds.TryGetValue(prefab, out float s) ? s : 1f;
                 ParticleSystem[] particleSystems = obj.GetComponentsInChildren<ParticleSystem>();
                 foreach (var ps in particleSystems)
                 {
                     ps.Clear(); // Clear existing particles
                     ps.time = 0f; // Reset simulation time
+                    var main = ps.main;
+                    main.simulationSpeed = speed;
                 }
 
                 // Reset all trail renderers in hierarchy

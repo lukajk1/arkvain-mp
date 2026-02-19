@@ -17,6 +17,8 @@ public class HUDManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _abilityBindingName;
     [SerializeField] private GameObject _abilityCooldownParentToHide;
     [SerializeField] private Image _abilityCooldown;
+    [SerializeField] private Color _abilityCooldownColor = Color.gray;
+    [SerializeField] private AudioClip _abilityReadySound;
 
     [Header("FPS Counter")]
     [SerializeField] private TextMeshProUGUI _fpsText;
@@ -37,6 +39,7 @@ public class HUDManager : MonoBehaviour
 
     private IWeaponLogic _currentWeapon;
     private WeaponManager _weaponManager;
+    private bool _abilityOnCooldown;
 
     private void Awake()
     {
@@ -119,10 +122,21 @@ public class HUDManager : MonoBehaviour
 
     public void SetAbilityCooldown(float normalizedCooldown, float remainingSeconds)
     {
+        bool onCooldown = remainingSeconds > 0f;
+
         if (_abilityCooldown != null)
+        {
             _abilityCooldown.fillAmount = normalizedCooldown;
+            _abilityCooldown.color = onCooldown ? _abilityCooldownColor : Color.white;
+        }
+
         if (_abilityCooldownText != null)
-            _abilityCooldownText.text = remainingSeconds > 0f ? remainingSeconds.ToString("F1") : string.Empty;
+            _abilityCooldownText.text = onCooldown ? remainingSeconds.ToString("F1") : string.Empty;
+
+        if (_abilityOnCooldown && !onCooldown && _abilityReadySound != null)
+            SoundManager.PlayNonDiegetic(_abilityReadySound);
+
+        _abilityOnCooldown = onCooldown;
     }
 
     public void HideAbilityUI()

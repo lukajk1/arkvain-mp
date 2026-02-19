@@ -163,8 +163,8 @@ public class SoundManager : MonoBehaviour
         AudioClip clip,
         SoundData.Type type = SoundData.Type.SFX,
         float volume = 1f,
-        bool varyPitch = true,
-        bool varyVolume = true)
+        bool varyPitch = false,
+        bool varyVolume = false)
     {
         Play(new SoundData(clip, type: type, blend: SoundData.SoundBlend.NonSpatial,
             volume: volume, varyPitch: varyPitch, varyVolume: varyVolume));

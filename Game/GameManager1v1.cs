@@ -32,6 +32,16 @@ public class GameManager1v1 : NetworkBehaviour
             kills.value = new Dictionary<PlayerID, int>();
             deaths.value = new Dictionary<PlayerID, int>();
             _matchEnded = false;
+            Debug.Log("[GameManager1v1] Server initialized kill/death dictionaries");
+        }
+        else
+        {
+            // On clients, initialize empty dictionaries if null
+            if (kills.value == null)
+                kills.value = new Dictionary<PlayerID, int>();
+            if (deaths.value == null)
+                deaths.value = new Dictionary<PlayerID, int>();
+            Debug.Log("[GameManager1v1] Client initialized kill/death dictionaries");
         }
     }
 
@@ -44,6 +54,8 @@ public class GameManager1v1 : NetworkBehaviour
     {
         if (_matchEnded) return; // Don't record kills after match ends
 
+        Debug.Log($"[GameManager1v1] RecordKill called: {killer.name} killed {victim.name}");
+
         // Initialize if needed
         if (!kills.value.ContainsKey(killer.playerID))
             kills.value[killer.playerID] = 0;
@@ -54,9 +66,13 @@ public class GameManager1v1 : NetworkBehaviour
         kills.value[killer.playerID]++;
         deaths.value[victim.playerID]++;
 
+        Debug.Log($"[GameManager1v1] New scores - Killer: {kills.value[killer.playerID]} kills, Victim: {deaths.value[victim.playerID]} deaths");
+
         // Force sync to clients (required when modifying dictionary contents)
         kills.SetDirty();
         deaths.SetDirty();
+
+        Debug.Log("[GameManager1v1] SetDirty called on kills and deaths");
 
         // Check win condition
         CheckWinCondition();

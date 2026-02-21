@@ -23,10 +23,8 @@ public class ScoreboardUI_1v1 : MonoBehaviour
     private string _defeatMessage = "DEFEAT";
 
     [Header("Settings")]
-    [SerializeField] private float _updateInterval = 0.5f; // Update UI every 0.5 seconds
     [SerializeField] private Color _defeatColor;
 
-    private float _updateTimer;
     private PlayerInfo? _player1Info;
     private PlayerInfo? _player2Info;
 
@@ -43,18 +41,34 @@ public class ScoreboardUI_1v1 : MonoBehaviour
             }
         }
 
+        Debug.Log($"[ScoreboardUI_1v1] Found GameManager. IsSpawned: {_scoreManager.isSpawned}, IsServer: {_scoreManager.isServer}");
+
         // Hide match result object initially
         if (_matchResultObject != null)
         {
             _matchResultObject.SetActive(false);
         }
 
+        // Subscribe to victory event
+        GameManager1v1.OnPlayerVictory += OnPlayerVictory;
+
+        // Wait for GameManager to be spawned before subscribing
+        StartCoroutine(WaitForGameManagerAndSubscribe());
+    }
+
+    private System.Collections.IEnumerator WaitForGameManagerAndSubscribe()
+    {
+        // Wait until the GameManager is spawned and dictionaries are initialized
+        while (!_scoreManager.isSpawned || _scoreManager.kills.value == null || _scoreManager.deaths.value == null)
+        {
+            yield return null;
+        }
+
+        Debug.Log("[ScoreboardUI_1v1] GameManager ready, subscribing to kill/death changes");
+
         // Subscribe to score changes for immediate updates
         _scoreManager.kills.onChanged += OnScoresChanged;
         _scoreManager.deaths.onChanged += OnScoresChanged;
-
-        // Subscribe to victory event
-        GameManager1v1.OnPlayerVictory += OnPlayerVictory;
 
         UpdateUI();
     }
@@ -71,19 +85,9 @@ public class ScoreboardUI_1v1 : MonoBehaviour
         GameManager1v1.OnPlayerVictory -= OnPlayerVictory;
     }
 
-    private void Update()
-    {
-        // Periodic update as fallback
-        _updateTimer += Time.deltaTime;
-        if (_updateTimer >= _updateInterval)
-        {
-            _updateTimer = 0f;
-            UpdateUI();
-        }
-    }
-
     private void OnScoresChanged(System.Collections.Generic.Dictionary<PlayerID, int> scores)
     {
+        Debug.Log("[ScoreboardUI_1v1] OnScoresChanged called");
         UpdateUI();
     }
 
@@ -103,8 +107,11 @@ public class ScoreboardUI_1v1 : MonoBehaviour
         if (_scoreManager.kills.value == null || _scoreManager.deaths.value == null)
         {
             _scoreText.text = "Waiting for match to start...";
+            Debug.Log("[ScoreboardUI_1v1] UpdateUI: Dictionaries not initialized yet");
             return;
         }
+
+        Debug.Log("[ScoreboardUI_1v1] UpdateUI called - updating scoreboard");
 
         // Get all players - first try from scores, then from PlayerInfoManager
         var players = _scoreManager.kills.value.Keys

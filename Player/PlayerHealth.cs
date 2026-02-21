@@ -113,9 +113,10 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
             });
         }
 
-        if (currentState.health <= 0)
+        if (currentState.health <= 0 && !currentState.isDead)
         {
-            Die(attacker);
+            currentState.isDead = true;
+            currentState.attacker = attacker;
         }
         //Debug.Log($"health changed to {currentState.health}");
     }
@@ -145,7 +146,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         if (viewState.isDead && !_lastDead)
         {
             _lastDead = true;
-            Die();
+            Die(viewState.attacker);
         }
     }
 
@@ -153,6 +154,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     {
         public int health;
         public bool isDead;
+        public PlayerID? attacker;
 
         public void Dispose() { }
 

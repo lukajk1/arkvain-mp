@@ -19,6 +19,7 @@ public class HitmarkerManager : MonoBehaviour
 
     [SerializeField] private AudioClip _bodyShotClip;
     [SerializeField] private AudioClip _headShotClip;
+    [SerializeField] private AudioClip _killSfx;
 
     private Vector3 _initialScale;
     private Vector3 _killIconInitialScale;
@@ -88,6 +89,8 @@ public class HitmarkerManager : MonoBehaviour
         if (_localWeaponManager != null && _localWeaponManager.owner == attacker)
         {
             AnimateKillIcon();
+            if (_killSfx != null)
+                SoundManager.PlayNonDiegetic(_killSfx);
         }
     }
 

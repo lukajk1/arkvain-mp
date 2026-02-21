@@ -42,6 +42,10 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
                 return;
 
             predictionManager.SetOwnership(newPlayer, player);
+
+            // Register player info
+            PlayerInfoManager.Register(player);
+
             _roundRunningState.OnPlayerSpawned(player, newPlayer.Value);
         }
 

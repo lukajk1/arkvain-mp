@@ -18,7 +18,7 @@ public class ScoreboardUI_1v1 : MonoBehaviour
     [SerializeField] private Image _glowBehindText;
 
     [Header("Format")]
-    [SerializeField] private string _scoreFormat = "Player {0}: {1} / Player {2}: {3}";
+    [SerializeField] private string _scoreFormat = "{0}: {1} / {2}: {3}";
     [SerializeField] private string _victoryMessage = "VICTORY";
     [SerializeField] private string _defeatMessage = "DEFEAT";
 
@@ -106,20 +106,26 @@ public class ScoreboardUI_1v1 : MonoBehaviour
 
         // Assign players to slots (first two players found)
         if (players.Count > 0 && !_player1Info.HasValue)
-            _player1Info = new PlayerInfo(players[0]);
+        {
+            if (PlayerInfoManager.TryGet(players[0], out var info))
+                _player1Info = info;
+        }
 
         if (players.Count > 1 && !_player2Info.HasValue)
-            _player2Info = new PlayerInfo(players[1]);
+        {
+            if (PlayerInfoManager.TryGet(players[1], out var info))
+                _player2Info = info;
+        }
 
-        // Get scores
-        string player1IDStr = _player1Info.HasValue ? _player1Info.Value.ToString() : "---";
+        // Get scores using player names from PlayerInfoManager
+        string player1Name = _player1Info.HasValue ? _player1Info.Value.name : "---";
         int player1Score = _player1Info.HasValue ? _scoreManager.GetKills(_player1Info.Value) : 0;
 
-        string player2IDStr = _player2Info.HasValue ? _player2Info.Value.ToString() : "---";
+        string player2Name = _player2Info.HasValue ? _player2Info.Value.name : "---";
         int player2Score = _player2Info.HasValue ? _scoreManager.GetKills(_player2Info.Value) : 0;
 
         // Update single text field
-        _scoreText.text = string.Format(_scoreFormat, player1IDStr, player1Score, player2IDStr, player2Score);
+        _scoreText.text = string.Format(_scoreFormat, player1Name, player1Score, player2Name, player2Score);
     }
 
     /// <summary>

@@ -10,6 +10,7 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
     [SerializeField] private GameObject _playerPrefab;
     [SerializeField] private List<Transform> spawnPoints = new List<Transform>();
     [SerializeField] RoundRunningState _roundRunningState;
+    [SerializeField] private ScoreboardUI_1v1 _scoreboard;
 
     private int _currentSpawnPoint;
 
@@ -47,6 +48,12 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
             PlayerInfoManager.Register(player);
 
             _roundRunningState.OnPlayerSpawned(player, newPlayer.Value);
+        }
+
+        // Refresh scoreboard to show player names immediately
+        if (_scoreboard != null)
+        {
+            _scoreboard.RefreshScoreboard();
         }
 
         machine.Next();

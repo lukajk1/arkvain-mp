@@ -18,9 +18,9 @@ public class ScoreboardUI_1v1 : MonoBehaviour
     [SerializeField] private Image _glowBehindText;
 
     [Header("Format")]
-    [SerializeField] private string _scoreFormat = "{0}: {1} / {2}: {3}";
-    [SerializeField] private string _victoryMessage = "VICTORY";
-    [SerializeField] private string _defeatMessage = "DEFEAT";
+    private string _scoreFormat = "{0}: {1} / {2}: {3}";
+    private string _victoryMessage = "VICTORY";
+    private string _defeatMessage = "DEFEAT";
 
     [Header("Settings")]
     [SerializeField] private float _updateInterval = 0.5f; // Update UI every 0.5 seconds
@@ -87,6 +87,14 @@ public class ScoreboardUI_1v1 : MonoBehaviour
         UpdateUI();
     }
 
+    /// <summary>
+    /// Force an immediate UI update. Useful to call after players spawn.
+    /// </summary>
+    public void RefreshScoreboard()
+    {
+        UpdateUI();
+    }
+
     private void UpdateUI()
     {
         if (_scoreManager == null || _scoreText == null) return;
@@ -98,11 +106,17 @@ public class ScoreboardUI_1v1 : MonoBehaviour
             return;
         }
 
-        // Get all players with scores
+        // Get all players - first try from scores, then from PlayerInfoManager
         var players = _scoreManager.kills.value.Keys
             .Union(_scoreManager.deaths.value.Keys)
             .Distinct()
             .ToList();
+
+        // If no players have scores yet, get all registered players from PlayerInfoManager
+        if (players.Count == 0)
+        {
+            players = new System.Collections.Generic.List<PlayerID>(PlayerInfoManager.GetAll().Keys);
+        }
 
         // Assign players to slots (first two players found)
         if (players.Count > 0 && !_player1Info.HasValue)

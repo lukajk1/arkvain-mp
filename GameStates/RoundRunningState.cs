@@ -33,12 +33,12 @@ public class RoundRunningState : PredictedStateNode<RoundRunningState.RoundState
         currentState.playersAlive[player] = obj;
     }
 
-    private void OnPlayerDied(PlayerID? player)
+    private void OnPlayerDied(PlayerInfo? player)
     {
         if (!player.HasValue) return;
         if (machine.currentStateNode is not RoundRunningState) return;
 
-        currentState.playersAlive.Remove(player.Value);
+        currentState.playersAlive.Remove(player.Value.playerID);
 
         if (currentState.playersAlive.Count <= 1)
         {

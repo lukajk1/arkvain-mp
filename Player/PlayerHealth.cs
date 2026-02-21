@@ -8,9 +8,9 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     [SerializeField] public int _maxHealth;
     [SerializeField] private float _killZoneY = -25f;
 
-    public static event Action<PlayerID?> OnPlayerDeath;
-    public static event Action<PlayerID, PlayerID> OnPlayerKilled; // (attacker, victim)
-    public event Action<PlayerID?> OnDeath;
+    public static event Action<PlayerInfo?> OnPlayerDeath;
+    public static event Action<PlayerInfo, PlayerInfo> OnPlayerKilled; // (attacker, victim)
+    public event Action<PlayerInfo?> OnDeath;
     public event Action<int, int> OnHealthChanged;
 
     [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
@@ -47,15 +47,17 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     }
 
 
-    private void Die(PlayerID? attacker = null)
+    private void Die(PlayerInfo? attacker = null)
     {
-        OnPlayerDeath?.Invoke(owner);
-        OnDeath?.Invoke(owner);
+        PlayerInfo? ownerInfo = owner.HasValue ? new PlayerInfo(owner.Value) : null;
+
+        OnPlayerDeath?.Invoke(ownerInfo);
+        OnDeath?.Invoke(ownerInfo);
 
         // Broadcast kill event if there was an attacker
         if (attacker.HasValue && owner.HasValue)
         {
-            OnPlayerKilled?.Invoke(attacker.Value, owner.Value);
+            OnPlayerKilled?.Invoke(attacker.Value, ownerInfo.Value);
         }
 
         // Record kill/death in ScoreManager (server only)
@@ -64,7 +66,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
             GameManager1v1 scoreManager = FindFirstObjectByType<GameManager1v1>();
             if (scoreManager != null)
             {
-                scoreManager.RecordKill(attacker.Value, owner.Value);
+                scoreManager.RecordKill(attacker.Value, ownerInfo.Value);
                 HUDManager.Instance?.BroadcastEvent("Killed by testplayer");
             }
         }
@@ -83,7 +85,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         ChangeHealth(-9999);
     }
 
-    public void ChangeHealth(int change, PlayerID? attacker = null)
+    public void ChangeHealth(int change, PlayerInfo? attacker = null)
     {
         // Server-side validation: Clamp damage to maximum reasonable value
         // This prevents a malicious client from dealing 9999 damage
@@ -154,7 +156,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     {
         public int health;
         public bool isDead;
-        public PlayerID? attacker;
+        public PlayerInfo? attacker;
 
         public void Dispose() { }
 

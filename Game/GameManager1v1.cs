@@ -17,8 +17,8 @@ public class GameManager1v1 : NetworkBehaviour
     public SyncVar<Dictionary<PlayerID, int>> kills = new SyncVar<Dictionary<PlayerID, int>>();
     public SyncVar<Dictionary<PlayerID, int>> deaths = new SyncVar<Dictionary<PlayerID, int>>();
 
-    // Event fired when a player wins (includes winner's PlayerID)
-    public static event System.Action<PlayerID> OnPlayerVictory;
+    // Event fired when a player wins (includes winner's PlayerInfo)
+    public static event System.Action<PlayerInfo> OnPlayerVictory;
 
     private bool _matchEnded = false;
 
@@ -40,19 +40,19 @@ public class GameManager1v1 : NetworkBehaviour
     /// Checks win condition after updating scores.
     /// </summary>
     [ServerRpc]
-    public void RecordKill(PlayerID killer, PlayerID victim)
+    public void RecordKill(PlayerInfo killer, PlayerInfo victim)
     {
         if (_matchEnded) return; // Don't record kills after match ends
 
         // Initialize if needed
-        if (!kills.value.ContainsKey(killer))
-            kills.value[killer] = 0;
-        if (!deaths.value.ContainsKey(victim))
-            deaths.value[victim] = 0;
+        if (!kills.value.ContainsKey(killer.playerID))
+            kills.value[killer.playerID] = 0;
+        if (!deaths.value.ContainsKey(victim.playerID))
+            deaths.value[victim.playerID] = 0;
 
         // Update scores
-        kills.value[killer]++;
-        deaths.value[victim]++;
+        kills.value[killer.playerID]++;
+        deaths.value[victim.playerID]++;
 
         // Force sync to clients (required when modifying dictionary contents)
         kills.SetDirty();
@@ -89,8 +89,9 @@ public class GameManager1v1 : NetworkBehaviour
     [ObserversRpc]
     private void TriggerVictory(PlayerID winner)
     {
-        Debug.Log($"[ScoreManager] Player {winner} wins with {GetKills(winner)} kills!");
-        OnPlayerVictory?.Invoke(winner);
+        PlayerInfo winnerInfo = new PlayerInfo(winner);
+        Debug.Log($"[ScoreManager] Player {winnerInfo} wins with {GetKills(winner)} kills!");
+        OnPlayerVictory?.Invoke(winnerInfo);
     }
 
     /// <summary>
@@ -101,12 +102,22 @@ public class GameManager1v1 : NetworkBehaviour
         return kills.value.TryGetValue(player, out int count) ? count : 0;
     }
 
+    public int GetKills(PlayerInfo player)
+    {
+        return GetKills(player.playerID);
+    }
+
     /// <summary>
     /// Get deaths for a specific player.
     /// </summary>
     public int GetDeaths(PlayerID player)
     {
         return deaths.value.TryGetValue(player, out int count) ? count : 0;
+    }
+
+    public int GetDeaths(PlayerInfo player)
+    {
+        return GetDeaths(player.playerID);
     }
 
     /// <summary>
@@ -121,6 +132,11 @@ public class GameManager1v1 : NetworkBehaviour
             return killCount;
 
         return (float)killCount / deathCount;
+    }
+
+    public float GetKDRatio(PlayerInfo player)
+    {
+        return GetKDRatio(player.playerID);
     }
 
     /// <summary>

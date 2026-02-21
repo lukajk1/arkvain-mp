@@ -142,7 +142,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     }
 
 
-    private void OnPlayerDeath(PlayerID? playerId)
+    private void OnPlayerDeath(PlayerInfo? playerId)
     {
         // should only fire if this instance is the local player--logic below this only pertains to this case
         if (!isOwner) return;

@@ -140,12 +140,12 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
             if (hurtbox is HurtboxHead head)
             {
                 baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
-                head.health.ChangeHealth(-baseDamage, owner);
+                //head.health.ChangeHealth(-baseDamage, owner);
                 isHeadshot = true;
             }
             else
             {
-                hurtbox.health.ChangeHealth(-baseDamage, owner);
+                //hurtbox.health.ChangeHealth(-baseDamage, owner);
             }
 
             hitPlayer = true;

@@ -154,15 +154,17 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
         bool isHeadshot = false;
         if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
         {
+            PlayerInfo? attackerInfo = owner.HasValue ? new PlayerInfo(owner.Value) : null;
+
             if (hurtbox is HurtboxHead head)
             {
                 int result = Mathf.RoundToInt(_damage * _headShotModifier);
-                head.health.ChangeHealth(-result, owner);
+                head.health.ChangeHealth(-result, attackerInfo);
                 isHeadshot = true;
             }
             else
             {
-                hurtbox.health.ChangeHealth(-_damage, owner);
+                hurtbox.health.ChangeHealth(-_damage, attackerInfo);
             }
             hitPlayer = true;
         }

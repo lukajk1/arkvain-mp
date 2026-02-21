@@ -81,12 +81,12 @@ public class HitmarkerManager : MonoBehaviour
         }
     }
 
-    private void OnPlayerKilled(PurrNet.PlayerID attacker, PurrNet.PlayerID victim)
+    private void OnPlayerKilled(PlayerInfo attacker, PlayerInfo victim)
     {
         // Check if the local player is the attacker
         // Since _localWeaponManager is only set for the local player's WeaponManager,
         // we can simply check if it exists and the attacker matches its owner
-        if (_localWeaponManager != null && _localWeaponManager.owner == attacker)
+        if (_localWeaponManager != null && _localWeaponManager.owner == attacker.playerID)
         {
             AnimateKillIcon();
             if (_killSfx != null)

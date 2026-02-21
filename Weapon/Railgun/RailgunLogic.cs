@@ -144,12 +144,12 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
             if (hurtbox is HurtboxHead head)
             {
                 baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
-                head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
+                //head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
                 isHeadshot = true;
             }
             else
             {
-                hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
+                //hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
             }
 
             hitPlayer = true;

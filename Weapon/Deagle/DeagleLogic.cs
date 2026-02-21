@@ -152,12 +152,12 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
             if (hurtbox is HurtboxHead head)
             {
                 baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
-                head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
+                //head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
                 isHeadshot = true;
             }
             else
             {
-                hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
+                //hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
             }
 
             hitPlayer = true;

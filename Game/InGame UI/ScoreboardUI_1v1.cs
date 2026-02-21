@@ -27,8 +27,8 @@ public class ScoreboardUI_1v1 : MonoBehaviour
     [SerializeField] private Color _defeatColor;
 
     private float _updateTimer;
-    private PlayerID? _player1ID;
-    private PlayerID? _player2ID;
+    private PlayerInfo? _player1Info;
+    private PlayerInfo? _player2Info;
 
     private void Start()
     {
@@ -105,18 +105,18 @@ public class ScoreboardUI_1v1 : MonoBehaviour
             .ToList();
 
         // Assign players to slots (first two players found)
-        if (players.Count > 0 && !_player1ID.HasValue)
-            _player1ID = players[0];
+        if (players.Count > 0 && !_player1Info.HasValue)
+            _player1Info = new PlayerInfo(players[0]);
 
-        if (players.Count > 1 && !_player2ID.HasValue)
-            _player2ID = players[1];
+        if (players.Count > 1 && !_player2Info.HasValue)
+            _player2Info = new PlayerInfo(players[1]);
 
         // Get scores
-        string player1IDStr = _player1ID.HasValue ? _player1ID.Value.ToString() : "---";
-        int player1Score = _player1ID.HasValue ? _scoreManager.GetKills(_player1ID.Value) : 0;
+        string player1IDStr = _player1Info.HasValue ? _player1Info.Value.ToString() : "---";
+        int player1Score = _player1Info.HasValue ? _scoreManager.GetKills(_player1Info.Value) : 0;
 
-        string player2IDStr = _player2ID.HasValue ? _player2ID.Value.ToString() : "---";
-        int player2Score = _player2ID.HasValue ? _scoreManager.GetKills(_player2ID.Value) : 0;
+        string player2IDStr = _player2Info.HasValue ? _player2Info.Value.ToString() : "---";
+        int player2Score = _player2Info.HasValue ? _scoreManager.GetKills(_player2Info.Value) : 0;
 
         // Update single text field
         _scoreText.text = string.Format(_scoreFormat, player1IDStr, player1Score, player2IDStr, player2Score);
@@ -126,16 +126,16 @@ public class ScoreboardUI_1v1 : MonoBehaviour
     /// Called when a player wins the match.
     /// Shows victory or defeat message based on whether the local player won.
     /// </summary>
-    private void OnPlayerVictory(PlayerID winner)
+    private void OnPlayerVictory(PlayerInfo winner)
     {
         if (_matchResultObject == null || _matchResultText == null) return;
 
         // Check if the local player is the winner
         PlayerID localPlayerID = NetworkManager.main.localPlayer;
 
-        Debug.Log($"[ScoreboardUI_1v1] OnPlayerVictory called. Winner ID: {winner.id}, Local PlayerID: {localPlayerID.id}");
+        Debug.Log($"[ScoreboardUI_1v1] OnPlayerVictory called. Winner ID: {winner.playerID.id}, Local PlayerID: {localPlayerID.id}");
 
-        bool isLocalPlayerWinner = localPlayerID.id == winner.id;
+        bool isLocalPlayerWinner = localPlayerID.id == winner.playerID.id;
 
         // Set appropriate message
         _matchResultText.text = isLocalPlayerWinner ? _victoryMessage : _defeatMessage;
@@ -148,6 +148,6 @@ public class ScoreboardUI_1v1 : MonoBehaviour
         // Show the match result object
         _matchResultObject.SetActive(true);
 
-        Debug.Log($"[ScoreboardUI_1v1] Match ended. Winner: {winner.id}, Local player: {localPlayerID.id}, Victory: {isLocalPlayerWinner}");
+        Debug.Log($"[ScoreboardUI_1v1] Match ended. Winner: {winner.playerID.id}, Local player: {localPlayerID.id}, Victory: {isLocalPlayerWinner}");
     }
 }

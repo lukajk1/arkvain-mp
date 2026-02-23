@@ -6,10 +6,7 @@ using System.Collections.Generic;
 
 public class PlayerVisualsManager : StatelessPredictedIdentity
 {
-    [SerializeField] private SkinnedMeshRenderer[] _skinnedMeshRenderers;
-    [SerializeField] private MeshRenderer[] _meshRenderers;
-
-    [SerializeField] private MeshRenderer _weaponViewmodel;
+    [SerializeField] private GameObject _skinnedMeshRenderersParent;
     [SerializeField] private MeshRenderer _weaponDiegetic;
 
     [Header("Canvas")]
@@ -80,13 +77,8 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             //Debug.Log("[VisualsManager] This is the owner, setting up local player visuals");
 
             // Disable mesh renderers for local player
-            foreach (var renderer in _skinnedMeshRenderers)
-            {
-                if (renderer != null)
-                {
-                    renderer.enabled = false;
-                }
-            }
+            if (_skinnedMeshRenderersParent != null) _skinnedMeshRenderersParent.SetActive(false);
+
             if (_weaponDiegetic != null) _weaponDiegetic.enabled = false;
 
             // disable health canvas
@@ -125,10 +117,6 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         }
         else
         {
-            //Debug.Log("[VisualsManager] This is NOT the owner, destroying camera");
-
-            if (_weaponViewmodel != null) _weaponViewmodel.enabled = false;
-
             // Destroy camera for non-owners to prevent settings system from modifying it
             if (_firstPersonCamera != null)
             {

@@ -61,6 +61,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     {
         if (!_landEventSubscribed && _playerMovement != null && _playerMovement._onLand != null)
         {
+            Debug.Log("[NetworkedAnimation] Subscribing to _onLand event");
             _playerMovement._onLand.AddListener(OnLand);
             _landEventSubscribed = true;
         }
@@ -135,8 +136,12 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
                 break;
 
             case JumpPhase.Airborne:
+                Debug.Log($"[NetworkedAnimation] Simulate Airborne - landingTriggered: {input.landingTriggered}, movementState: {movementState}");
                 if (input.landingTriggered)
+                {
+                    Debug.Log("[NetworkedAnimation] Simulate: Transitioning to Landing phase");
                     state.jumpPhase = JumpPhase.Landing;
+                }
                 break;
 
             case JumpPhase.Landing:
@@ -165,11 +170,13 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     {
         if (_pendingJumpStartEnded)
         {
+            Debug.Log("[NetworkedAnimation] UpdateInput: Setting jumpStartEnded");
             input.jumpStartEnded = true;
             _pendingJumpStartEnded = false;
         }
         if (_pendingLanding)
         {
+            Debug.Log("[NetworkedAnimation] UpdateInput: Setting landingTriggered");
             input.landingTriggered = true;
             _pendingLanding = false;
         }
@@ -237,6 +244,8 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     {
         if (_animancer == null) return;
 
+        Debug.Log($"[NetworkedAnimation] Playing jump phase: {phase}");
+
         switch (phase)
         {
             case JumpPhase.JumpStart:
@@ -275,9 +284,23 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
     // Event callbacks
     // -------------------------------------------------------------------------
 
-    private void OnJumpStartEnd() => _pendingJumpStartEnded = true;
-    private void OnLandingEnd() => _pendingJumpStartEnded = true;
-    private void OnLand() => _pendingLanding = true;
+    private void OnJumpStartEnd()
+    {
+        Debug.Log("[NetworkedAnimation] OnJumpStartEnd called");
+        _pendingJumpStartEnded = true;
+    }
+
+    private void OnLandingEnd()
+    {
+        Debug.Log("[NetworkedAnimation] OnLandingEnd called");
+        _pendingJumpStartEnded = true;
+    }
+
+    private void OnLand()
+    {
+        Debug.Log("[NetworkedAnimation] OnLand event received");
+        _pendingLanding = true;
+    }
 
     // -------------------------------------------------------------------------
     // Cleanup

@@ -125,18 +125,18 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             _rigidbody.velocity = new Vector3(targetVel.x, _rigidbody.velocity.y, targetVel.z);
         }
 
-        // Detect landing: was airborne last tick, grounded now, cooldown expired
-        if (!state.wasGrounded && isGrounded && state.landCooldown <= 0)
+        // Detect landing: was airborne last tick, grounded now
+        if (!state.wasGrounded && isGrounded)
         {
+            Debug.Log($"[PlayerManualMovement] Landing detected! Invoking _onLand event. wasGrounded: {state.wasGrounded}, isGrounded: {isGrounded}");
             state.movementState = MovementState.Grounded;
             _onLand.Invoke();
-            state.landCooldown = _landCooldown;
         }
 
         if (input.jump && isGrounded && state.jumpCooldown <= 0)
         {
             state.jumpCooldown = _jumpCooldown;
-            state.landCooldown = _landCooldown; // Prevent landing event right after jump
+            // Don't set landCooldown here - let it be set only when actually landing
             state.movementState = MovementState.Jumping;
             _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0f, _rigidbody.velocity.z);
             _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);

@@ -18,7 +18,12 @@ public abstract class WeaponVisualBase : MonoBehaviour
     {
         if (_viewmodel != null)
         {
+            Debug.Log($"[{GetType().Name}] Showing viewmodel: {_viewmodel.name}");
             _viewmodel.SetActive(true);
+        }
+        else
+        {
+            Debug.LogWarning($"[{GetType().Name}] Cannot show viewmodel - _viewmodel reference is null!");
         }
     }
 

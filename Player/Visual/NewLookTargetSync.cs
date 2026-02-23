@@ -5,9 +5,11 @@ public class NewLookTargetSync : PredictedIdentity<NewLookTargetSync.LookInput, 
 {
     [SerializeField] private FirstPersonCamera _camera;
     [SerializeField] private Transform _gunTransform;
+    [SerializeField] private Transform _headTransform;
 
     private Transform _cameraTransform;
-    private Quaternion _rotationOffset; // Gun's rotation relative to camera at start
+    private Quaternion _gunRotationOffset; // Gun's rotation relative to camera at start
+    private Quaternion _headRotationOffset; // Head's rotation relative to camera at start
     private bool _offsetCaptured = false;
 
     protected override void LateAwake()
@@ -21,12 +23,23 @@ public class NewLookTargetSync : PredictedIdentity<NewLookTargetSync.LookInput, 
             Debug.Log($"[NewLookTargetSync] Cached camera transform");
         }
 
-        // Calculate initial offset: gun's world rotation relative to camera's world rotation
-        if (_gunTransform != null && _cameraTransform != null)
+        if (_cameraTransform != null)
         {
-            _rotationOffset = Quaternion.Inverse(_cameraTransform.rotation) * _gunTransform.rotation;
+            // Calculate initial offset: gun's world rotation relative to camera's world rotation
+            if (_gunTransform != null)
+            {
+                _gunRotationOffset = Quaternion.Inverse(_cameraTransform.rotation) * _gunTransform.rotation;
+                Debug.Log($"[NewLookTargetSync] Captured gun offset: {_gunRotationOffset.eulerAngles}, Gun world: {_gunTransform.rotation.eulerAngles}, Camera world: {_cameraTransform.rotation.eulerAngles}");
+            }
+
+            // Calculate initial offset: head's world rotation relative to camera's world rotation
+            if (_headTransform != null)
+            {
+                _headRotationOffset = Quaternion.Inverse(_cameraTransform.rotation) * _headTransform.rotation;
+                Debug.Log($"[NewLookTargetSync] Captured head offset: {_headRotationOffset.eulerAngles}, Head world: {_headTransform.rotation.eulerAngles}, Camera world: {_cameraTransform.rotation.eulerAngles}");
+            }
+
             _offsetCaptured = true;
-            Debug.Log($"[NewLookTargetSync] Captured offset: {_rotationOffset.eulerAngles}, Gun world: {_gunTransform.rotation.eulerAngles}, Camera world: {_cameraTransform.rotation.eulerAngles}");
         }
     }
 
@@ -58,15 +71,29 @@ public class NewLookTargetSync : PredictedIdentity<NewLookTargetSync.LookInput, 
         // Use networked camera rotation from state (world space)
         Quaternion cameraRotation = viewState.cameraRotation;
 
+        if (!_offsetCaptured) return;
+
         // Apply camera rotation with offset to gun (world space)
-        if (_gunTransform != null && _offsetCaptured)
+        if (_gunTransform != null)
         {
             // Gun's world rotation = Camera's world rotation * offset
-            _gunTransform.rotation = cameraRotation * _rotationOffset;
+            _gunTransform.rotation = cameraRotation * _gunRotationOffset;
         }
-        else if (Time.frameCount % 60 == 0) // Log every 60 frames
+    }
+
+    private void LateUpdate()
+    {
+        // Apply head rotation in LateUpdate to run after animation systems
+        if (_headTransform != null && _offsetCaptured)
         {
-            Debug.Log($"[NewLookTargetSync] UpdateView - gunTransform null: {_gunTransform == null}, offset captured: {_offsetCaptured}, cameraRot: {cameraRotation.eulerAngles}");
+            // Head's world rotation = Camera's world rotation * offset
+            Quaternion newRotation = currentState.cameraRotation * _headRotationOffset;
+            _headTransform.rotation = newRotation;
+
+            if (Time.frameCount % 120 == 0)
+            {
+                Debug.Log($"[NewLookTargetSync] Head LateUpdate - Camera: {currentState.cameraRotation.eulerAngles}, Offset: {_headRotationOffset.eulerAngles}, Result: {newRotation.eulerAngles}");
+            }
         }
     }
 

@@ -18,8 +18,15 @@ public class CrossbowVisual3P : MonoBehaviour
 
     [SerializeField] private ParticleSystem _envHitParticles;
 
+    [Header("Recoil")]
+    [SerializeField] private Transform _recoilTransform;
+    [SerializeField] private float _recoilDistance = 0.1f;
+    [SerializeField] private float _recoilDuration = 0.15f;
+
     private Coroutine _activeBulletCoroutine;
     private GameObject _activeBulletObject;
+    private Vector3 _recoilInitialLocalPosition;
+    private int _recoilTweenId = -1;
 
     private void Awake()
     {
@@ -37,6 +44,12 @@ public class CrossbowVisual3P : MonoBehaviour
             _muzzleFlashParticles.transform.rotation = diegeticMuzzlePosition.rotation;
             _muzzleFlashParticles.Stop();
             _muzzleFlashParticles.Clear();
+        }
+
+        // Cache initial recoil local position
+        if (_recoilTransform != null)
+        {
+            _recoilInitialLocalPosition = _recoilTransform.localPosition;
         }
     }
 
@@ -58,10 +71,45 @@ public class CrossbowVisual3P : MonoBehaviour
 
         _weaponLogic.OnShoot -= OnShoot;
         _weaponLogic.OnHit -= OnHit;
+
+        // Cancel recoil animation and reset position
+        if (_recoilTweenId != -1)
+        {
+            LeanTween.cancel(_recoilTweenId);
+            _recoilTweenId = -1;
+        }
+
+        if (_recoilTransform != null)
+        {
+            _recoilTransform.localPosition = _recoilInitialLocalPosition;
+        }
     }
 
     private void OnShoot(Vector3 fireDirection)
     {
+        // Apply recoil animation
+        if (_recoilTransform != null)
+        {
+            // Cancel any existing recoil tween
+            if (_recoilTweenId != -1)
+            {
+                LeanTween.cancel(_recoilTweenId);
+            }
+
+            // Reset to initial position
+            _recoilTransform.localPosition = _recoilInitialLocalPosition;
+
+            // Calculate recoil target position (backward along local -Z)
+            Vector3 recoilTarget = _recoilInitialLocalPosition + Vector3.back * _recoilDistance;
+
+            // Animate: move back quickly, then return to initial position
+            LTSeq sequence = LeanTween.sequence();
+            sequence.append(LeanTween.moveLocal(_recoilTransform.gameObject, recoilTarget, _recoilDuration * 0.3f).setEaseOutQuad());
+            sequence.append(LeanTween.moveLocal(_recoilTransform.gameObject, _recoilInitialLocalPosition, _recoilDuration * 0.7f).setEaseInOutQuad());
+
+            _recoilTweenId = sequence.id;
+        }
+
         if (_shootSound != null)
             SoundManager.PlayDiegetic(_shootSound, transform.position, varyVolume: false);
 

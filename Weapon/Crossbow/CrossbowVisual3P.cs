@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -25,8 +26,8 @@ public class CrossbowVisual3P : MonoBehaviour
     [SerializeField] private float _recoilDistance = 0.1f;
     [SerializeField] private float _recoilDuration = 0.15f;
 
-    private Coroutine _activeBulletCoroutine;
-    private GameObject _activeBulletObject;
+    private List<Coroutine> _activeBulletCoroutines = new List<Coroutine>();
+    private List<GameObject> _activeBulletObjects = new List<GameObject>();
     private Vector3 _recoilInitialLocalPosition;
     private int _recoilTweenId = -1;
 
@@ -74,6 +75,8 @@ public class CrossbowVisual3P : MonoBehaviour
         _weaponLogic.OnShoot -= OnShoot;
         _weaponLogic.OnHit -= OnHit;
 
+        CleanupBullets();
+
         // Cancel recoil animation and reset position
         if (_recoilTweenId != -1)
         {
@@ -85,6 +88,28 @@ public class CrossbowVisual3P : MonoBehaviour
         {
             _recoilTransform.localPosition = _recoilInitialLocalPosition;
         }
+    }
+
+    private void CleanupBullets()
+    {
+        // Stop all active bullet coroutines
+        foreach (var coroutine in _activeBulletCoroutines)
+        {
+            if (coroutine != null)
+                StopCoroutine(coroutine);
+        }
+        _activeBulletCoroutines.Clear();
+
+        // Return all active bullet objects to the pool
+        if (VFXPoolManager.Instance != null)
+        {
+            foreach (var bulletObj in _activeBulletObjects)
+            {
+                if (bulletObj != null)
+                    VFXPoolManager.Instance.Return(bulletObj);
+            }
+        }
+        _activeBulletObjects.Clear();
     }
 
     private void OnShoot(Vector3 fireDirection)
@@ -133,8 +158,9 @@ public class CrossbowVisual3P : MonoBehaviour
 
             if (bulletObj != null)
             {
-                _activeBulletObject = bulletObj;
-                _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(bulletObj, startPos, endPos));
+                _activeBulletObjects.Add(bulletObj);
+                Coroutine coroutine = StartCoroutine(AnimateBulletToHit(bulletObj, startPos, endPos));
+                _activeBulletCoroutines.Add(coroutine);
             }
         }
     }
@@ -168,7 +194,7 @@ public class CrossbowVisual3P : MonoBehaviour
         if (VFXPoolManager.Instance != null)
             VFXPoolManager.Instance.Return(bulletObj);
 
-        _activeBulletCoroutine = null;
-        _activeBulletObject = null;
+        // Remove from tracking lists
+        _activeBulletObjects.Remove(bulletObj);
     }
 }

@@ -20,7 +20,6 @@ public class NewLookTargetSync : PredictedIdentity<NewLookTargetSync.LookInput, 
         if (_camera != null)
         {
             _cameraTransform = _camera.transform;
-            Debug.Log($"[NewLookTargetSync] Cached camera transform");
         }
 
         if (_cameraTransform != null)
@@ -29,14 +28,12 @@ public class NewLookTargetSync : PredictedIdentity<NewLookTargetSync.LookInput, 
             if (_gunTransform != null)
             {
                 _gunRotationOffset = Quaternion.Inverse(_cameraTransform.rotation) * _gunTransform.rotation;
-                Debug.Log($"[NewLookTargetSync] Captured gun offset: {_gunRotationOffset.eulerAngles}, Gun world: {_gunTransform.rotation.eulerAngles}, Camera world: {_cameraTransform.rotation.eulerAngles}");
             }
 
             // Calculate initial offset: head's world rotation relative to camera's world rotation
             if (_headTransform != null)
             {
                 _headRotationOffset = Quaternion.Inverse(_cameraTransform.rotation) * _headTransform.rotation;
-                Debug.Log($"[NewLookTargetSync] Captured head offset: {_headRotationOffset.eulerAngles}, Head world: {_headTransform.rotation.eulerAngles}, Camera world: {_cameraTransform.rotation.eulerAngles}");
             }
 
             _offsetCaptured = true;
@@ -58,11 +55,6 @@ public class NewLookTargetSync : PredictedIdentity<NewLookTargetSync.LookInput, 
         if (isOwner && _cameraTransform != null)
         {
             input.cameraRotation = _cameraTransform.rotation;
-
-            if (Time.frameCount % 120 == 0) // Log every 120 frames
-            {
-                Debug.Log($"[NewLookTargetSync] GetFinalInput - Camera rotation: {_cameraTransform.rotation.eulerAngles}");
-            }
         }
     }
 
@@ -89,11 +81,6 @@ public class NewLookTargetSync : PredictedIdentity<NewLookTargetSync.LookInput, 
             // Head's world rotation = Camera's world rotation * offset
             Quaternion newRotation = currentState.cameraRotation * _headRotationOffset;
             _headTransform.rotation = newRotation;
-
-            if (Time.frameCount % 120 == 0)
-            {
-                Debug.Log($"[NewLookTargetSync] Head LateUpdate - Camera: {currentState.cameraRotation.eulerAngles}, Offset: {_headRotationOffset.eulerAngles}, Result: {newRotation.eulerAngles}");
-            }
         }
     }
 

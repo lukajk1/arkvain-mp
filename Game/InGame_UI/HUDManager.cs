@@ -9,6 +9,7 @@ public class HUDManager : MonoBehaviour
     [SerializeField] private string _ammoFormat = "{0} / {1}"; // "12 / 30" format
 
     [SerializeField] private TextMeshProUGUI _healthText;
+    [SerializeField] private TextMeshProUGUI _healthTextDropShadow;
     [SerializeField] private TextMeshProUGUI _velocityText;
 
     [Header("FPS Counter")]
@@ -72,6 +73,8 @@ public class HUDManager : MonoBehaviour
     {
         if (_healthText != null)
             _healthText.text = $"{currentHealth}";
+            
+        if (_healthTextDropShadow != null) _healthTextDropShadow.text = $"{currentHealth}";
     }
 
     public void SetVelocityReadout(Vector3 velocity)

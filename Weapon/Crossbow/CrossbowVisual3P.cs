@@ -9,12 +9,14 @@ public class CrossbowVisual3P : MonoBehaviour
     [SerializeField] private CrossbowLogic _weaponLogic;
 
     [Header("Shoot Effects")]
-    [SerializeField] private AudioClip _shootSound;
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
     [SerializeField] private GameObject _bulletPrefab;
     [SerializeField] private Transform diegeticMuzzlePosition;
     [SerializeField] private float _bulletMaxDistance = 100f;
     [SerializeField] private float _bulletSpeed = 100f;
+    [Header("Shoot Sound")]
+    [SerializeField] private AudioClip _shootSound;
+    [SerializeField] [Range(0f, 1f)] private float _thirdPersonShotVolumeRatio = 0.7f;
 
     [SerializeField] private ParticleSystem _envHitParticles;
 
@@ -111,7 +113,7 @@ public class CrossbowVisual3P : MonoBehaviour
         }
 
         if (_shootSound != null)
-            SoundManager.PlayDiegetic(_shootSound, transform.position, varyVolume: false);
+            SoundManager.PlayDiegetic(_shootSound, transform.position, varyVolume: false, volume: _thirdPersonShotVolumeRatio);
 
         if (_muzzleFlashParticles != null)
         {

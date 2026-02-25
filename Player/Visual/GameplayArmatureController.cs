@@ -29,10 +29,10 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
     [Header("Blending")]
     [SerializeField] private float _landToLocomotionFade = 0.15f;
 
-    [Header("Parameter Smoothing")]
+    [Header("Parameter Smoothing")] // for mixer strafe input--not general visual interpolation
     [SerializeField] private StringAsset _parameterX;
     [SerializeField] private StringAsset _parameterY;
-    [SerializeField] private float _parameterSmoothTime = 0.2f;
+    [SerializeField] private float _directionalParameterSmoothTime = 0.2f;
 
     private SmoothedVector2Parameter _smoothedParameter;
     private Vector2MixerState _mixerState;
@@ -102,7 +102,7 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
             _animancer,
             _parameterX,
             _parameterY,
-            _parameterSmoothTime);
+            _directionalParameterSmoothTime);
     }
 
     // -------------------------------------------------------------------------
@@ -251,6 +251,7 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
 
     protected override void UpdateView(AnimState viewState, AnimState? verified)
     {
+        // Use the raw simulated state for discrete animation transitions
         var state = _latestSimulatedState;
 
         if (state.movementState != _lastPlayedMovementState)

@@ -3,13 +3,17 @@ using Animancer.TransitionLibraries;
 using UnityEngine;
 
 /// <summary>
-/// Visual-only armature controller that adds additional smoothing on top of the
-/// authoritative GameplayArmatureController for enhanced visual quality.
+/// Visual-only armature controller that mirrors GameplayArmatureController with additional smoothing.
 ///
-/// NOT networked - reads state directly from GameplayArmatureController for display only.
-/// Does NOT drive colliders - purely cosmetic skinned mesh rendering.
+/// Reads the interpolated view state from GameplayArmatureController (already smooth at 60+ FPS from PurrNet)
+/// and applies EXTRA smoothing on top to eliminate any rollback jitter.
 ///
-/// This is optional - if visual quality of gameplay armature is sufficient, you don't need this.
+/// NOT networked - purely cosmetic for what the player sees.
+/// Does NOT drive colliders - GameplayArmature handles all collision/hurtboxes.
+///
+/// Two layers of smoothing:
+/// 1. PurrNet's interpolation between ticks (60 FPS updates)
+/// 2. Our SmoothedParameter with longer smooth time (configurable, default 0.4s vs gameplay's 0.2s)
 /// </summary>
 public class VisualArmatureController : MonoBehaviour
 {
@@ -27,10 +31,15 @@ public class VisualArmatureController : MonoBehaviour
     [Header("Blending")]
     [SerializeField] private float _landToLocomotionFade = 0.15f;
 
+    [Header("Visual Smoothing")]
+    [SerializeField, Tooltip("General visual smoothing factor - higher = smoother but more laggy. 0 = no extra smoothing beyond PurrNet interpolation.")]
+    private float _visualSmoothTime = 0.1f;
+
     [Header("Parameter Smoothing")]
     [SerializeField] private StringAsset _parameterX;
     [SerializeField] private StringAsset _parameterY;
-    [SerializeField] private float _parameterSmoothTime = 0.2f;
+    [Tooltip("Smoothing for directional input to animation mixer")]
+    private float _directionalParameterSmoothTime = 0.2f;
 
     private SmoothedVector2Parameter _smoothedParameter;
     private Vector2MixerState _mixerState;
@@ -88,33 +97,36 @@ public class VisualArmatureController : MonoBehaviour
             _animancer,
             _parameterX,
             _parameterY,
-            _parameterSmoothTime);
+            _directionalParameterSmoothTime);
     }
 
     // -------------------------------------------------------------------------
-    // Update - reads from gameplay armature and applies extra smoothing
+    // Update - reads interpolated state from gameplay armature and applies extra smoothing
     // -------------------------------------------------------------------------
 
-    private void LateUpdate()
+    private void Update()
     {
         if (_gameplayArmature == null || _mixerState == null) return;
 
-        // Read authoritative state from gameplay armature
-        var gameplayState = _gameplayArmature.currentState;
+        // Read the raw tick state from gameplay armature
+        // (GameplayArmature suppresses interpolation, so we get 30Hz tick updates)
+        // Our SmoothedParameter will smooth this out to 60+ FPS
+        var state = _gameplayArmature.currentState;
 
         // Handle movement state transitions
-        if (gameplayState.movementState != _lastPlayedMovementState)
+        if (state.movementState != _lastPlayedMovementState)
         {
-            _lastPlayedMovementState = gameplayState.movementState;
-            PlayMovementStateAnimation(gameplayState.movementState);
+            _lastPlayedMovementState = state.movementState;
+            PlayMovementStateAnimation(state.movementState);
         }
 
-        // Apply extra smoothing to movement parameters
-        if (gameplayState.movementState == PlayerManualMovement.MovementState.Grounded && _smoothedParameter != null)
+        // Apply smoothing to movement parameters
+        // This smooths the 30Hz tick updates into 60+ FPS smooth motion
+        if (state.movementState == PlayerManualMovement.MovementState.Grounded && _smoothedParameter != null)
         {
             _smoothedParameter.TargetValue = new Vector2(
-                gameplayState.moveDirectionX,
-                gameplayState.moveDirectionY
+                state.moveDirectionX,
+                state.moveDirectionY
             );
         }
     }
@@ -158,17 +170,4 @@ public class VisualArmatureController : MonoBehaviour
         _smoothedParameter?.Dispose();
     }
 
-#if UNITY_EDITOR
-    private void OnDrawGizmosSelected()
-    {
-        if (_animancer != null && Application.isPlaying && _gameplayArmature != null)
-        {
-            var state = _gameplayArmature.currentState;
-            UnityEditor.Handles.Label(
-                transform.position + Vector3.up * 3.5f,
-                $"Visual Armature (Extra Smooth)\nMove: ({state.moveDirectionX:F2}, {state.moveDirectionY:F2})\nState: {state.movementState}"
-            );
-        }
-    }
-#endif
 }

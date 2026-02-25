@@ -100,7 +100,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
         }
 
         if (isGrounded && input.moveDirection.sqrMagnitude == 0 && !input.jump)
-            _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0f, _rigidbody.velocity.z);
+            _rigidbody.linearVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
 
         Vector3 targetVel = moveDir * _moveSpeed;
         float accel = isGrounded ? _acceleration : _acceleration * _airAccelerationMultiplier;
@@ -122,7 +122,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             _rigidbody.AddForce(-horizontal * _groundDrag);
         if (horizontal.magnitude > _moveSpeed)
         {
-            _rigidbody.velocity = new Vector3(targetVel.x, _rigidbody.velocity.y, targetVel.z);
+            _rigidbody.linearVelocity = new Vector3(targetVel.x, _rigidbody.linearVelocity.y, targetVel.z);
         }
 
         // Detect landing: was airborne last tick, grounded now
@@ -138,7 +138,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
             state.jumpCooldown = _jumpCooldown;
             // Don't set landCooldown here - let it be set only when actually landing
             state.movementState = MovementState.Jumping;
-            _rigidbody.velocity = new Vector3(_rigidbody.velocity.x, 0f, _rigidbody.velocity.z);
+            _rigidbody.linearVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
             _rigidbody.AddForce(Vector3.up * _jumpForce, ForceMode.Impulse);
             _onJump.Invoke();
             //Debug.Log("jump called in movement");
@@ -172,7 +172,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
                 : input.blinkDistance;
 
             _rigidbody.position = _rigidbody.position + input.blinkDirection * travelDistance;
-            _rigidbody.velocity = Vector3.zero;
+            _rigidbody.linearVelocity = Vector3.zero;
         }
         else if (input.blinkDirection == Vector3.zero)
         {

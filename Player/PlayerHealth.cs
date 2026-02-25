@@ -6,7 +6,7 @@ using UnityEngine;
 public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
     [SerializeField] public int _maxHealth;
-    [SerializeField] private float _killZoneY = -25f;
+    [SerializeField] private float _yHeightKillThreshold = -25f;
 
     public static event Action<PlayerInfo?> OnPlayerDeath;
     public static event Action<PlayerInfo, PlayerInfo> OnPlayerKilled; // (attacker, victim)
@@ -125,7 +125,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     protected override void Simulate(ref HealthState state, float delta)
     {
-        if (!state.isDead && transform.position.y < _killZoneY)
+        if (!state.isDead && transform.position.y < _yHeightKillThreshold)
         {
             state.health = 0;
             state.isDead = true;

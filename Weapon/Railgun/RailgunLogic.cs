@@ -16,7 +16,7 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
     [SerializeField] private LayerMask _shotLayerMask;
 
     [Header("References")]
-    [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
     public float reloadSpeed => _reloadTime;

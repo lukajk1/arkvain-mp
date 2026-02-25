@@ -1,7 +1,7 @@
 using UnityEngine;
 using PurrNet.Prediction;
 
-public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveInput, PlayerManualMovement.State>
+public class PlayerMovementLegacyV2 : PredictedIdentity<PlayerMovementLegacyV2.MoveInput, PlayerMovementLegacyV2.State>
 {
     public enum MovementState
     {
@@ -53,7 +53,7 @@ public class PlayerManualMovement : PredictedIdentity<PlayerManualMovement.MoveI
     }
 
 
-    protected override void Simulate(PlayerManualMovement.MoveInput input, ref State state, float delta)
+    protected override void Simulate(PlayerMovementLegacyV2.MoveInput input, ref State state, float delta)
     {
         state.jumpCooldown -= delta;
         state.landCooldown -= delta;

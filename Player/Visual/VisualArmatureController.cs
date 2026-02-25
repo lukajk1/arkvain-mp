@@ -44,7 +44,7 @@ public class VisualArmatureController : MonoBehaviour
     private SmoothedVector2Parameter _smoothedParameter;
     private Vector2MixerState _mixerState;
 
-    private PlayerManualMovement.MovementState _lastPlayedMovementState = PlayerManualMovement.MovementState.Grounded;
+    private PlayerMovement.MovementState _lastPlayedMovementState = PlayerMovement.MovementState.Grounded;
 
     // -------------------------------------------------------------------------
     // Initialization
@@ -122,7 +122,7 @@ public class VisualArmatureController : MonoBehaviour
 
         // Apply smoothing to movement parameters
         // This smooths the 30Hz tick updates into 60+ FPS smooth motion
-        if (state.movementState == PlayerManualMovement.MovementState.Grounded && _smoothedParameter != null)
+        if (state.movementState == PlayerMovement.MovementState.Grounded && _smoothedParameter != null)
         {
             _smoothedParameter.TargetValue = new Vector2(
                 state.moveDirectionX,
@@ -135,23 +135,23 @@ public class VisualArmatureController : MonoBehaviour
     // Animancer playback
     // -------------------------------------------------------------------------
 
-    private void PlayMovementStateAnimation(PlayerManualMovement.MovementState state)
+    private void PlayMovementStateAnimation(PlayerMovement.MovementState state)
     {
         if (_animancer == null) return;
 
         switch (state)
         {
-            case PlayerManualMovement.MovementState.Jumping:
+            case PlayerMovement.MovementState.Jumping:
                 if (_animancer.Graph.Transitions.TryGetTransition(_jumpStartIndex, out var jumpGroup))
                     _animancer.Play(jumpGroup.Transition);
                 break;
 
-            case PlayerManualMovement.MovementState.Airborne:
+            case PlayerMovement.MovementState.Airborne:
                 if (_animancer.Graph.Transitions.TryGetTransition(_airborneIndex, out var airGroup))
                     _animancer.Play(airGroup.Transition);
                 break;
 
-            case PlayerManualMovement.MovementState.Grounded:
+            case PlayerMovement.MovementState.Grounded:
                 if (_mixerState != null)
                 {
                     var fadeState = _animancer.Play(_mixerState, _landToLocomotionFade);

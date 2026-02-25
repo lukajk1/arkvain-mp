@@ -14,7 +14,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
     [Header("Refs")]
     [SerializeField] private Vector3 _centerOfCamera;
     [SerializeField] private LayerMask _shotLayerMask;
-    [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
 

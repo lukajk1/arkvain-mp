@@ -24,7 +24,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 {
     [Header("Animation Setup")]
     [SerializeField] private AnimancerComponent _animancer;
-    [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
     [SerializeField] private AvatarMask _layerMask;
 
     [Header("Transition Indices")]
@@ -125,8 +125,8 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
         switch (state.jumpPhase)
         {
             case JumpPhase.None:
-                if (movementState == PlayerManualMovement.MovementState.Jumping ||
-                    movementState == PlayerManualMovement.MovementState.Airborne)
+                if (movementState == PlayerMovement.MovementState.Jumping ||
+                    movementState == PlayerMovement.MovementState.Airborne)
                     state.jumpPhase = JumpPhase.JumpStart;
                 break;
 

@@ -17,7 +17,7 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
     [SerializeField] private LayerMask _shotLayerMask;
 
     [Header("References")]
-    [SerializeField] private PlayerMovement _playerMovement;
+    [SerializeField] private PlayerMovementLegacyV1 _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
 

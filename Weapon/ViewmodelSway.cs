@@ -7,7 +7,7 @@ using UnityEngine;
 public class ViewmodelSway : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     [Header("Feature Toggles")]
     [Tooltip("Turn positional sway (on camera movement) on/off")]

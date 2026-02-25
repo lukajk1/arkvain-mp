@@ -18,7 +18,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private GameObject _deadPlayerPrefab;
 
     [SerializeField] private PlayerHealth _playerHealth;
-    [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     [Header("Ability")]
     [SerializeField] private MonoBehaviour _abilityLogic;
@@ -185,7 +185,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         }
 
         if (_playerMovement != null && _footstepClips.Count > 0
-            && _playerMovement.CurrentMovementState == PlayerManualMovement.MovementState.Grounded)
+            && _playerMovement.CurrentMovementState == PlayerMovement.MovementState.Grounded)
         {
             var vel = _playerMovement._rigidbody.linearVelocity;
             _footstepDistance += new Vector3(vel.x, 0f, vel.z).magnitude * Time.deltaTime;

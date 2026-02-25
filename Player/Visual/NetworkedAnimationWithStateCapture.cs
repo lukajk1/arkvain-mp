@@ -26,7 +26,7 @@ public class NetworkedAnimationWithStateCapture : PredictedIdentity<NetworkedAni
 {
     [Header("Animation Setup")]
     [SerializeField] private AnimancerComponent _animancer;
-    [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     [Header("Transition Indices")]
     [SerializeField] private byte _locomotionMixerIndex = 0;
@@ -122,8 +122,8 @@ public class NetworkedAnimationWithStateCapture : PredictedIdentity<NetworkedAni
         switch (state.jumpPhase)
         {
             case JumpPhase.None:
-                if (movementState == PlayerManualMovement.MovementState.Jumping ||
-                    movementState == PlayerManualMovement.MovementState.Airborne)
+                if (movementState == PlayerMovement.MovementState.Jumping ||
+                    movementState == PlayerMovement.MovementState.Airborne)
                     state.jumpPhase = JumpPhase.JumpStart;
                 break;
 

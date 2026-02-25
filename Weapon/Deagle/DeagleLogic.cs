@@ -20,7 +20,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     [SerializeField] private AnimationCurve _damageFalloff;
 
     [Header("References")]
-    [SerializeField] private PlayerMovement _playerMovement;
+    [SerializeField] private PlayerMovementLegacyV1 _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
 

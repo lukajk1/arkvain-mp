@@ -17,7 +17,7 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
 {
     [Header("Animation Setup")]
     [SerializeField] private AnimancerComponent _animancer;
-    [SerializeField] private PlayerManualMovement _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
     [SerializeField] private AvatarMask _layerMask;
 
     [Header("Transition Indices")]
@@ -37,7 +37,7 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
     private SmoothedVector2Parameter _smoothedParameter;
     private Vector2MixerState _mixerState;
 
-    private PlayerManualMovement.MovementState _lastPlayedMovementState = PlayerManualMovement.MovementState.Grounded;
+    private PlayerMovement.MovementState _lastPlayedMovementState = PlayerMovement.MovementState.Grounded;
     private AnimState _latestSimulatedState;
 
     private bool _pendingJumpStartEnded = false;
@@ -120,14 +120,14 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
         state.movementState = movementState;
 
         // Update move direction when grounded
-        if (state.movementState == PlayerManualMovement.MovementState.Grounded)
+        if (state.movementState == PlayerMovement.MovementState.Grounded)
         {
             state.moveDirectionX = moveInput.x;
             state.moveDirectionY = moveInput.y;
         }
 
         // Handle landing detection
-        if (state.wasAirborne && movementState == PlayerManualMovement.MovementState.Grounded)
+        if (state.wasAirborne && movementState == PlayerMovement.MovementState.Grounded)
         {
             state.justLanded = true;
         }
@@ -136,8 +136,8 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
             state.justLanded = false;
         }
 
-        state.wasAirborne = (movementState == PlayerManualMovement.MovementState.Airborne ||
-                             movementState == PlayerManualMovement.MovementState.Jumping);
+        state.wasAirborne = (movementState == PlayerMovement.MovementState.Airborne ||
+                             movementState == PlayerMovement.MovementState.Jumping);
     }
 
     protected override void LateSimulate(ref AnimState state, float delta)
@@ -260,7 +260,7 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
             PlayMovementStateAnimation(state.movementState);
         }
 
-        if (state.movementState == PlayerManualMovement.MovementState.Grounded && _smoothedParameter != null)
+        if (state.movementState == PlayerMovement.MovementState.Grounded && _smoothedParameter != null)
             _smoothedParameter.TargetValue = new Vector2(state.moveDirectionX, state.moveDirectionY);
     }
 
@@ -268,23 +268,23 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
     // Animancer playback — visual only, never called during rollback
     // -------------------------------------------------------------------------
 
-    private void PlayMovementStateAnimation(PlayerManualMovement.MovementState state)
+    private void PlayMovementStateAnimation(PlayerMovement.MovementState state)
     {
         if (_animancer == null) return;
 
         switch (state)
         {
-            case PlayerManualMovement.MovementState.Jumping:
+            case PlayerMovement.MovementState.Jumping:
                 if (_animancer.Graph.Transitions.TryGetTransition(_jumpStartIndex, out var jumpGroup))
                     _animancer.Play(jumpGroup.Transition);
                 break;
 
-            case PlayerManualMovement.MovementState.Airborne:
+            case PlayerMovement.MovementState.Airborne:
                 if (_animancer.Graph.Transitions.TryGetTransition(_airborneIndex, out var airGroup))
                     _animancer.Play(airGroup.Transition);
                 break;
 
-            case PlayerManualMovement.MovementState.Grounded:
+            case PlayerMovement.MovementState.Grounded:
                 if (_mixerState != null)
                 {
                     var fadeState = _animancer.Play(_mixerState, _landToLocomotionFade);
@@ -323,7 +323,7 @@ public class GameplayArmatureController : PredictedIdentity<GameplayArmatureCont
     {
         public float moveDirectionX;
         public float moveDirectionY;
-        public PlayerManualMovement.MovementState movementState;
+        public PlayerMovement.MovementState movementState;
         public bool wasAirborne;
         public bool justLanded;
 

@@ -26,13 +26,9 @@ public class PlayerMovementLegacyV1 : PredictedIdentity<PlayerMovementLegacyV1.M
         _onLand = new PredictedEvent(predictionManager, this);
     }
 
-
     protected override void Simulate(PlayerMovementLegacyV1.MoveInput input, ref State state, float delta)
     {
-        // simulate is the local simulation/interpolation that occurs between packets from the server ig
-        // all operations pertaining to state/input should pass through the 'interfaces' referenced by state and input here i.e. don't call input.get... in here
-
-        // delta = time in ms since last tick I guess
+        // delta = time in ms since last tick
         state.jumpCooldown -= delta;
         state.landCooldown -= delta;
 

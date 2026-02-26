@@ -12,16 +12,20 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
     public MovementState CurrentMovementState { get; private set; } = MovementState.Grounded;
 
-    [Header("Values")]
-    [HideInInspector] public float _moveSpeed = 4.2f;
-    [SerializeField] private float _acceleration = 20f;
-    [SerializeField] private float _airAccelerationMultiplier = 0.5f;
-    [SerializeField] private float _jumpForce = 5f;
-    [SerializeField] private float _planarDamping = 10f;
-    [Tooltip("Acceleration multiplier applied whenever there is existing horizontal velocity. 1 = no penalty, 0 = no acceleration while moving. Applied uniformly regardless of direction change angle.")]
-    [SerializeField] private float _oppositeAccelMultiplier = 0.25f;
+    [Header("External References")]
+    [SerializeField] private LayerMask _groundMask;
+    [SerializeField] private FirstPersonCamera _camera;
+    [SerializeField] public PredictedRigidbody _rigidbody;
+    [SerializeField] private CapsuleCollider _capsule;
 
-    [Header("Groud")]
+    [Header("Movement Values")]
+    [SerializeField] public float _moveSpeed = 4.2f;
+    [SerializeField] private float _timeToMaxSpeed = 0.2f;
+    [SerializeField, Range(0f, 1f)] private float _airMaxXZVelocityRatio = 0.5f;
+    [SerializeField] private float _jumpForce = 5f;
+    [SerializeField] private float _maxVerticalVelocity = 20f;
+
+    [Header("Ground")]
     [SerializeField] private float _groundDrag = 8f;
     [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private float _jumpCooldown = 0.2f;
@@ -33,12 +37,6 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [SerializeField] private float _slopeStickDuration = 0.15f;
     private RaycastHit _slopeHit;
 
-
-    [Header("External References")]
-    [SerializeField] private LayerMask _groundMask;
-    [SerializeField] private FirstPersonCamera _camera;
-    [SerializeField] public PredictedRigidbody _rigidbody;
-    [SerializeField] private CapsuleCollider _capsule;
     //events
     [HideInInspector] public PredictedEvent _onJump;
     [HideInInspector] public PredictedEvent _onLand;
@@ -102,33 +100,41 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         if (isGrounded && input.moveDirection.sqrMagnitude == 0 && !input.jump)
             _rigidbody.linearVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
 
+        Vector3 currentVel = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
         Vector3 targetVel = moveDir * _moveSpeed;
-        float accel = isGrounded ? _acceleration : _acceleration * _airAccelerationMultiplier;
+        Vector3 velocityError = targetVel - currentVel;
+        float accelRate = 1f / _timeToMaxSpeed;
 
-        if (moveDir.sqrMagnitude > 0.001f)
+        _rigidbody.AddForce(velocityError * accelRate, ForceMode.Acceleration);
+
+        // clamp max velocity
+        Vector3 clampedVelocity = _rigidbody.linearVelocity;
+
+        // clamp horizontal (air only)
+        if (!isGrounded)
         {
-            var curHorizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
-            if (curHorizontal.sqrMagnitude > 0.001f)
+            var horizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
+            float maxAirSpeed = _moveSpeed * _airMaxXZVelocityRatio;
+            if (horizontal.magnitude > maxAirSpeed)
             {
-                accel *= _oppositeAccelMultiplier;
+                Vector3 clampedHorizontal = horizontal.normalized * maxAirSpeed;
+                clampedVelocity.x = clampedHorizontal.x;
+                clampedVelocity.z = clampedHorizontal.z;
             }
         }
 
-        _rigidbody.AddForce(targetVel * accel);
-
-        var horizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
-        _rigidbody.AddForce(-horizontal * _planarDamping);
-        if (isGrounded)
-            _rigidbody.AddForce(-horizontal * _groundDrag);
-        if (horizontal.magnitude > _moveSpeed)
+        // clamp vertical
+        if (Mathf.Abs(clampedVelocity.y) > _maxVerticalVelocity)
         {
-            _rigidbody.linearVelocity = new Vector3(targetVel.x, _rigidbody.linearVelocity.y, targetVel.z);
+            clampedVelocity.y = Mathf.Sign(clampedVelocity.y) * _maxVerticalVelocity;
         }
+
+        _rigidbody.linearVelocity = clampedVelocity;
 
         // Detect landing: was airborne last tick, grounded now
         if (!state.wasGrounded && isGrounded)
         {
-            Debug.Log($"[PlayerManualMovement] Landing detected! Invoking _onLand event. wasGrounded: {state.wasGrounded}, isGrounded: {isGrounded}");
+            //Debug.Log($"[PlayerManualMovement] Landing detected! Invoking _onLand event. wasGrounded: {state.wasGrounded}, isGrounded: {isGrounded}");
             state.movementState = MovementState.Grounded;
             _onLand.Invoke();
         }
@@ -156,6 +162,22 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
         CurrentMovementState = state.movementState;
 
+        HandleBlink(input, ref state);
+
+        state.wasGrounded = isGrounded;
+
+        if (input.cameraForward.HasValue)
+        {
+            var camForward = input.cameraForward.Value;
+            camForward.y = 0;
+            if (camForward.sqrMagnitude > 0.0001f)
+                _rigidbody.MoveRotation(Quaternion.LookRotation(camForward.normalized));
+        }
+
+    }
+
+    private void HandleBlink(MoveInput input, ref State state)
+    {
         if (input.blinkDirection != Vector3.zero && !state.blinkConsumed && _capsule != null)
         {
             state.blinkConsumed = true;
@@ -171,24 +193,13 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
                 ? Mathf.Max(0f, blinkHit.distance - skinWidth)
                 : input.blinkDistance;
 
-            _rigidbody.position = _rigidbody.position + input.blinkDirection * travelDistance;
+            _rigidbody.MovePosition(_rigidbody.position + input.blinkDirection * travelDistance);
             _rigidbody.linearVelocity = Vector3.zero;
         }
         else if (input.blinkDirection == Vector3.zero)
         {
             state.blinkConsumed = false;
         }
-
-        state.wasGrounded = isGrounded;
-
-        if (input.cameraForward.HasValue)
-        {
-            var camForward = input.cameraForward.Value;
-            camForward.y = 0;
-            if (camForward.sqrMagnitude > 0.0001f)
-                _rigidbody.MoveRotation(Quaternion.LookRotation(camForward.normalized));
-        }
-
     }
 
     private static Collider[] _groundColliders = new Collider[8];

@@ -3,6 +3,7 @@ using PurrNet.Prediction;
 
 public class PlayerMovementLegacyV2 : PredictedIdentity<PlayerMovementLegacyV2.MoveInput, PlayerMovementLegacyV2.State>
 {
+    // as of a5f1ef6 / 2/24/26 this was the movement script. Used to be called "PlayerManualMovement".
     public enum MovementState
     {
         Grounded,

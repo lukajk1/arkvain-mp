@@ -106,6 +106,8 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         {
             Vector3 accelDir = moveDir.normalized;
             float accelRate = _moveSpeed / _timeToMaxSpeed;
+            if (!isGrounded)
+                accelRate *= _airControlRatio;
             _rigidbody.AddForce(accelDir * accelRate, ForceMode.Acceleration);
         }
         else if (isGrounded)
@@ -124,26 +126,11 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         var horizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
 
         // clamp horizontal
-        if (isGrounded)
+        if (horizontal.magnitude > _moveSpeed)
         {
-            // Ground: clamp to moveSpeed
-            if (horizontal.magnitude > _moveSpeed)
-            {
-                Vector3 clampedHorizontal = horizontal.normalized * _moveSpeed;
-                clampedVelocity.x = clampedHorizontal.x;
-                clampedVelocity.z = clampedHorizontal.z;
-            }
-        }
-        else
-        {
-            // Air: clamp to reduced speed
-            float maxAirSpeed = _moveSpeed * _airControlRatio;
-            if (horizontal.magnitude > maxAirSpeed)
-            {
-                Vector3 clampedHorizontal = horizontal.normalized * maxAirSpeed;
-                clampedVelocity.x = clampedHorizontal.x;
-                clampedVelocity.z = clampedHorizontal.z;
-            }
+            Vector3 clampedHorizontal = horizontal.normalized * _moveSpeed;
+            clampedVelocity.x = clampedHorizontal.x;
+            clampedVelocity.z = clampedHorizontal.z;
         }
 
         // clamp vertical

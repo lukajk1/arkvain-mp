@@ -60,43 +60,15 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
         bool isGrounded = IsGrounded();
 
-        // SNAP LOGIC: If we were grounded and aren't jumping, check for a slope transition
-        if (!isGrounded && state.wasGrounded && state.jumpCooldown <= 0)
-        {
-            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit snapHit, _groundCheckRadius * 2f, _groundMask))
-            {
-                isGrounded = true;
-                // Manually push the position down or apply a heavy burst of downward force
-                _rigidbody.AddForce(Vector3.down * _slopeStickForce * 2f, ForceMode.Acceleration);
-            }
-        }
+        // Try to keep player grounded when walking off ledges
+        isGrounded = TrySnapToGround(isGrounded, state);
 
         Vector3 moveDir = transform.forward * input.moveDirection.y + transform.right * input.moveDirection.x;
 
-        bool onSlope = OnSlope();
-
+        // Handle slope movement
+        bool onSlope = IsOnSlope();
         if (isGrounded && onSlope)
-        {
-            // Use the slope's normal to find the correct "forward" and "right" on the incline
-            Vector3 slopeRight = Vector3.Cross(_slopeHit.normal, Vector3.up);
-            Vector3 slopeForward = Vector3.Cross(slopeRight, _slopeHit.normal);
-
-            // Reverse logic if moving backward/left
-            // Or more simply, project your existing moveDir correctly:
-            if (!input.jump)
-                moveDir = GetSlopeMoveDirection(moveDir);
-
-            // don't apply gravity cancellation while on slop if jumping
-            if (!input.jump)
-                _rigidbody.AddForce(-Physics.gravity * _rigidbody.rb.mass);
-
-            if (input.moveDirection.sqrMagnitude > 0 && !input.jump)
-                state.slopeStickCooldown = _slopeStickDuration;
-
-            if (state.slopeStickCooldown > 0 && !input.jump)
-                _rigidbody.AddForce(-_slopeHit.normal * _slopeStickForce); // Stick TO the normal, not just down
-
-        }
+            moveDir = HandleSlopeMovement(input, ref state, moveDir);
 
         if (isGrounded && input.moveDirection.sqrMagnitude == 0 && !input.jump)
             _rigidbody.linearVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
@@ -186,6 +158,43 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
     }
 
+    private Vector3 HandleSlopeMovement(MoveInput input, ref State state, Vector3 moveDir)
+    {
+        if (!input.jump)
+        {
+            // Project movement onto slope plane
+            moveDir = GetSlopeMoveDirection(moveDir);
+
+            // Cancel gravity to prevent sliding down slope
+            _rigidbody.AddForce(-Physics.gravity, ForceMode.Acceleration);
+        }
+
+        // Manage slope stick duration
+        if (input.moveDirection.sqrMagnitude > 0 && !input.jump)
+            state.slopeStickCooldown = _slopeStickDuration;
+
+        // Apply force to stick to slope
+        if (state.slopeStickCooldown > 0 && !input.jump)
+            _rigidbody.AddForce(-_slopeHit.normal * _slopeStickForce, ForceMode.Acceleration);
+
+        return moveDir;
+    }
+
+    private bool TrySnapToGround(bool isGrounded, State state)
+    {
+        // If not grounded without jumping, then ran off a ledge. Try to stick player to slope.
+        if (!isGrounded && state.wasGrounded && state.jumpCooldown <= 0)
+        {
+            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit snapHit, _groundCheckRadius * 2f, _groundMask))
+            {
+                // Manually push the position down or apply a heavy burst of downward force
+                _rigidbody.AddForce(Vector3.down * _slopeStickForce * 2f, ForceMode.Acceleration);
+                return true;
+            }
+        }
+        return isGrounded;
+    }
+
     private void HandleBlink(MoveInput input, ref State state)
     {
         if (input.blinkDirection != Vector3.zero && !state.blinkConsumed && _capsule != null)
@@ -219,7 +228,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         return hit > 0;
     }
 
-    private bool OnSlope()
+    private bool IsOnSlope()
     {
         if (Physics.Raycast(transform.position, Vector3.down, out _slopeHit, _groundCheckRadius, _groundMask))
         {

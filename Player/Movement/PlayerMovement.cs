@@ -41,7 +41,6 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [SerializeField] private float _maxSlopeAngle = 40f;
     [SerializeField] private float _slopeStickForce = 80f;
     [SerializeField] private float _slopeStickDuration = 0.15f;
-    private RaycastHit _slopeHit;
 
     //events
     [HideInInspector] public PredictedEvent _onJump;
@@ -56,6 +55,38 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         _onLand = new PredictedEvent(predictionManager, this);
     }
 
+    protected override void GetUnityState(ref State state)
+    {
+        // Cache rotation for calculating forward/right vectors in Simulate
+        state.rotation = _rigidbody.rotation;
+
+        // Perform ground check at guaranteed-safe moment (after all SetUnityState calls complete)
+        state.isGrounded = Physics.OverlapSphereNonAlloc(
+            _rigidbody.position,
+            _groundCheckRadius,
+            _groundColliders,
+            _groundMask) > 0;
+
+        // Perform slope check
+        if (Physics.Raycast(_rigidbody.position, Vector3.down, out RaycastHit hit, _groundCheckRadius, _groundMask))
+        {
+            float angle = Vector3.Angle(Vector3.up, hit.normal);
+            state.isOnSlope = angle < _maxSlopeAngle && angle != 0;
+            state.slopeNormal = hit.normal;
+        }
+        else
+        {
+            state.isOnSlope = false;
+            state.slopeNormal = Vector3.up;
+        }
+    }
+
+    protected override void UpdateView(State viewState, State? verified)
+    {
+        // Update public property for external visual systems (UI, audio, etc.)
+        // This runs every frame with interpolated state, not during rollback
+        CurrentMovementState = viewState.movementState;
+    }
 
     protected override void Simulate(PlayerMovement.MoveInput input, ref State state, float delta)
     {
@@ -63,57 +94,21 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         state.landCooldown -= delta;
         state.slopeStickCooldown -= delta;
 
-        bool isGrounded = IsGrounded();
+        // Read from cached state instead of calling IsGrounded()
+        bool isGrounded = state.isGrounded;
 
         // Try to keep player grounded when walking off ledges
         isGrounded = TrySnapToGround(isGrounded, state);
 
-        Vector3 moveDir = transform.forward * input.moveDirection.y + transform.right * input.moveDirection.x;
+        // Calculate forward/right from cached rotation instead of transform
+        Vector3 forward = state.rotation * Vector3.forward;
+        Vector3 right = state.rotation * Vector3.right;
+        Vector3 moveDir = forward * input.moveDirection.y + right * input.moveDirection.x;
 
-        // Track strafe key presses (A/D)
-        bool pressingLeft = input.moveDirection.x < -0.1f;
-        bool pressingRight = input.moveDirection.x > 0.1f;
+        float strafeSpamMultiplier = CalculateStrafeSpamPenalty(input, ref state, delta);
 
-        // Detect new key press
-        if (pressingLeft && !state.wasPressingLeft)
-        {
-            if (state.timeSinceLastStrafePress < _strafeSpamWindow)
-                state.leftPressCount++;
-            else
-                state.leftPressCount = 1;
-            state.timeSinceLastStrafePress = 0f;
-        }
-        else if (pressingRight && !state.wasPressingRight)
-        {
-            if (state.timeSinceLastStrafePress < _strafeSpamWindow)
-                state.rightPressCount++;
-            else
-                state.rightPressCount = 1;
-            state.timeSinceLastStrafePress = 0f;
-        }
-
-        state.wasPressingLeft = pressingLeft;
-        state.wasPressingRight = pressingRight;
-        state.timeSinceLastStrafePress += delta;
-
-        // Calculate spam penalty
-        int totalPresses = state.leftPressCount + state.rightPressCount;
-        float strafeSpamMultiplier = 1f;
-        if (totalPresses > _maxStrafePresses)
-        {
-            strafeSpamMultiplier = _spamAccelPenaltyMultiplier;
-            Debug.Log($"[PlayerMovement] STRAFE SPAM! Total presses: {totalPresses}, penalty: {_spamAccelPenaltyMultiplier}");
-        }
-
-        // Reset counters if window expires
-        if (state.timeSinceLastStrafePress > _strafeSpamWindow)
-        {
-            state.leftPressCount = 0;
-            state.rightPressCount = 0;
-        }
-
-        // Handle slope movement
-        bool onSlope = IsOnSlope();
+        // Handle slope movement - read from cached state
+        bool onSlope = state.isOnSlope;
         if (isGrounded && onSlope)
             moveDir = HandleSlopeMovement(input, ref state, moveDir);
 
@@ -213,8 +208,6 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         else if (!isGrounded && state.movementState == MovementState.Grounded)
             state.movementState = MovementState.Airborne;
 
-        CurrentMovementState = state.movementState;
-
         HandleBlink(input, ref state);
 
         state.wasGrounded = isGrounded;
@@ -233,8 +226,8 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     {
         if (!input.jump)
         {
-            // Project movement onto slope plane
-            moveDir = GetSlopeMoveDirection(moveDir);
+            // Project movement onto slope plane using cached slope normal
+            moveDir = Vector3.ProjectOnPlane(moveDir, state.slopeNormal).normalized;
 
             // Cancel gravity to prevent sliding down slope
             _rigidbody.AddForce(-Physics.gravity, ForceMode.Acceleration);
@@ -244,9 +237,9 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         if (input.moveDirection.sqrMagnitude > 0 && !input.jump)
             state.slopeStickCooldown = _slopeStickDuration;
 
-        // Apply force to stick to slope
+        // Apply force to stick to slope using cached slope normal
         if (state.slopeStickCooldown > 0 && !input.jump)
-            _rigidbody.AddForce(-_slopeHit.normal * _slopeStickForce, ForceMode.Acceleration);
+            _rigidbody.AddForce(-state.slopeNormal * _slopeStickForce, ForceMode.Acceleration);
 
         return moveDir;
     }
@@ -264,6 +257,53 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
             }
         }
         return isGrounded;
+    }
+
+    private float CalculateStrafeSpamPenalty(MoveInput input, ref State state, float delta)
+    {
+        // Track strafe key presses (A/D)
+        bool pressingLeft = input.moveDirection.x < -0.1f;
+        bool pressingRight = input.moveDirection.x > 0.1f;
+
+        // Detect new key press
+        if (pressingLeft && !state.wasPressingLeft)
+        {
+            if (state.timeSinceLastStrafePress < _strafeSpamWindow)
+                state.leftPressCount++;
+            else
+                state.leftPressCount = 1;
+            state.timeSinceLastStrafePress = 0f;
+        }
+        else if (pressingRight && !state.wasPressingRight)
+        {
+            if (state.timeSinceLastStrafePress < _strafeSpamWindow)
+                state.rightPressCount++;
+            else
+                state.rightPressCount = 1;
+            state.timeSinceLastStrafePress = 0f;
+        }
+
+        state.wasPressingLeft = pressingLeft;
+        state.wasPressingRight = pressingRight;
+        state.timeSinceLastStrafePress += delta;
+
+        // Calculate spam penalty
+        int totalPresses = state.leftPressCount + state.rightPressCount;
+        float strafeSpamMultiplier = 1f;
+        if (totalPresses > _maxStrafePresses)
+        {
+            strafeSpamMultiplier = _spamAccelPenaltyMultiplier;
+            //Debug.Log($"[PlayerMovement] Strafe spam! Total presses: {totalPresses}, penalty: {_spamAccelPenaltyMultiplier}");
+        }
+
+        // Reset counters if window expires
+        if (state.timeSinceLastStrafePress > _strafeSpamWindow)
+        {
+            state.leftPressCount = 0;
+            state.rightPressCount = 0;
+        }
+
+        return strafeSpamMultiplier;
     }
 
     private void HandleBlink(MoveInput input, ref State state)
@@ -292,28 +332,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         }
     }
 
-    private static Collider[] _groundColliders = new Collider[8];
-    public bool IsGrounded()
-    {
-        var hit = Physics.OverlapSphereNonAlloc(transform.position, _groundCheckRadius, _groundColliders, _groundMask);
-        return hit > 0;
-    }
-
-    private bool IsOnSlope()
-    {
-        if (Physics.Raycast(transform.position, Vector3.down, out _slopeHit, _groundCheckRadius, _groundMask))
-        {
-            float angle = Vector3.Angle(Vector3.up, _slopeHit.normal);
-            return angle < _maxSlopeAngle && angle != 0;
-        }
-
-        return false;
-    }
-
-    private Vector3 GetSlopeMoveDirection(Vector3 moveDir)
-    {
-        return Vector3.ProjectOnPlane(moveDir, _slopeHit.normal).normalized;
-    }
+    private Collider[] _groundColliders = new Collider[8];
 
     private (Vector3 direction, float distance)? _pendingBlink;
 
@@ -388,6 +407,12 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         public int leftPressCount;
         public int rightPressCount;
         public float timeSinceLastStrafePress;
+
+        // Physics query results (cached from GetUnityState)
+        public bool isGrounded;
+        public bool isOnSlope;
+        public Vector3 slopeNormal;
+        public Quaternion rotation;
 
         public void Dispose() { }
     }

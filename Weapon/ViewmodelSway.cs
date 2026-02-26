@@ -167,7 +167,8 @@ public class ViewmodelSway : MonoBehaviour
 
     private void CalculateBobOffset()
     {
-        bool isGrounded = _playerMovement.IsGrounded();
+        // Read from PlayerMovement's predicted state (interpolated view state)
+        bool isGrounded = _playerMovement.currentState.isGrounded;
         float movementMagnitude = Mathf.Abs(_walkInput.x) + Mathf.Abs(_walkInput.y);
 
         _speedCurve += Time.deltaTime * (isGrounded ? movementMagnitude * _bobExaggeration : 1f) + 0.01f;

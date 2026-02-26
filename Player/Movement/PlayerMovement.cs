@@ -20,7 +20,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
     [Header("Movement Values")]
     [SerializeField] public float _moveSpeed = 4.2f;
-    [SerializeField] private float _timeToMaxSpeed = 0.2f;
+    [SerializeField] private float _timeToMaxSpeed = 0.1f;
     [SerializeField] private float _timeToRest = 0.05f;
     [SerializeField, Range(0f, 1f)] private float _airControlRatio = 0.5f;
     [SerializeField] private float _jumpForce = 5f;
@@ -77,7 +77,28 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         if (moveDir.sqrMagnitude > 0.001f)
         {
             Vector3 accelDir = moveDir.normalized;
-            float accelRate = _moveSpeed / _timeToMaxSpeed;
+            float baseAccelRate = _moveSpeed / _timeToMaxSpeed;
+
+            // Check if we're changing direction (moving opposite to input)
+            Vector3 currentHorizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
+            float accelRate = baseAccelRate;
+
+            if (currentHorizontal.sqrMagnitude > 0.001f)
+            {
+                // Dot product: -1 = opposite direction, 0 = perpendicular, 1 = same direction
+                float dot = Vector3.Dot(accelDir, currentHorizontal.normalized);
+
+                // If moving opposite to input direction, double acceleration
+                if (dot < 0)
+                {
+                    // Smoothly scale from 1x to 2x acceleration based on how opposite
+                    // dot = -1 (180°) → 2x acceleration
+                    // dot = 0 (90°) → 1x acceleration
+                    float oppositenessFactor = Mathf.Abs(Mathf.Min(0, dot)); // 0 to 1
+                    accelRate = baseAccelRate * (1 + oppositenessFactor);
+                }
+            }
+
             if (!isGrounded)
                 accelRate *= _airControlRatio;
             _rigidbody.AddForce(accelDir * accelRate, ForceMode.Acceleration);

@@ -26,6 +26,11 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [SerializeField] private float _jumpForce = 5f;
     [SerializeField] private float _maxVerticalVelocity = 20f;
 
+    [Header("Anti-Strafe Spam")]
+    [SerializeField] private float _strafeSpamWindow = 0.3f;
+    private int _maxStrafePresses = 2;
+    private float _spamAccelPenaltyMultiplier = 0.4f;
+
     [Header("Ground")]
     [SerializeField] private float _groundDrag = 8f;
     [SerializeField] private float _groundCheckRadius = 0.2f;
@@ -65,6 +70,48 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
         Vector3 moveDir = transform.forward * input.moveDirection.y + transform.right * input.moveDirection.x;
 
+        // Track strafe key presses (A/D)
+        bool pressingLeft = input.moveDirection.x < -0.1f;
+        bool pressingRight = input.moveDirection.x > 0.1f;
+
+        // Detect new key press
+        if (pressingLeft && !state.wasPressingLeft)
+        {
+            if (state.timeSinceLastStrafePress < _strafeSpamWindow)
+                state.leftPressCount++;
+            else
+                state.leftPressCount = 1;
+            state.timeSinceLastStrafePress = 0f;
+        }
+        else if (pressingRight && !state.wasPressingRight)
+        {
+            if (state.timeSinceLastStrafePress < _strafeSpamWindow)
+                state.rightPressCount++;
+            else
+                state.rightPressCount = 1;
+            state.timeSinceLastStrafePress = 0f;
+        }
+
+        state.wasPressingLeft = pressingLeft;
+        state.wasPressingRight = pressingRight;
+        state.timeSinceLastStrafePress += delta;
+
+        // Calculate spam penalty
+        int totalPresses = state.leftPressCount + state.rightPressCount;
+        float strafeSpamMultiplier = 1f;
+        if (totalPresses > _maxStrafePresses)
+        {
+            strafeSpamMultiplier = _spamAccelPenaltyMultiplier;
+            Debug.Log($"[PlayerMovement] STRAFE SPAM! Total presses: {totalPresses}, penalty: {_spamAccelPenaltyMultiplier}");
+        }
+
+        // Reset counters if window expires
+        if (state.timeSinceLastStrafePress > _strafeSpamWindow)
+        {
+            state.leftPressCount = 0;
+            state.rightPressCount = 0;
+        }
+
         // Handle slope movement
         bool onSlope = IsOnSlope();
         if (isGrounded && onSlope)
@@ -98,6 +145,9 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
                     accelRate = baseAccelRate * (1 + oppositenessFactor);
                 }
             }
+
+            // Apply strafe spam penalty
+            accelRate *= strafeSpamMultiplier;
 
             if (!isGrounded)
                 accelRate *= _airControlRatio;
@@ -331,6 +381,13 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         public float slopeStickCooldown;
         public MovementState movementState;
         public bool blinkConsumed;
+
+        // Anti-strafe spam tracking
+        public bool wasPressingLeft;
+        public bool wasPressingRight;
+        public int leftPressCount;
+        public int rightPressCount;
+        public float timeSinceLastStrafePress;
 
         public void Dispose() { }
     }

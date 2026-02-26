@@ -21,7 +21,8 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [Header("Movement Values")]
     [SerializeField] public float _moveSpeed = 4.2f;
     [SerializeField] private float _timeToMaxSpeed = 0.2f;
-    [SerializeField, Range(0f, 1f)] private float _airMaxXZVelocityRatio = 0.5f;
+    [SerializeField] private float _timeToRest = 0.05f;
+    [SerializeField, Range(0f, 1f)] private float _airControlRatio = 0.5f;
     [SerializeField] private float _jumpForce = 5f;
     [SerializeField] private float _maxVerticalVelocity = 20f;
 
@@ -100,21 +101,43 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         if (isGrounded && input.moveDirection.sqrMagnitude == 0 && !input.jump)
             _rigidbody.linearVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
 
-        Vector3 currentVel = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
-        Vector3 targetVel = moveDir * _moveSpeed;
-        Vector3 velocityError = targetVel - currentVel;
-        float accelRate = 1f / _timeToMaxSpeed;
-
-        _rigidbody.AddForce(velocityError * accelRate, ForceMode.Acceleration);
+        // Constant acceleration in input direction
+        if (moveDir.sqrMagnitude > 0.001f)
+        {
+            Vector3 accelDir = moveDir.normalized;
+            float accelRate = _moveSpeed / _timeToMaxSpeed;
+            _rigidbody.AddForce(accelDir * accelRate, ForceMode.Acceleration);
+        }
+        else if (isGrounded)
+        {
+            // Decelerate to rest when no input
+            Vector3 currentHorizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
+            if (currentHorizontal.sqrMagnitude > 0.001f)
+            {
+                float decelRate = currentHorizontal.magnitude / _timeToRest;
+                _rigidbody.AddForce(-currentHorizontal.normalized * decelRate, ForceMode.Acceleration);
+            }
+        }
 
         // clamp max velocity
         Vector3 clampedVelocity = _rigidbody.linearVelocity;
+        var horizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
 
-        // clamp horizontal (air only)
-        if (!isGrounded)
+        // clamp horizontal
+        if (isGrounded)
         {
-            var horizontal = new Vector3(_rigidbody.linearVelocity.x, 0, _rigidbody.linearVelocity.z);
-            float maxAirSpeed = _moveSpeed * _airMaxXZVelocityRatio;
+            // Ground: clamp to moveSpeed
+            if (horizontal.magnitude > _moveSpeed)
+            {
+                Vector3 clampedHorizontal = horizontal.normalized * _moveSpeed;
+                clampedVelocity.x = clampedHorizontal.x;
+                clampedVelocity.z = clampedHorizontal.z;
+            }
+        }
+        else
+        {
+            // Air: clamp to reduced speed
+            float maxAirSpeed = _moveSpeed * _airControlRatio;
             if (horizontal.magnitude > maxAirSpeed)
             {
                 Vector3 clampedHorizontal = horizontal.normalized * maxAirSpeed;

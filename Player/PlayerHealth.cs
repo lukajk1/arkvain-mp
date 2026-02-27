@@ -7,6 +7,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 {
     [SerializeField] public int _maxHealth;
     [SerializeField] private float _yHeightKillThreshold = -25f;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     public static event Action<PlayerInfo?> OnPlayerDeath;
     public static event Action<PlayerInfo, PlayerInfo> OnPlayerKilled; // (attacker, victim)
@@ -125,7 +126,8 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     protected override void Simulate(ref HealthState state, float delta)
     {
-        if (!state.isDead && transform.position.y < _yHeightKillThreshold)
+        // rb is safe to read from in simulate()
+        if (!state.isDead && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
         {
             state.health = 0;
             state.isDead = true;

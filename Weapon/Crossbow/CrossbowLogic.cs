@@ -32,16 +32,12 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
         base.LateAwake();
         _selfRoot = transform.root;
 
-        //Debug.Log("[CrossbowLogic] LateAwake started");
-
         _onShootEvent = new PredictedEvent(predictionManager, this);
         _onShootEvent.AddListener(OnShootEventHandler);
         _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
         _onHitEvent.AddListener(OnHitEventHandler);
         _onReloadEvent = new PredictedEvent(predictionManager, this);
         _onReloadEvent.AddListener(OnReloadEventHandler);
-
-        //Debug.Log($"[CrossbowLogic] LateAwake complete. PredictionManager: {(predictionManager != null ? "Valid" : "NULL")}");
     }
 
     protected override void OnDestroy()
@@ -123,10 +119,6 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
 
     private void Shoot(ref ShootState state)
     {
-        //Debug.Log("[CrossbowLogic] Shoot() called");
-
-        // Use the camera forward direction directly - it already includes visual recoil
-        // from the previous tick's UpdateView() call
         var aimDirection = _playerMovement.currentInput.cameraForward ?? state.lastKnownForward;
         state.lastKnownForward = aimDirection;
 

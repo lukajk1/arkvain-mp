@@ -156,7 +156,14 @@ public class PlayerHealthVisual : MonoBehaviour
     {
         if (delay > 0)
         {
-            LeanTween.delayedCall(gameObject, delay, () => CreateDamageFlash(previousPercent, currentPercent));
+            LeanTween.delayedCall(delay, () =>
+            {
+                // Check if object is still valid when delay completes
+                if (this != null && gameObject != null && gameObject.activeInHierarchy)
+                {
+                    CreateDamageFlash(previousPercent, currentPercent);
+                }
+            });
         }
         else
         {
@@ -169,13 +176,18 @@ public class PlayerHealthVisual : MonoBehaviour
     /// </summary>
     private void CreateDamageFlash(float previousPercent, float currentPercent)
     {
-        // Get the fill RectTransform from the slider
+        // Safety checks - slider/fill rect might be destroyed
+        if (_healthSlider == null || _healthSlider.fillRect == null) return;
+
         RectTransform fillRect = _healthSlider.fillRect;
-        if (fillRect == null) return;
 
         // Instantiate the damage flash image
         Transform parent = _damageFlashContainer != null ? _damageFlashContainer : fillRect.parent;
+        if (parent == null) return;
+
         Image damageFlash = Instantiate(_damageFlashPrefab, parent);
+        if (damageFlash == null) return;
+
         RectTransform flashRect = damageFlash.rectTransform;
 
         // Copy the fill rect's anchors and settings
@@ -198,7 +210,12 @@ public class PlayerHealthVisual : MonoBehaviour
 
         LeanTween.alpha(flashRect, 0f, _damageFlashDuration)
             .setEase(LeanTweenType.easeOutCubic)
-            .setOnComplete(() => Destroy(damageFlash.gameObject));
+            .setOnComplete(() =>
+            {
+                // Null check in case object was destroyed during animation
+                if (damageFlash != null)
+                    Destroy(damageFlash.gameObject);
+            });
 
         //Debug.Log($"[PlayerHealthVisual] Created damage flash from {previousPercent:F2} to {currentPercent:F2}");
     }

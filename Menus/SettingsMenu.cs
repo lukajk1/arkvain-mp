@@ -12,7 +12,16 @@ public class SettingsMenu : MonoBehaviour
         bool stateToSetTo = !_menuObject.activeSelf;
 
         _menuObject.SetActive(stateToSetTo);
-        LockActionMap.i.ModifyLockList(ActionMapType.PlayerControls, stateToSetTo, this);
+
+        if (stateToSetTo)
+        {
+            InputManager.Instance.LockPlayerControls(this);
+        }
+        else
+        {
+            InputManager.Instance.UnlockPlayerControls(this);
+        }
+
         ClientGame.ModifyCursorUnlockList(stateToSetTo, this);
     }
 }

@@ -16,12 +16,12 @@ public class EscapeMenu : MonoBehaviour
     private void Start()
     {
         _menuObject.SetActive(false);
-    }
 
-    private void OnEnable()
-    {
-        // Subscribe to escape key input
-        InputManager.Instance.UI.Escape.performed += OnEscapePressed;
+        // Subscribe to escape key input (in Start to ensure InputManager is initialized)
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.UI.Escape.performed += OnEscapePressed;
+        }
 
         // Subscribe to button clicks
         if (_returnToGameButton != null)
@@ -37,10 +37,18 @@ public class EscapeMenu : MonoBehaviour
             _quitToDesktopButton.onClick.AddListener(OnQuitToDesktop);
     }
 
+    private void OnEnable()
+    {
+        // Empty - subscriptions now in Start()
+    }
+
     private void OnDisable()
     {
         // Unsubscribe from escape key input
-        InputManager.Instance.UI.Escape.performed -= OnEscapePressed;
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.UI.Escape.performed -= OnEscapePressed;
+        }
 
         // Unsubscribe from button clicks
         if (_returnToGameButton != null)
@@ -58,14 +66,21 @@ public class EscapeMenu : MonoBehaviour
 
     private void OnEscapePressed(InputAction.CallbackContext context)
     {
-        Debug.Log("escape called");
-
         if (_menuObject == null) return;
 
         bool stateToSetTo = !_menuObject.activeSelf;
 
         _menuObject.SetActive(stateToSetTo);
-        LockActionMap.i.ModifyLockList(ActionMapType.PlayerControls, stateToSetTo, this);
+
+        if (stateToSetTo)
+        {
+            InputManager.Instance.LockPlayerControls(this);
+        }
+        else
+        {
+            InputManager.Instance.UnlockPlayerControls(this);
+        }
+
         ClientGame.ModifyCursorUnlockList(stateToSetTo, this);
     }
 
@@ -74,7 +89,7 @@ public class EscapeMenu : MonoBehaviour
         if (_menuObject != null)
         {
             _menuObject.SetActive(false);
-            LockActionMap.i.ModifyLockList(ActionMapType.PlayerControls, false, this);
+            InputManager.Instance.UnlockPlayerControls(this);
             ClientGame.ModifyCursorUnlockList(false, this);
         }
     }

@@ -7,6 +7,7 @@ public class InputManager : MonoBehaviour
     private InputSystem_Actions _actions;
 
     public InputSystem_Actions.PlayerActions Player => _actions.Player;
+    public InputSystem_Actions.UIActions UI => _actions.UI;
 
     private void Awake()
     {
@@ -15,6 +16,7 @@ public class InputManager : MonoBehaviour
             Instance = this;
             _actions = new InputSystem_Actions();
             _actions.Player.Enable();
+            _actions.UI.Enable();
             DontDestroyOnLoad(gameObject);
         }
         else

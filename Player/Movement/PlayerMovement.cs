@@ -36,11 +36,10 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private float _jumpCooldown = 0.2f;
     [SerializeField] private float _landCooldown = 0.15f;
+    private float _groundStickForce = 100f;
 
     [Header("Slope Handling")]
     [SerializeField] private float _maxSlopeAngle = 40f;
-    [SerializeField] private float _slopeStickForce = 80f;
-    [SerializeField] private float _slopeStickDuration = 0.15f;
 
     //events
     [HideInInspector] public PredictedEvent _onJump;
@@ -92,7 +91,6 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     {
         state.jumpCooldown -= delta;
         state.landCooldown -= delta;
-        state.slopeStickCooldown -= delta;
 
         // Read from cached state instead of calling IsGrounded()
         bool isGrounded = state.isGrounded;
@@ -229,17 +227,13 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
             // Project movement onto slope plane using cached slope normal
             moveDir = Vector3.ProjectOnPlane(moveDir, state.slopeNormal).normalized;
 
-            // Cancel gravity to prevent sliding down slope
-            _rigidbody.AddForce(-Physics.gravity, ForceMode.Acceleration);
+            // Decompose gravity into perpendicular (into slope) and parallel (sliding) components
+            Vector3 perpComponent = Vector3.Project(Physics.gravity, state.slopeNormal);
+            Vector3 parallelComponent = Physics.gravity - perpComponent;
+
+            // Cancel only the sliding force, keep natural ground contact from perpendicular component
+            _rigidbody.AddForce(-parallelComponent * 1.02f, ForceMode.Acceleration);
         }
-
-        // Manage slope stick duration
-        if (input.moveDirection.sqrMagnitude > 0 && !input.jump)
-            state.slopeStickCooldown = _slopeStickDuration;
-
-        // Apply force to stick to slope using cached slope normal
-        if (state.slopeStickCooldown > 0 && !input.jump)
-            _rigidbody.AddForce(-state.slopeNormal * _slopeStickForce, ForceMode.Acceleration);
 
         return moveDir;
     }
@@ -251,8 +245,8 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         {
             if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit snapHit, _groundCheckRadius * 2f, _groundMask))
             {
-                // Manually push the position down or apply a heavy burst of downward force
-                _rigidbody.AddForce(Vector3.down * _slopeStickForce * 2f, ForceMode.Acceleration);
+                // apply a heavy acceleration downwards
+                _rigidbody.AddForce(Vector3.down * _groundStickForce, ForceMode.Acceleration);
                 return true;
             }
         }
@@ -397,7 +391,6 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         public float jumpCooldown;
         public bool wasGrounded;
         public float landCooldown;
-        public float slopeStickCooldown;
         public MovementState movementState;
         public bool blinkConsumed;
 

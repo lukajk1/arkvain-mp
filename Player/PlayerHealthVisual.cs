@@ -32,64 +32,89 @@ public class PlayerHealthVisual : MonoBehaviour
     private int _previousBreakpoint = -1;
     private float _lastHurtSFXTime = -999f;
 
-    private void Awake()
+    private void Start()
     {
-        if (_healthSlider != null)
-        {
-            _healthSlider.value = 1f;
-        }
-    }
-
-    private void OnEnable()
-    {
-        _previousBreakpoint = -1;
-        _previousHealthPercent = 1f;
         ScreenspaceEffectManager.SetScreenDamage(0f);
 
         if (_playerHealth != null)
         {
-            _playerHealth.OnHealthChanged += OnHealthChanged;
-            Debug.Log("[PlayerHealthVisual] Subscribed to OnHealthChanged");
-        }
-        else
-        {
-            Debug.LogWarning("[PlayerHealthVisual] _playerHealth is null in OnEnable — reference not assigned");
+            // Initialize with current health to avoid false damage flash on spawn
+            var state = _playerHealth.viewState;
+            _previousHealthPercent = (float)state.health / _playerHealth._maxHealth;
+            _previousBreakpoint = Mathf.FloorToInt((1f - _previousHealthPercent) * _healthBreakpoints);
+
+            // Set initial slider value
+            if (_healthSlider != null)
+            {
+                _healthSlider.value = _previousHealthPercent;
+            }
+
+            _playerHealth._onHealthChanged.AddListener(OnHealthChanged);
         }
     }
 
-    private void OnDisable()
+    private void OnDestroy()
     {
         if (_playerHealth != null)
         {
-            _playerHealth.OnHealthChanged -= OnHealthChanged;
+            _playerHealth._onHealthChanged.RemoveListener(OnHealthChanged);
         }
     }
 
     /// <summary>
     /// Updates the health bar visual based on current health percentage.
     /// </summary>
-    private void OnHealthChanged(int currentHealth, int maxHealth)
+    private void OnHealthChanged((int health, int maxHealth) values)
     {
+        int currentHealth = values.health;
+        int maxHealth = values.maxHealth;
         float newHealthPercent = (float)currentHealth / maxHealth;
-        //Debug.Log($"[PlayerHealthVisual] UpdateHealthBar called — health: {currentHealth}/{maxHealth}, isOwner: {_playerHealth.isOwner}");
 
+        // Update HUD readout (always, for owner)
         if (_playerHealth.isOwner)
         {
-            if (_previousBreakpoint != -1 && newHealthPercent < _previousHealthPercent)
-            {
-                bool lowHealth = newHealthPercent < _thresholdToShowSSDamage;
-                ScreenspaceEffectManager.FlashScreenDamage(lowHealth);
-
-                if (hurtSFX != null && hurtSFX.Count > 0 && Time.time - _lastHurtSFXTime >= _hurtSFXCooldown)
-                {
-                    _lastHurtSFXTime = Time.time;
-                    var clip = hurtSFX[Random.Range(0, hurtSFX.Count)];
-                    SoundManager.Play(new SoundData(clip, pitch: 0.4f));
-                }
-            }
             HUDManager.Instance?.SetHealthReadout(currentHealth, maxHealth);
         }
 
+        // Determine if this is damage or healing
+        bool isInitializing = _previousBreakpoint == -1;
+        bool isDamage = !isInitializing && newHealthPercent < _previousHealthPercent;
+        bool isHealing = !isInitializing && newHealthPercent > _previousHealthPercent;
+
+        // Handle damage effects (owner only)
+        if (_playerHealth.isOwner && isDamage)
+        {
+            HandleDamageEffects(newHealthPercent);
+        }
+
+        // Update health bar slider
+        UpdateHealthBarSlider(newHealthPercent, isDamage);
+
+        // Store for next comparison
+        _previousHealthPercent = newHealthPercent;
+    }
+
+    /// <summary>
+    /// Handles screen flash and sound effects for taking damage.
+    /// </summary>
+    private void HandleDamageEffects(float newHealthPercent)
+    {
+        bool lowHealth = newHealthPercent < _thresholdToShowSSDamage;
+        ScreenspaceEffectManager.FlashScreenDamage(lowHealth);
+
+        if (hurtSFX != null && hurtSFX.Count > 0 && Time.time - _lastHurtSFXTime >= _hurtSFXCooldown)
+        {
+            _lastHurtSFXTime = Time.time;
+            var clip = hurtSFX[Random.Range(0, hurtSFX.Count)];
+            SoundManager.Play(new SoundData(clip, pitch: 0.4f));
+        }
+    }
+
+    /// <summary>
+    /// Updates the health bar slider and creates damage flash animations.
+    /// </summary>
+    private void UpdateHealthBarSlider(float newHealthPercent, bool isDamage)
+    {
         if (_healthSlider == null) return;
 
         // Calculate current breakpoint (0 = 100%, 1 = 90%, 2 = 80%, etc.)
@@ -99,15 +124,15 @@ public class PlayerHealthVisual : MonoBehaviour
         if (_previousBreakpoint == -1)
         {
             _previousBreakpoint = currentBreakpoint;
+            _healthSlider.value = newHealthPercent;
+            return;
         }
 
-        // Check if we crossed into a new breakpoint (took enough damage)
-        if (currentBreakpoint > _previousBreakpoint && _damageFlashPrefab != null)
+        // Create damage flash animations if we crossed breakpoints
+        if (isDamage && currentBreakpoint > _previousBreakpoint && _damageFlashPrefab != null)
         {
-            // Calculate how many breakpoints were crossed
             int breakpointsCrossed = currentBreakpoint - _previousBreakpoint;
 
-            // Trigger a flash for each breakpoint crossed, with cascading delay
             for (int i = 0; i < breakpointsCrossed; i++)
             {
                 int targetBreakpoint = _previousBreakpoint + i + 1;
@@ -119,8 +144,8 @@ public class PlayerHealthVisual : MonoBehaviour
             }
         }
 
+        // Always update slider value (handles both damage and healing)
         _previousBreakpoint = currentBreakpoint;
-        _previousHealthPercent = newHealthPercent;
         _healthSlider.value = newHealthPercent;
     }
 

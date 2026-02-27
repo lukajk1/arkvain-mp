@@ -12,16 +12,17 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     public static event Action<PlayerInfo?> OnPlayerDeath;
     public static event Action<PlayerInfo, PlayerInfo> OnPlayerKilled; // (attacker, victim)
     public event Action<PlayerInfo?> OnDeath;
-    public event Action<int, int> OnHealthChanged;
 
     [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
+    [HideInInspector] public PredictedEvent<(int health, int maxHealth)> _onHealthChanged;
 
     protected override void LateAwake()
     {
         base.LateAwake();
+        if (isOwner) gameObject.name = "local player";
 
         _onDamageTaken = new PredictedEvent<DamageInfo>(predictionManager, this);
-        if (isOwner) gameObject.name = "local player";
+        _onHealthChanged = new PredictedEvent<(int, int)>(predictionManager, this);
     }
 
     protected override void OnDestroy()
@@ -33,7 +34,8 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     {
         return new HealthState()
         {
-            health = _maxHealth
+            health = _maxHealth,
+            lastHealth = _maxHealth
         };
     }
 
@@ -86,6 +88,42 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         ChangeHealth(-9999);
     }
 
+    protected override void Simulate(ref HealthState state, float delta)
+    {
+        // rb is safe to read from in simulate()
+        if (!state.isDead && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
+        {
+            state.health = 0;
+            state.isDead = true;
+        }
+    }
+
+    protected override void LateSimulate(ref HealthState state, float delta)
+    {
+        // Detect health change and fire event
+        if (state.health != state.lastHealth)
+        {
+            _onHealthChanged?.Invoke((state.health, _maxHealth));
+            state.lastHealth = state.health;
+        }
+    }
+
+    private bool _lastDead = false;
+
+    protected override void UpdateView(HealthState viewState, HealthState? verified)
+    {
+        base.UpdateView(viewState, verified);
+
+        // Health changes now handled by PredictedEvent in LateSimulate()
+        // Old C# event kept for backwards compatibility but not invoked from here
+
+        if (viewState.isDead && !_lastDead)
+        {
+            _lastDead = true;
+            Die(viewState.attacker);
+        }
+    }
+
     public void ChangeHealth(int change, PlayerInfo? attacker = null)
     {
         // Server-side validation: Clamp damage to maximum reasonable value
@@ -124,41 +162,12 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         //Debug.Log($"health changed to {currentState.health}");
     }
 
-    protected override void Simulate(ref HealthState state, float delta)
-    {
-        // rb is safe to read from in simulate()
-        if (!state.isDead && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
-        {
-            state.health = 0;
-            state.isDead = true;
-        }
-    }
-
-    private int _lastBroadcastHealth = -1;
-    private bool _lastDead = false;
-
-    protected override void UpdateView(HealthState viewState, HealthState? verified)
-    {
-        base.UpdateView(viewState, verified);
-
-        if (viewState.health != _lastBroadcastHealth)
-        {
-            _lastBroadcastHealth = viewState.health;
-            OnHealthChanged?.Invoke(viewState.health, _maxHealth);
-        }
-
-        if (viewState.isDead && !_lastDead)
-        {
-            _lastDead = true;
-            Die(viewState.attacker);
-        }
-    }
-
     public struct HealthState : IPredictedData<PlayerHealth.HealthState>
     {
         public int health;
         public bool isDead;
         public PlayerInfo? attacker;
+        public int lastHealth; // Track previous tick's health for change detection
 
         public void Dispose() { }
 

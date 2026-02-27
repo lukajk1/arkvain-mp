@@ -21,7 +21,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     [Header("Movement Values")]
     [SerializeField] public float _moveSpeed = 4.2f;
     [SerializeField] private float _timeToMaxSpeed = 0.1f;
-    [SerializeField] private float _timeToRest = 0.05f;
+    [SerializeField] private float _timeToRest = 0.1f;  // Increased from 0.05 for less aggressive deceleration
     [SerializeField, Range(0f, 1f)] private float _airControlRatio = 0.5f;
     [SerializeField] private float _jumpForce = 5f;
     [SerializeField] private float _maxVerticalVelocity = 20f;
@@ -33,13 +33,13 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
 
     [Header("Ground")]
     [SerializeField] private float _groundDrag = 8f;
-    [SerializeField] private float _groundCheckRadius = 0.2f;
+    private float _groundCheckRadius = 0.2f;
     [SerializeField] private float _jumpCooldown = 0.2f;
     [SerializeField] private float _landCooldown = 0.15f;
     private float _groundStickForce = 100f;
 
     [Header("Slope Handling")]
-    [SerializeField] private float _maxSlopeAngle = 40f;
+    private float _maxSlopeAngle = 40f;
 
     //events
     [HideInInspector] public PredictedEvent _onJump;
@@ -110,8 +110,14 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         if (isGrounded && onSlope)
             moveDir = HandleSlopeMovement(input, ref state, moveDir);
 
+        // Clamp Y velocity when grounded to prevent tiny oscillations, but don't zero completely
         if (isGrounded && input.moveDirection.sqrMagnitude == 0 && !input.jump)
-            _rigidbody.linearVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
+        {
+            Vector3 vel = _rigidbody.linearVelocity;
+            if (Mathf.Abs(vel.y) < 0.5f)  // Only zero if very small (prevents desync on ground transitions)
+                vel.y = 0f;
+            _rigidbody.linearVelocity = vel;
+        }
 
         // Constant acceleration in input direction
         if (moveDir.sqrMagnitude > 0.001f)
@@ -232,7 +238,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
             Vector3 parallelComponent = Physics.gravity - perpComponent;
 
             // Cancel only the sliding force, keep natural ground contact from perpendicular component
-            _rigidbody.AddForce(-parallelComponent * 1.02f, ForceMode.Acceleration);
+            _rigidbody.AddForce(-parallelComponent, ForceMode.Acceleration);
         }
 
         return moveDir;
@@ -243,7 +249,8 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         // If not grounded without jumping, then ran off a ledge. Try to stick player to slope.
         if (!isGrounded && state.wasGrounded && state.jumpCooldown <= 0)
         {
-            if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit snapHit, _groundCheckRadius * 2f, _groundMask))
+            // Use rigidbody.position for deterministic physics queries
+            if (Physics.Raycast(_rigidbody.position, Vector3.down, out RaycastHit snapHit, _groundCheckRadius * 2f, _groundMask))
             {
                 // apply a heavy acceleration downwards
                 _rigidbody.AddForce(Vector3.down * _groundStickForce, ForceMode.Acceleration);

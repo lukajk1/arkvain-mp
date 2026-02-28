@@ -65,6 +65,11 @@ public class GameSettings : ScriptableObject
 {
     private const string SETTINGS_FILENAME = "gamesettings.json";
 
+    /// <summary>
+    /// Event that fires when GameSettings is initialized and loaded
+    /// </summary>
+    public static event System.Action OnSettingsInitialized;
+
     [HideInInspector] public GameSettingsData data = GameSettingsData.GetDefaults();
 
     private static GameSettings _instance;
@@ -74,10 +79,15 @@ public class GameSettings : ScriptableObject
         {
             if (_instance == null)
             {
+                Debug.Log("Loading GameSettings from Resources...");
                 _instance = Resources.Load<GameSettings>("GameSettings");
                 if (_instance == null)
                 {
                     Debug.LogError("GameSettings asset not found in Resources folder! Create one at Assets/Resources/GameSettings.asset");
+                }
+                else
+                {
+                    Debug.Log($"GameSettings loaded successfully. Data initialized: {_instance.data.vsyncEnabled}");
                 }
             }
             return _instance;
@@ -92,6 +102,8 @@ public class GameSettings : ScriptableObject
         {
             Instance.LoadFromFile();
             Instance.ApplySettings();
+            Debug.Log("GameSettings initialized, firing OnSettingsInitialized event");
+            OnSettingsInitialized?.Invoke();
         }
         else
         {

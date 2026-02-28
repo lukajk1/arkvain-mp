@@ -44,6 +44,22 @@ public class PersistentClient : MonoBehaviour
     private void Start()
     {
         GameSettings.Initialize();
+
+        // Reapply settings after a delay to ensure graphics system is fully initialized
+        StartCoroutine(ReapplySettingsDelayed());
+    }
+
+    private System.Collections.IEnumerator ReapplySettingsDelayed()
+    {
+        // Apply after 1 frame
+        yield return null;
+        GameSettings.Instance?.ApplySettings();
+        Debug.Log("Settings reapplied after 1 frame");
+
+        //// Apply after 100ms
+        //yield return new WaitForSeconds(0.1f);
+        //GameSettings.Instance?.ApplySettings();
+        //Debug.Log("Settings reapplied after 100ms delay");
     }
 
     public static void SetDefaultCursorState(CursorLockMode state)

@@ -180,18 +180,18 @@ public class SettingsMenu : MonoBehaviour
             );
             if (currentResolutionIndex >= 0)
             {
-                _resolutionDropdown.value = currentResolutionIndex;
+                _resolutionDropdown.SetValueWithoutNotify(currentResolutionIndex);
             }
         }
 
         if (_windowModeDropdown != null)
-            _windowModeDropdown.value = (int)GameSettings.Instance.data.windowMode;
+            _windowModeDropdown.SetValueWithoutNotify((int)GameSettings.Instance.data.windowMode);
 
         if (_vsyncToggle != null)
-            _vsyncToggle.isOn = GameSettings.Instance.data.vsyncEnabled;
+            _vsyncToggle.SetIsOnWithoutNotify(GameSettings.Instance.data.vsyncEnabled);
 
         if (_targetFrameRateInputField != null)
-            _targetFrameRateInputField.text = GameSettings.Instance.data.targetFrameRate.ToString();
+            _targetFrameRateInputField.SetTextWithoutNotify(GameSettings.Instance.data.targetFrameRate.ToString());
     }
 
     // Audio callbacks

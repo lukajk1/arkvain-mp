@@ -20,9 +20,7 @@ public class SettingsMenu : MonoBehaviour
 
     [Header("Input")]
     [SerializeField] private Slider _mouseSensitivitySlider;
-    [SerializeField] private Slider _mouseDPISlider;
     [SerializeField] private TMP_InputField _mouseDPIInputField;
-    [SerializeField] private Slider _cmPer360Slider;
     [SerializeField] private TMP_InputField _cmPer360InputField;
 
     [Header("Graphics")]
@@ -32,7 +30,6 @@ public class SettingsMenu : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button _saveButton;
     [SerializeField] private Button _resetButton;
-    [SerializeField] private Button _closeButton;
 
     private void Start()
     {
@@ -63,14 +60,8 @@ public class SettingsMenu : MonoBehaviour
         if (_mouseSensitivitySlider != null)
             _mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivityChanged);
 
-        if (_mouseDPISlider != null)
-            _mouseDPISlider.onValueChanged.AddListener(OnMouseDPISliderChanged);
-
         if (_mouseDPIInputField != null)
             _mouseDPIInputField.onEndEdit.AddListener(OnMouseDPIInputChanged);
-
-        if (_cmPer360Slider != null)
-            _cmPer360Slider.onValueChanged.AddListener(OnCmPer360SliderChanged);
 
         if (_cmPer360InputField != null)
             _cmPer360InputField.onEndEdit.AddListener(OnCmPer360InputChanged);
@@ -87,9 +78,6 @@ public class SettingsMenu : MonoBehaviour
 
         if (_resetButton != null)
             _resetButton.onClick.AddListener(OnResetClicked);
-
-        if (_closeButton != null)
-            _closeButton.onClick.AddListener(OnCloseClicked);
     }
 
     private void OnDisable()
@@ -107,14 +95,8 @@ public class SettingsMenu : MonoBehaviour
         if (_mouseSensitivitySlider != null)
             _mouseSensitivitySlider.onValueChanged.RemoveListener(OnMouseSensitivityChanged);
 
-        if (_mouseDPISlider != null)
-            _mouseDPISlider.onValueChanged.RemoveListener(OnMouseDPISliderChanged);
-
         if (_mouseDPIInputField != null)
             _mouseDPIInputField.onEndEdit.RemoveListener(OnMouseDPIInputChanged);
-
-        if (_cmPer360Slider != null)
-            _cmPer360Slider.onValueChanged.RemoveListener(OnCmPer360SliderChanged);
 
         if (_cmPer360InputField != null)
             _cmPer360InputField.onEndEdit.RemoveListener(OnCmPer360InputChanged);
@@ -131,9 +113,6 @@ public class SettingsMenu : MonoBehaviour
 
         if (_resetButton != null)
             _resetButton.onClick.RemoveListener(OnResetClicked);
-
-        if (_closeButton != null)
-            _closeButton.onClick.RemoveListener(OnCloseClicked);
     }
 
     /// <summary>
@@ -155,14 +134,8 @@ public class SettingsMenu : MonoBehaviour
         if (_mouseSensitivitySlider != null)
             _mouseSensitivitySlider.value = GameSettings.Instance.data.mouseSensitivity;
 
-        if (_mouseDPISlider != null)
-            _mouseDPISlider.value = GameSettings.Instance.data.mouseDPI;
-
         if (_mouseDPIInputField != null)
             _mouseDPIInputField.text = GameSettings.Instance.data.mouseDPI.ToString();
-
-        if (_cmPer360Slider != null)
-            _cmPer360Slider.value = GameSettings.Instance.data.cmPer360;
 
         if (_cmPer360InputField != null)
             _cmPer360InputField.text = GameSettings.Instance.data.cmPer360.ToString("F1");
@@ -200,18 +173,6 @@ public class SettingsMenu : MonoBehaviour
         GameSettings.Instance.data.mouseSensitivity = value;
     }
 
-    private void OnMouseDPISliderChanged(float value)
-    {
-        int dpiValue = Mathf.RoundToInt(value);
-        GameSettings.Instance.data.mouseDPI = dpiValue;
-
-        // Update input field to match slider (prevent feedback loop)
-        if (_mouseDPIInputField != null)
-        {
-            _mouseDPIInputField.SetTextWithoutNotify(dpiValue.ToString());
-        }
-    }
-
     private void OnMouseDPIInputChanged(string text)
     {
         if (int.TryParse(text, out int dpiValue))
@@ -219,12 +180,6 @@ public class SettingsMenu : MonoBehaviour
             // Clamp to reasonable values
             dpiValue = Mathf.Clamp(dpiValue, 100, 10000);
             GameSettings.Instance.data.mouseDPI = dpiValue;
-
-            // Update slider to match input (prevent feedback loop)
-            if (_mouseDPISlider != null)
-            {
-                _mouseDPISlider.SetValueWithoutNotify(dpiValue);
-            }
 
             // Update input field with clamped value
             if (_mouseDPIInputField != null)
@@ -242,30 +197,13 @@ public class SettingsMenu : MonoBehaviour
         }
     }
 
-    private void OnCmPer360SliderChanged(float value)
-    {
-        GameSettings.Instance.data.cmPer360 = value;
-
-        // Update input field to match slider (prevent feedback loop)
-        if (_cmPer360InputField != null)
-        {
-            _cmPer360InputField.SetTextWithoutNotify(value.ToString("F1"));
-        }
-    }
-
     private void OnCmPer360InputChanged(string text)
     {
         if (float.TryParse(text, out float cmValue))
         {
-            // Clamp to reasonable values (matching slider range)
+            // Clamp to reasonable values
             cmValue = Mathf.Clamp(cmValue, 5f, 100f);
             GameSettings.Instance.data.cmPer360 = cmValue;
-
-            // Update slider to match input (prevent feedback loop)
-            if (_cmPer360Slider != null)
-            {
-                _cmPer360Slider.SetValueWithoutNotify(cmValue);
-            }
 
             // Update input field with clamped value
             if (_cmPer360InputField != null)
@@ -309,11 +247,6 @@ public class SettingsMenu : MonoBehaviour
         GameSettings.Instance.ResetToDefaults();
         LoadSettingsToUI();
         Debug.Log("Settings reset to defaults!");
-    }
-
-    private void OnCloseClicked()
-    {
-        SetState(false);
     }
 
     /// <summary>

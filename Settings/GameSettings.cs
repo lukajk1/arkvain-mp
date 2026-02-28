@@ -147,6 +147,7 @@ public class GameSettings : ScriptableObject
         // Apply input settings to ClientGame static fields
         ClientGame.playerDPI = data.mouseDPI;
         ClientGame.targetCm360 = data.cmPer360;
+        //Debug.Log("");
     }
 
     /// <summary>

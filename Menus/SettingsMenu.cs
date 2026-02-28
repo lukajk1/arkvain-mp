@@ -27,9 +27,12 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private TMP_InputField _cmPer360InputField;
 
     [Header("Graphics")]
-    [SerializeField] private Dropdown _graphicsQualityDropdown;
+    [SerializeField] private TMP_Dropdown _resolutionDropdown;
+    [SerializeField] private TMP_Dropdown _windowModeDropdown;
     [SerializeField] private Toggle _vsyncToggle;
     [SerializeField] private TMP_InputField _targetFrameRateInputField;
+
+    private Resolution[] _availableResolutions;
 
     [Header("Buttons")]
     [SerializeField] private Button _saveButton;
@@ -37,6 +40,7 @@ public class SettingsMenu : MonoBehaviour
 
     private void Start()
     {
+        PopulateResolutionDropdown();
         SetState(false);
     }
 
@@ -50,6 +54,7 @@ public class SettingsMenu : MonoBehaviour
         InputManager.Instance.ModifyPlayerControlsLockList(value, this);
     }
 
+    #region onenable/disable subscriptions
     private void OnEnable()
     {
         // Subscribe to UI changes
@@ -74,8 +79,11 @@ public class SettingsMenu : MonoBehaviour
         if (_cmPer360InputField != null)
             _cmPer360InputField.onEndEdit.AddListener(OnCmPer360InputChanged);
 
-        if (_graphicsQualityDropdown != null)
-            _graphicsQualityDropdown.onValueChanged.AddListener(OnGraphicsQualityChanged);
+        if (_resolutionDropdown != null)
+            _resolutionDropdown.onValueChanged.AddListener(OnResolutionChanged);
+
+        if (_windowModeDropdown != null)
+            _windowModeDropdown.onValueChanged.AddListener(OnWindowModeChanged);
 
         if (_vsyncToggle != null)
             _vsyncToggle.onValueChanged.AddListener(OnVSyncChanged);
@@ -115,8 +123,11 @@ public class SettingsMenu : MonoBehaviour
         if (_cmPer360InputField != null)
             _cmPer360InputField.onEndEdit.RemoveListener(OnCmPer360InputChanged);
 
-        if (_graphicsQualityDropdown != null)
-            _graphicsQualityDropdown.onValueChanged.RemoveListener(OnGraphicsQualityChanged);
+        if (_resolutionDropdown != null)
+            _resolutionDropdown.onValueChanged.RemoveListener(OnResolutionChanged);
+
+        if (_windowModeDropdown != null)
+            _windowModeDropdown.onValueChanged.RemoveListener(OnWindowModeChanged);
 
         if (_vsyncToggle != null)
             _vsyncToggle.onValueChanged.RemoveListener(OnVSyncChanged);
@@ -131,7 +142,7 @@ public class SettingsMenu : MonoBehaviour
         if (_resetButton != null)
             _resetButton.onClick.RemoveListener(OnResetClicked);
     }
-
+    #endregion
     /// <summary>
     /// Load current settings from GameSettings into UI controls
     /// </summary>
@@ -160,8 +171,21 @@ public class SettingsMenu : MonoBehaviour
         if (_cmPer360InputField != null)
             _cmPer360InputField.text = GameSettings.Instance.data.cmPer360.ToString("F1");
 
-        if (_graphicsQualityDropdown != null)
-            _graphicsQualityDropdown.value = GameSettings.Instance.data.graphicsQuality;
+        if (_resolutionDropdown != null)
+        {
+            // Find matching resolution in dropdown
+            int currentResolutionIndex = FindResolutionIndex(
+                GameSettings.Instance.data.resolutionWidth,
+                GameSettings.Instance.data.resolutionHeight
+            );
+            if (currentResolutionIndex >= 0)
+            {
+                _resolutionDropdown.value = currentResolutionIndex;
+            }
+        }
+
+        if (_windowModeDropdown != null)
+            _windowModeDropdown.value = (int)GameSettings.Instance.data.windowMode;
 
         if (_vsyncToggle != null)
             _vsyncToggle.isOn = GameSettings.Instance.data.vsyncEnabled;
@@ -287,9 +311,20 @@ public class SettingsMenu : MonoBehaviour
     }
 
     // Graphics callbacks
-    private void OnGraphicsQualityChanged(int value)
+    private void OnResolutionChanged(int value)
     {
-        GameSettings.Instance.data.graphicsQuality = value;
+        if (_availableResolutions != null && value >= 0 && value < _availableResolutions.Length)
+        {
+            Resolution resolution = _availableResolutions[value];
+            GameSettings.Instance.data.resolutionWidth = resolution.width;
+            GameSettings.Instance.data.resolutionHeight = resolution.height;
+            GameSettings.Instance.ApplySettings();
+        }
+    }
+
+    private void OnWindowModeChanged(int value)
+    {
+        GameSettings.Instance.data.windowMode = (WindowMode)value;
         GameSettings.Instance.ApplySettings();
     }
 
@@ -377,6 +412,77 @@ public class SettingsMenu : MonoBehaviour
     }
 
     /// <summary>
-    /// Show the settings menu
+    /// Populate resolution dropdown with available resolutions up to native resolution
     /// </summary>
+    private void PopulateResolutionDropdown()
+    {
+        if (_resolutionDropdown == null) return;
+
+        // Get all available resolutions
+        Resolution[] allResolutions = Screen.resolutions;
+        Resolution nativeResolution = Screen.currentResolution;
+
+        // Filter out resolutions higher than native and remove duplicates (different refresh rates)
+        System.Collections.Generic.List<Resolution> filteredResolutions = new System.Collections.Generic.List<Resolution>();
+        System.Collections.Generic.HashSet<string> addedResolutions = new System.Collections.Generic.HashSet<string>();
+
+        foreach (Resolution res in allResolutions)
+        {
+            // Skip resolutions higher than native
+            if (res.width > nativeResolution.width || res.height > nativeResolution.height)
+                continue;
+
+            // Create unique key for width x height (ignore refresh rate)
+            string resolutionKey = $"{res.width}x{res.height}";
+
+            // Skip if already added
+            if (addedResolutions.Contains(resolutionKey))
+                continue;
+
+            filteredResolutions.Add(res);
+            addedResolutions.Add(resolutionKey);
+        }
+
+        // Sort resolutions highest to lowest
+        filteredResolutions.Sort((a, b) =>
+        {
+            // Sort by width first, then height (descending)
+            if (a.width != b.width)
+                return b.width.CompareTo(a.width);
+            return b.height.CompareTo(a.height);
+        });
+
+        // Store filtered resolutions
+        _availableResolutions = filteredResolutions.ToArray();
+
+        // Populate dropdown options
+        _resolutionDropdown.ClearOptions();
+        System.Collections.Generic.List<string> options = new System.Collections.Generic.List<string>();
+
+        foreach (Resolution res in _availableResolutions)
+        {
+            options.Add($"{res.width} x {res.height}");
+        }
+
+        _resolutionDropdown.AddOptions(options);
+    }
+
+    /// <summary>
+    /// Find the index of a resolution in the available resolutions array
+    /// </summary>
+    private int FindResolutionIndex(int width, int height)
+    {
+        if (_availableResolutions == null) return -1;
+
+        for (int i = 0; i < _availableResolutions.Length; i++)
+        {
+            if (_availableResolutions[i].width == width && _availableResolutions[i].height == height)
+            {
+                return i;
+            }
+        }
+
+        // If exact match not found, return closest resolution
+        return 0;
+    }
 }

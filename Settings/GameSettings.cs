@@ -2,6 +2,16 @@ using UnityEngine;
 using System.IO;
 
 /// <summary>
+/// Window mode options
+/// </summary>
+public enum WindowMode
+{
+    Windowed = 0,
+    Borderless = 1,
+    Fullscreen = 2
+}
+
+/// <summary>
 /// Serializable struct containing all game settings
 /// </summary>
 [System.Serializable]
@@ -19,9 +29,11 @@ public struct GameSettingsData
     public float cmPer360;
 
     // Graphics
-    public int graphicsQuality;
     public bool vsyncEnabled;
     public int targetFrameRate;
+    public WindowMode windowMode;
+    public int resolutionWidth;
+    public int resolutionHeight;
 
     /// <summary>
     /// Returns default settings. In the case that the json file is not found, values populate from here.
@@ -39,9 +51,11 @@ public struct GameSettingsData
             mouseDPI = 800,
             cmPer360 = 35f,
 
-            graphicsQuality = 2,
             vsyncEnabled = true,
-            targetFrameRate = 144
+            targetFrameRate = 144,
+            windowMode = WindowMode.Borderless,
+            resolutionWidth = Screen.currentResolution.width,
+            resolutionHeight = Screen.currentResolution.height
         };
     }
 }
@@ -134,9 +148,27 @@ public class GameSettings : ScriptableObject
     public void ApplySettings()
     {
         // Apply graphics settings
-        QualitySettings.SetQualityLevel(data.graphicsQuality);
         QualitySettings.vSyncCount = data.vsyncEnabled ? 1 : 0;
         Application.targetFrameRate = data.targetFrameRate;
+
+        // Apply resolution (skip in editor to avoid issues)
+        #if !UNITY_EDITOR
+        Screen.SetResolution(data.resolutionWidth, data.resolutionHeight, Screen.fullScreenMode);
+        #endif
+
+        // Apply window mode
+        switch (data.windowMode)
+        {
+            case WindowMode.Windowed:
+                Screen.fullScreenMode = FullScreenMode.Windowed;
+                break;
+            case WindowMode.Borderless:
+                Screen.fullScreenMode = FullScreenMode.FullScreenWindow;
+                break;
+            case WindowMode.Fullscreen:
+                Screen.fullScreenMode = FullScreenMode.ExclusiveFullScreen;
+                break;
+        }
 
         // Apply audio settings via AudioManager
         if (AudioManager.Instance != null)

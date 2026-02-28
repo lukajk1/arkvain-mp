@@ -70,7 +70,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     {
         base.LateAwake();
 
-        Debug.Log($"[VisualsManager] LateAwake - isOwner: {isOwner}, Owner: {owner}, ClientGame.Instance: {ClientGame.Instance != null}, MainCamera: {_mainCamera != null}, FirstPersonCamera: {_firstPersonCamera != null}");
+        Debug.Log($"[VisualsManager] LateAwake - isOwner: {isOwner}, Owner: {owner}, ClientGame.Instance: {ClientsideGameManager.Instance != null}, MainCamera: {_mainCamera != null}, FirstPersonCamera: {_firstPersonCamera != null}");
 
         if (isOwner)
         {
@@ -97,10 +97,10 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
             if (_mainCamera != null)
             {
-                if (ClientGame.Instance != null)
+                if (ClientsideGameManager.Instance != null)
                 {
-                    ClientGame.Instance.RegisterMainCamera(_mainCamera);
-                    Debug.Log($"[VisualsManager] Registered main camera: {_mainCamera.name}, Current ClientGame._mainCamera: {ClientGame._mainCamera?.name ?? "null"}");
+                    ClientsideGameManager.Instance.RegisterMainCamera(_mainCamera);
+                    Debug.Log($"[VisualsManager] Registered main camera: {_mainCamera.name}, Current ClientGame._mainCamera: {ClientsideGameManager._mainCamera?.name ?? "null"}");
                 }
                 else
                 {
@@ -168,9 +168,9 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         base.OnDestroy();
 
         // Clear camera reference if we registered it
-        if (isOwner && ClientGame._mainCamera == _mainCamera)
+        if (isOwner && ClientsideGameManager._mainCamera == _mainCamera)
         {
-            ClientGame._mainCamera = null;
+            ClientsideGameManager._mainCamera = null;
             //Debug.Log("[VisualsManager] Cleared main camera reference on destroy");
         }
     }

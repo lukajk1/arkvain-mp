@@ -40,13 +40,13 @@ public class FirstPersonCamera : MonoBehaviour
 
         // Normalize delta based on mouse DPI to get consistent physical movement
         // Input System gives delta in pixels, so divide by DPI to get physical distance in inches
-        float physicalDeltaX = lookDelta.x / ClientGame.playerDPI;
-        float physicalDeltaY = lookDelta.y / ClientGame.playerDPI;
+        float physicalDeltaX = lookDelta.x / PersistentClient.playerDPI;
+        float physicalDeltaY = lookDelta.y / PersistentClient.playerDPI;
 
         // Convert physical distance (inches) to degrees based on cm/360 setting
         // targetCm360 is how many cm for a 360° turn
         // 2.54 cm/1 inch
-        float inchesPerFullRotation = (ClientGame.targetCm360 / 2.54f);
+        float inchesPerFullRotation = (PersistentClient.cm360 / 2.54f);
         float degreesPerInch = 360f / inchesPerFullRotation;
 
         float mouseX = physicalDeltaX * degreesPerInch;

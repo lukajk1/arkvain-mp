@@ -50,7 +50,7 @@ public class SettingsMenu : MonoBehaviour
 
         if (value) LoadSettingsToUI();
 
-        ClientGame.ModifyCursorUnlockList(value, this);
+        PersistentClient.ModifyCursorUnlockList(value, this);
         InputManager.Instance.ModifyPlayerControlsLockList(value, this);
     }
 

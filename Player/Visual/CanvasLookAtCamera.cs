@@ -9,7 +9,7 @@ public class CanvasLookAtCamera : MonoBehaviour
         if (_cachedCameraTransform == null)
         {
             // Check if camera exists and is not destroyed
-            if (ClientGame._mainCamera == null || !ClientGame._mainCamera)
+            if (ClientsideGameManager._mainCamera == null || !ClientsideGameManager._mainCamera)
             {
                 // Try to find and register a camera in the scene
                 Camera foundCamera = Camera.main;
@@ -19,9 +19,9 @@ public class CanvasLookAtCamera : MonoBehaviour
                     foundCamera = FindFirstObjectByType<Camera>();
                 }
 
-                if (foundCamera != null && ClientGame.Instance != null)
+                if (foundCamera != null && ClientsideGameManager.Instance != null)
                 {
-                    ClientGame.Instance.RegisterMainCamera(foundCamera);
+                    ClientsideGameManager.Instance.RegisterMainCamera(foundCamera);
                     //Debug.Log($"[CanvasLookAtCamera] Found and registered camera: {foundCamera.name}");
                 }
                 else
@@ -29,7 +29,7 @@ public class CanvasLookAtCamera : MonoBehaviour
                     return;
                 }
             }
-            _cachedCameraTransform = ClientGame._mainCamera.transform;
+            _cachedCameraTransform = ClientsideGameManager._mainCamera.transform;
         }
 
         Vector3 dir = _cachedCameraTransform.position - transform.position;

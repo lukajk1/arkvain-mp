@@ -44,7 +44,7 @@ public class EscapeMenu : MonoBehaviour
         {
             _menuObject.SetActive(value);
             InputManager.Instance.ModifyPlayerControlsLockList(value, this);
-            ClientGame.ModifyCursorUnlockList(value, this);
+            PersistentClient.ModifyCursorUnlockList(value, this);
         }
     }
 

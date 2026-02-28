@@ -109,7 +109,7 @@ _tracerLine.enabled = true;
         if (VFXPoolManager.Instance != null && Camera.main != null && _envHitParticles != null)
         {
             float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
-            if (!hitInfo.hitPlayer && distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
+            if (!hitInfo.hitPlayer && distanceSqr < ClientsideGameManager.maxVFXDistance * ClientsideGameManager.maxVFXDistance)
             {
                 // Orient the particle effect so its Z+ axis aligns with the surface normal
                 Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);

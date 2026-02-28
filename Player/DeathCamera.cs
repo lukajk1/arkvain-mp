@@ -16,8 +16,8 @@ public class DeathCamera : MonoBehaviour
     {
         Vector2 lookDelta = _cachedLookAction.ReadValue<Vector2>();
 
-        float physicalDeltaX = lookDelta.x / ClientGame.playerDPI;
-        float inchesPerFullRotation = ClientGame.targetCm360 / 2.54f;
+        float physicalDeltaX = lookDelta.x / PersistentClient.playerDPI;
+        float inchesPerFullRotation = PersistentClient.cm360 / 2.54f;
         float degreesPerInch = 360f / inchesPerFullRotation;
 
         _yRotation += physicalDeltaX * degreesPerInch;

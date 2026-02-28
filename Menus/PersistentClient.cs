@@ -3,12 +3,14 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class ClientGame : MonoBehaviour
+public class PersistentClient : MonoBehaviour
 {
-    public static ClientGame Instance { get; private set; }
+    public static PersistentClient Instance { get; private set; }
 
-    public static float targetCm360 = 34.6f; // Standard competitive sensitivity
-    public static float playerDPI = 800f;
+    public static float cm360;
+    public static float playerDPI;
+
+    private static CursorLockMode _cursorDefaultState;
 
     private static CursorLockMode _cursorLockState;
     public static CursorLockMode CursorLockState
@@ -24,32 +26,35 @@ public class ClientGame : MonoBehaviour
             }
         }
     }
-
-    public static Camera _mainCamera;
-
     private static List<object> cursorLockList = new();
-
-    // the distance at which to stop rendering environmental hit effects
-    public static float maxVFXDistance = 38f;
     private void Awake()
     {
         if (Instance != null)
         {
             Debug.LogError($"More than one instance of {Instance} in scene");
+            Destroy(gameObject);
         }
 
         Instance = this;
+        DontDestroyOnLoad(gameObject);
+
+        _cursorDefaultState = CursorLockMode.Confined;
     }
 
     private void Start()
     {
-        CursorLockState = CursorLockMode.Locked;
+        GameSettings.Initialize();
     }
 
-    public void RegisterMainCamera(Camera camera)
+    public static void SetDefaultCursorState(CursorLockMode state)
     {
-        _mainCamera = camera;
-        Debug.Log("new maincamera registered");
+        _cursorDefaultState = state;
+
+        // Reapply cursor state if no overrides are active
+        if (cursorLockList.Count == 0)
+        {
+            CursorLockState = _cursorDefaultState;
+        }
     }
 
     public static void ModifyCursorUnlockList(bool isAdding, object obj)
@@ -70,7 +75,7 @@ public class ClientGame : MonoBehaviour
         }
         else
         {
-            CursorLockState = CursorLockMode.Locked;
+            CursorLockState = _cursorDefaultState;
         }
     }
 

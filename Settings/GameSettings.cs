@@ -65,7 +65,7 @@ public class GameSettings : ScriptableObject
 {
     private const string SETTINGS_FILENAME = "gamesettings.json";
 
-    [HideInInspector] public GameSettingsData data;
+    [HideInInspector] public GameSettingsData data = GameSettingsData.GetDefaults();
 
     private static GameSettings _instance;
     public static GameSettings Instance
@@ -86,19 +86,18 @@ public class GameSettings : ScriptableObject
 
     private static string SettingsFilePath => Path.Combine(Application.persistentDataPath, SETTINGS_FILENAME);
 
-    /// <summary>
-    /// Called automatically before scene loads to initialize settings from file
-    /// </summary>
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void Initialize()
+    public static void Initialize()
     {
         if (Instance != null)
         {
             Instance.LoadFromFile();
             Instance.ApplySettings();
         }
+        else
+        {
+            Debug.LogError("GameSettings Instance is null during Initialize!");
+        }
     }
-
     /// <summary>
     /// Load settings from JSON file in persistent data path
     /// </summary>
@@ -149,7 +148,19 @@ public class GameSettings : ScriptableObject
     {
         // Apply graphics settings
         QualitySettings.vSyncCount = data.vsyncEnabled ? 1 : 0;
-        Application.targetFrameRate = data.targetFrameRate;
+
+        // Only set target frame rate if VSync is disabled
+        // (VSync overrides targetFrameRate and locks to monitor refresh rate)
+        if (!data.vsyncEnabled)
+        {
+            Application.targetFrameRate = data.targetFrameRate;
+        }
+        else
+        {
+            Application.targetFrameRate = -1; // Let VSync control frame rate
+        }
+
+        Debug.Log($"Applied settings - VSync: {data.vsyncEnabled}, TargetFPS: {Application.targetFrameRate}, QualityVSync: {QualitySettings.vSyncCount}");
 
         // Apply resolution (skip in editor to avoid issues)
         #if !UNITY_EDITOR
@@ -177,8 +188,8 @@ public class GameSettings : ScriptableObject
         }
 
         // Apply input settings to ClientGame static fields
-        ClientGame.playerDPI = data.mouseDPI;
-        ClientGame.targetCm360 = data.cmPer360;
+        PersistentClient.playerDPI = data.mouseDPI;
+        PersistentClient.cm360 = data.cmPer360;
     }
 
     /// <summary>

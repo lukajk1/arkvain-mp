@@ -68,7 +68,7 @@ public class WeaponHitEffectsManager : MonoBehaviour
             if (Camera.main != null && _hitWallParticles != null)
             {
                 float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
-                if (distanceSqr < ClientGame.maxVFXDistance * ClientGame.maxVFXDistance)
+                if (distanceSqr < ClientsideGameManager.maxVFXDistance * ClientsideGameManager.maxVFXDistance)
                 {
                     // Orient the particle effect so its Z+ axis aligns with the surface normal
                     Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);

@@ -24,13 +24,13 @@ public struct GameSettingsData
     public int targetFrameRate;
 
     /// <summary>
-    /// Returns default settings
+    /// Returns default settings. In the case that the json file is not found, values populate from here.
     /// </summary>
     public static GameSettingsData GetDefaults()
     {
         return new GameSettingsData
         {
-            masterVolume = 1.0f,
+            masterVolume = 0.5f,
             musicVolume = 1.0f,
             sfxVolume = 1.0f,
 

@@ -13,8 +13,9 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private GameObject _menuObject;
     [SerializeField] private EscapeMenu _escapeMenu;
 
-    [Header("Audio Sliders")]
+    [Header("Audio")]
     [SerializeField] private Slider _masterVolumeSlider;
+    [SerializeField] private TMP_InputField _masterVolumeInputField;
     [SerializeField] private Slider _musicVolumeSlider;
     [SerializeField] private Slider _sfxVolumeSlider;
 
@@ -26,6 +27,7 @@ public class SettingsMenu : MonoBehaviour
     [Header("Graphics")]
     [SerializeField] private Dropdown _graphicsQualityDropdown;
     [SerializeField] private Toggle _vsyncToggle;
+    [SerializeField] private TMP_InputField _targetFrameRateInputField;
 
     [Header("Buttons")]
     [SerializeField] private Button _saveButton;
@@ -38,9 +40,10 @@ public class SettingsMenu : MonoBehaviour
 
     public void SetState(bool value)
     {
+        _menuObject.SetActive(value);
+
         if (value) LoadSettingsToUI();
 
-        _menuObject.SetActive(value);
         ClientGame.ModifyCursorUnlockList(value, this);
         InputManager.Instance.ModifyPlayerControlsLockList(value, this);
     }
@@ -49,7 +52,10 @@ public class SettingsMenu : MonoBehaviour
     {
         // Subscribe to UI changes
         if (_masterVolumeSlider != null)
-            _masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeChanged);
+            _masterVolumeSlider.onValueChanged.AddListener(OnMasterVolumeSliderChanged);
+
+        if (_masterVolumeInputField != null)
+            _masterVolumeInputField.onEndEdit.AddListener(OnMasterVolumeInputChanged);
 
         if (_musicVolumeSlider != null)
             _musicVolumeSlider.onValueChanged.AddListener(OnMusicVolumeChanged);
@@ -72,6 +78,9 @@ public class SettingsMenu : MonoBehaviour
         if (_vsyncToggle != null)
             _vsyncToggle.onValueChanged.AddListener(OnVSyncChanged);
 
+        if (_targetFrameRateInputField != null)
+            _targetFrameRateInputField.onEndEdit.AddListener(OnTargetFrameRateInputChanged);
+
         // Subscribe to buttons
         if (_saveButton != null)
             _saveButton.onClick.AddListener(OnSaveClicked);
@@ -84,7 +93,10 @@ public class SettingsMenu : MonoBehaviour
     {
         // Unsubscribe from UI changes
         if (_masterVolumeSlider != null)
-            _masterVolumeSlider.onValueChanged.RemoveListener(OnMasterVolumeChanged);
+            _masterVolumeSlider.onValueChanged.RemoveListener(OnMasterVolumeSliderChanged);
+
+        if (_masterVolumeInputField != null)
+            _masterVolumeInputField.onEndEdit.RemoveListener(OnMasterVolumeInputChanged);
 
         if (_musicVolumeSlider != null)
             _musicVolumeSlider.onValueChanged.RemoveListener(OnMusicVolumeChanged);
@@ -107,6 +119,9 @@ public class SettingsMenu : MonoBehaviour
         if (_vsyncToggle != null)
             _vsyncToggle.onValueChanged.RemoveListener(OnVSyncChanged);
 
+        if (_targetFrameRateInputField != null)
+            _targetFrameRateInputField.onEndEdit.RemoveListener(OnTargetFrameRateInputChanged);
+
         // Unsubscribe from buttons
         if (_saveButton != null)
             _saveButton.onClick.RemoveListener(OnSaveClicked);
@@ -124,6 +139,9 @@ public class SettingsMenu : MonoBehaviour
 
         if (_masterVolumeSlider != null)
             _masterVolumeSlider.value = GameSettings.Instance.data.masterVolume;
+
+        if (_masterVolumeInputField != null)
+            _masterVolumeInputField.text = Mathf.RoundToInt(GameSettings.Instance.data.masterVolume * 100f).ToString();
 
         if (_musicVolumeSlider != null)
             _musicVolumeSlider.value = GameSettings.Instance.data.musicVolume;
@@ -145,14 +163,59 @@ public class SettingsMenu : MonoBehaviour
 
         if (_vsyncToggle != null)
             _vsyncToggle.isOn = GameSettings.Instance.data.vsyncEnabled;
+
+        if (_targetFrameRateInputField != null)
+            _targetFrameRateInputField.text = GameSettings.Instance.data.targetFrameRate.ToString();
     }
 
     // Audio callbacks
-    private void OnMasterVolumeChanged(float value)
+    private void OnMasterVolumeSliderChanged(float value)
     {
         GameSettings.Instance.data.masterVolume = value;
+
+        // Update input field to match slider (prevent feedback loop)
+        if (_masterVolumeInputField != null)
+        {
+            _masterVolumeInputField.SetTextWithoutNotify(Mathf.RoundToInt(value * 100f).ToString());
+        }
+
         // Apply immediately for preview
         AudioManager.Instance?.SetMasterVolume(value);
+    }
+
+    private void OnMasterVolumeInputChanged(string text)
+    {
+        if (int.TryParse(text, out int volumePercent))
+        {
+            // Clamp to 0-100
+            volumePercent = Mathf.Clamp(volumePercent, 0, 100);
+            float volumeFloat = volumePercent / 100f;
+
+            GameSettings.Instance.data.masterVolume = volumeFloat;
+
+            // Update slider to match input (prevent feedback loop)
+            if (_masterVolumeSlider != null)
+            {
+                _masterVolumeSlider.SetValueWithoutNotify(volumeFloat);
+            }
+
+            // Update input field with clamped value
+            if (_masterVolumeInputField != null)
+            {
+                _masterVolumeInputField.text = volumePercent.ToString();
+            }
+
+            // Apply immediately for preview
+            AudioManager.Instance?.SetMasterVolume(volumeFloat);
+        }
+        else
+        {
+            // Invalid input - reset to current value
+            if (_masterVolumeInputField != null)
+            {
+                _masterVolumeInputField.text = Mathf.RoundToInt(GameSettings.Instance.data.masterVolume * 100f).ToString();
+            }
+        }
     }
 
     private void OnMusicVolumeChanged(float value)
@@ -232,6 +295,32 @@ public class SettingsMenu : MonoBehaviour
     {
         GameSettings.Instance.data.vsyncEnabled = value;
         GameSettings.Instance.ApplySettings();
+    }
+
+    private void OnTargetFrameRateInputChanged(string text)
+    {
+        if (int.TryParse(text, out int frameRate))
+        {
+            // Clamp to reasonable values
+            frameRate = Mathf.Clamp(frameRate, 30, 500);
+            GameSettings.Instance.data.targetFrameRate = frameRate;
+
+            // Update input field with clamped value
+            if (_targetFrameRateInputField != null)
+            {
+                _targetFrameRateInputField.text = frameRate.ToString();
+            }
+
+            GameSettings.Instance.ApplySettings();
+        }
+        else
+        {
+            // Invalid input - reset to current value
+            if (_targetFrameRateInputField != null)
+            {
+                _targetFrameRateInputField.text = GameSettings.Instance.data.targetFrameRate.ToString();
+            }
+        }
     }
 
     // Button callbacks

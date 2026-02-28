@@ -52,7 +52,7 @@ public struct GameSettingsData
             cmPer360 = 35f,
 
             vsyncEnabled = true,
-            targetFrameRate = 144,
+            targetFrameRate = (int)Screen.currentResolution.refreshRateRatio.value,
             windowMode = WindowMode.Borderless,
             resolutionWidth = Screen.currentResolution.width,
             resolutionHeight = Screen.currentResolution.height

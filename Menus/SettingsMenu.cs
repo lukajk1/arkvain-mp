@@ -371,6 +371,7 @@ public class SettingsMenu : MonoBehaviour
         GameSettings.Instance.ApplySettings();
         GameSettings.Instance.SaveToFile();
         SetState(false);
+        _escapeMenu.SetState(false);
     }
 
     private void OnResetClicked()

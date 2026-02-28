@@ -326,8 +326,8 @@ public class SettingsMenu : MonoBehaviour
     // Button callbacks
     private void OnSaveClicked()
     {
+        GameSettings.Instance.ApplySettings();
         GameSettings.Instance.SaveToFile();
-        Debug.Log("Settings saved!");
         SetState(false);
     }
 

@@ -11,6 +11,8 @@ public class SettingsMenu : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private GameObject _menuObject;
+    [SerializeField] private Canvas _canvas;
+    [SerializeField] private GameObject _confirmationBoxPrefab;
     [SerializeField] private EscapeMenu _escapeMenu;
 
     [Header("Audio")]
@@ -326,12 +328,48 @@ public class SettingsMenu : MonoBehaviour
     // Button callbacks
     private void OnSaveClicked()
     {
+        // in case I want to have more logic handling here prior to calling saveandclose()
+        SaveAndClose();
+    }
+
+    private void SaveAndClose()
+    {
         GameSettings.Instance.ApplySettings();
         GameSettings.Instance.SaveToFile();
         SetState(false);
     }
 
     private void OnResetClicked()
+    {
+        if (_confirmationBoxPrefab == null || _canvas == null)
+        {
+            // No confirmation box - save directly
+            SaveAndClose();
+            return;
+        }
+
+        GameObject confirmBoxObj = Instantiate(_confirmationBoxPrefab, _canvas.transform);
+        ConfirmationBox confirmBox = confirmBoxObj.GetComponent<ConfirmationBox>();
+
+        if (confirmBox != null)
+        {
+            confirmBox.Initialize(
+                onConfirm: () => ResetSettings(),
+                onCancel: null,
+                message: "Reset settings?",
+                confirmText: "Yes",
+                cancelText: "Cancel"
+            );
+        }
+        else
+        {
+            // Fallback if component not found
+            Destroy(confirmBoxObj);
+            SaveAndClose();
+        }
+    }
+
+    private void ResetSettings()
     {
         GameSettings.Instance.ResetToDefaults();
         LoadSettingsToUI();

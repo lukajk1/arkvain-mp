@@ -10,7 +10,6 @@ using TMPro;
 public class SettingsMenu : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private GameObject _menuObject;
     [SerializeField] private Canvas _canvas;
     [SerializeField] private GameObject _confirmationBoxPrefab;
     [SerializeField] private EscapeMenu _escapeMenu;
@@ -46,7 +45,7 @@ public class SettingsMenu : MonoBehaviour
 
     public void SetState(bool value)
     {
-        _menuObject.SetActive(value);
+        _canvas.gameObject.SetActive(value);
 
         if (value) LoadSettingsToUI();
 

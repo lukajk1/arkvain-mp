@@ -38,29 +38,21 @@ public class InputManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Lock player controls (merged from LockActionMap functionality).
+    /// Modify the player controls lock list.
     /// Multiple systems can lock - controls only unlock when all locks are removed.
     /// </summary>
-    public void LockPlayerControls(object requester)
+    public void ModifyPlayerControlsLockList(bool isAdding, object obj)
     {
-        _playerControlsLocks.Add(requester);
-        UpdatePlayerControlsState();
-    }
+        if (isAdding)
+        {
+            if (_playerControlsLocks.Contains(obj)) return; // no need to modify then
+            else
+            {
+                _playerControlsLocks.Add(obj);
+            }
+        }
+        else _playerControlsLocks.Remove(obj);
 
-    /// <summary>
-    /// Unlock player controls for a specific requester.
-    /// </summary>
-    public void UnlockPlayerControls(object requester)
-    {
-        _playerControlsLocks.Remove(requester);
-        UpdatePlayerControlsState();
-    }
-
-    /// <summary>
-    /// Updates the player controls enabled state based on active locks.
-    /// </summary>
-    private void UpdatePlayerControlsState()
-    {
         if (_playerControlsLocks.Count > 0)
         {
             _actions.Player.Disable();
@@ -69,6 +61,24 @@ public class InputManager : MonoBehaviour
         {
             _actions.Player.Enable();
         }
+    }
+
+    /// <summary>
+    /// Lock player controls (legacy method - use ModifyPlayerControlsLockList instead).
+    /// </summary>
+    [System.Obsolete("Use ModifyPlayerControlsLockList(true, this) instead")]
+    public void LockPlayerControls(object requester)
+    {
+        ModifyPlayerControlsLockList(true, requester);
+    }
+
+    /// <summary>
+    /// Unlock player controls for a specific requester (legacy method - use ModifyPlayerControlsLockList instead).
+    /// </summary>
+    [System.Obsolete("Use ModifyPlayerControlsLockList(false, this) instead")]
+    public void UnlockPlayerControls(object requester)
+    {
+        ModifyPlayerControlsLockList(false, requester);
     }
 
     // Legacy methods for backwards compatibility (now use lock/unlock instead)

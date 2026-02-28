@@ -56,7 +56,7 @@ public class ClientGame : MonoBehaviour
     {
         if (isAdding)
         {
-            if (cursorLockList.Contains(obj)) return; // no need to modify then
+            if (cursorLockList.Contains(obj)) return; // no need to modify in this case
             else
             {
                 cursorLockList.Add(obj);

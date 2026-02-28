@@ -6,6 +6,7 @@ public class EscapeMenu : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private GameObject _menuObject;
+    [SerializeField] private SettingsMenu _settingsMenu;
 
     [Header("Buttons")]
     [SerializeField] private Button _returnToGameButton;
@@ -35,6 +36,16 @@ public class EscapeMenu : MonoBehaviour
 
         if (_quitToDesktopButton != null)
             _quitToDesktopButton.onClick.AddListener(OnQuitToDesktop);
+    }
+
+    public void SetState(bool value)
+    {
+        if (_menuObject != null)
+        {
+            _menuObject.SetActive(value);
+            InputManager.Instance.ModifyPlayerControlsLockList(value, this);
+            ClientGame.ModifyCursorUnlockList(value, this);
+        }
     }
 
     private void OnEnable()
@@ -70,34 +81,23 @@ public class EscapeMenu : MonoBehaviour
 
         bool stateToSetTo = !_menuObject.activeSelf;
 
-        _menuObject.SetActive(stateToSetTo);
-
-        if (stateToSetTo)
-        {
-            InputManager.Instance.LockPlayerControls(this);
-        }
-        else
-        {
-            InputManager.Instance.UnlockPlayerControls(this);
-        }
-
-        ClientGame.ModifyCursorUnlockList(stateToSetTo, this);
+        SetState(stateToSetTo);
     }
 
     private void OnReturnToGame()
     {
-        if (_menuObject != null)
-        {
-            _menuObject.SetActive(false);
-            InputManager.Instance.UnlockPlayerControls(this);
-            ClientGame.ModifyCursorUnlockList(false, this);
-        }
+        SetState(false);
     }
 
     private void OnSettings()
     {
-        // TODO: Open settings menu
-        Debug.Log("Settings button clicked");
+        if (_settingsMenu == null)
+        {
+            Debug.LogWarning("Settings menu not assigned!");
+            return;
+        }
+
+        _settingsMenu.SetState(true);
     }
 
     private void OnLeaveMatch()

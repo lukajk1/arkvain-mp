@@ -111,9 +111,12 @@ public class DashVisual : MonoBehaviour
         // Animate Fresnel with LeanTween
         if (_targetRenderers != null && _targetRenderers.Length > 0)
         {
-            // Cancel previous animation
+            // Cancel and restart animation if already running
             if (_fresnelTweenId != -1)
+            {
                 LeanTween.cancel(_fresnelTweenId);
+                _fresnelTweenId = -1;
+            }
 
             // Enable Fresnel and set to min power instantly
             EnableFresnel(true);
@@ -122,18 +125,21 @@ public class DashVisual : MonoBehaviour
             // Animate from min to max - starts slow, accelerates
             LTDescr tween = LeanTween.value(gameObject, UpdateFresnelPower, _fresnelStartPower, _fresnelEndPower, _fresnelAnimDuration)
                 .setEaseInQuad()
-                .setOnComplete(() =>
-                {
-                    Debug.Log("[DashVisual] Fresnel animation complete callback fired");
-                    if (this != null)
-                    {
-                        EnableFresnel(false); // Disable when done
-                        _fresnelTweenId = -1;
-                        Debug.Log("[DashVisual] Fresnel disabled");
-                    }
-                });
+                .setOnComplete(OnFresnelAnimationComplete);
 
             _fresnelTweenId = tween.id;
+        }
+    }
+
+    private void OnFresnelAnimationComplete()
+    {
+        // Only disable if this is still the active tween (not cancelled)
+        if (this != null && _fresnelTweenId != -1)
+        {
+            Debug.Log("[DashVisual] Fresnel animation complete callback fired");
+            EnableFresnel(false);
+            _fresnelTweenId = -1;
+            Debug.Log("[DashVisual] Fresnel disabled");
         }
     }
 

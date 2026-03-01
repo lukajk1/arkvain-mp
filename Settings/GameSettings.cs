@@ -34,6 +34,7 @@ public struct GameSettingsData
     public WindowMode windowMode;
     public int resolutionWidth;
     public int resolutionHeight;
+    public int FOV;
 
     /// <summary>
     /// Returns default settings. In the case that the json file is not found, values populate from here.
@@ -50,6 +51,7 @@ public struct GameSettingsData
             invertY = false,
             mouseDPI = 800,
             cmPer360 = 35f,
+            FOV = 80,
 
             vsyncEnabled = true,
             targetFrameRate = (int)Screen.currentResolution.refreshRateRatio.value,

@@ -2,7 +2,6 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-
 public class PersistentClient : MonoBehaviour
 {
     public static PersistentClient Instance { get; private set; }
@@ -55,11 +54,6 @@ public class PersistentClient : MonoBehaviour
         yield return null;
         GameSettings.Instance?.ApplySettings();
         Debug.Log("Settings reapplied after 1 frame");
-
-        //// Apply after 100ms
-        //yield return new WaitForSeconds(0.1f);
-        //GameSettings.Instance?.ApplySettings();
-        //Debug.Log("Settings reapplied after 100ms delay");
     }
 
     public static void SetDefaultCursorState(CursorLockMode state)

@@ -1,11 +1,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class EscapeMenu : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private GameObject _menuObject;
+    [SerializeField] private SceneNameHolder _lobbyScene;
+    [SerializeField] private Canvas _menu;
     [SerializeField] private SettingsMenu _settingsMenu;
 
     [Header("Buttons")]
@@ -16,7 +18,7 @@ public class EscapeMenu : MonoBehaviour
 
     private void Start()
     {
-        _menuObject.SetActive(false);
+        _menu.gameObject.SetActive(false);
 
         // Subscribe to escape key input (in Start to ensure InputManager is initialized)
         if (InputManager.Instance != null)
@@ -40,9 +42,9 @@ public class EscapeMenu : MonoBehaviour
 
     public void SetState(bool value)
     {
-        if (_menuObject != null)
+        if (_menu != null)
         {
-            _menuObject.SetActive(value);
+            _menu.gameObject.SetActive(value);
             InputManager.Instance.ModifyPlayerControlsLockList(value, this);
             PersistentClient.ModifyCursorUnlockList(value, this);
         }
@@ -77,9 +79,9 @@ public class EscapeMenu : MonoBehaviour
 
     private void OnEscapePressed(InputAction.CallbackContext context)
     {
-        if (_menuObject == null) return;
+        if (_menu == null) return;
 
-        bool stateToSetTo = !_menuObject.activeSelf;
+        bool stateToSetTo = !_menu.gameObject.activeSelf;
 
         SetState(stateToSetTo);
     }
@@ -102,8 +104,8 @@ public class EscapeMenu : MonoBehaviour
 
     private void OnLeaveMatch()
     {
-        // TODO: Implement leave match functionality
-        Debug.Log("Leave match button clicked");
+        SetState(false); // necessary to clean up cursor lock modification
+        SceneManager.LoadScene(_lobbyScene.sceneName);
     }
 
     private void OnQuitToDesktop()

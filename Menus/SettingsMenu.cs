@@ -30,6 +30,8 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private TMP_Dropdown _windowModeDropdown;
     [SerializeField] private Toggle _vsyncToggle;
     [SerializeField] private TMP_InputField _targetFrameRateInputField;
+    [SerializeField] private Slider _fovSlider;
+    [SerializeField] private TMP_InputField _fovInputField;
 
     private Resolution[] _availableResolutions;
 
@@ -90,6 +92,12 @@ public class SettingsMenu : MonoBehaviour
         if (_targetFrameRateInputField != null)
             _targetFrameRateInputField.onEndEdit.AddListener(OnTargetFrameRateInputChanged);
 
+        if (_fovSlider != null)
+            _fovSlider.onValueChanged.AddListener(OnFOVSliderChanged);
+
+        if (_fovInputField != null)
+            _fovInputField.onEndEdit.AddListener(OnFOVInputChanged);
+
         // Subscribe to buttons
         if (_saveButton != null)
             _saveButton.onClick.AddListener(OnSaveClicked);
@@ -133,6 +141,12 @@ public class SettingsMenu : MonoBehaviour
 
         if (_targetFrameRateInputField != null)
             _targetFrameRateInputField.onEndEdit.RemoveListener(OnTargetFrameRateInputChanged);
+
+        if (_fovSlider != null)
+            _fovSlider.onValueChanged.RemoveListener(OnFOVSliderChanged);
+
+        if (_fovInputField != null)
+            _fovInputField.onEndEdit.RemoveListener(OnFOVInputChanged);
 
         // Unsubscribe from buttons
         if (_saveButton != null)
@@ -191,6 +205,16 @@ public class SettingsMenu : MonoBehaviour
 
         if (_targetFrameRateInputField != null)
             _targetFrameRateInputField.SetTextWithoutNotify(GameSettings.Instance.data.targetFrameRate.ToString());
+
+        if (_fovSlider != null)
+        {
+            // Normalize FOV (50-105) to slider range (0-1)
+            float normalizedFOV = ((float)GameSettings.Instance.data.FOV - 50f) / (105f - 50f);
+            _fovSlider.SetValueWithoutNotify(normalizedFOV);
+        }
+
+        if (_fovInputField != null)
+            _fovInputField.SetTextWithoutNotify(GameSettings.Instance.data.FOV.ToString());
 
         UpdateTargetFrameRateInputState();
     }
@@ -358,6 +382,51 @@ public class SettingsMenu : MonoBehaviour
             if (_targetFrameRateInputField != null)
             {
                 _targetFrameRateInputField.text = GameSettings.Instance.data.targetFrameRate.ToString();
+            }
+        }
+    }
+
+    private void OnFOVSliderChanged(float value)
+    {
+        // Convert normalized slider value (0-1) to FOV range (50-105)
+        int fov = Mathf.RoundToInt(50f + (value * (105f - 50f)));
+        GameSettings.Instance.data.FOV = fov;
+
+        // Update input field to match slider (prevent feedback loop)
+        if (_fovInputField != null)
+        {
+            _fovInputField.SetTextWithoutNotify(fov.ToString());
+        }
+    }
+
+    private void OnFOVInputChanged(string text)
+    {
+        if (int.TryParse(text, out int fov))
+        {
+            // Clamp to 50-105
+            fov = Mathf.Clamp(fov, 50, 105);
+            GameSettings.Instance.data.FOV = fov;
+
+            // Update slider to match input (prevent feedback loop)
+            if (_fovSlider != null)
+            {
+                // Normalize FOV to 0-1 range for slider
+                float normalizedFOV = ((float)fov - 50f) / (105f - 50f);
+                _fovSlider.SetValueWithoutNotify(normalizedFOV);
+            }
+
+            // Update input field with clamped value
+            if (_fovInputField != null)
+            {
+                _fovInputField.text = fov.ToString();
+            }
+        }
+        else
+        {
+            // Invalid input - reset to current value
+            if (_fovInputField != null)
+            {
+                _fovInputField.text = GameSettings.Instance.data.FOV.ToString();
             }
         }
     }

@@ -204,6 +204,11 @@ public class GameSettings : ScriptableObject
         // Apply input settings to ClientGame static fields
         PersistentClient.playerDPI = data.mouseDPI;
         PersistentClient.cm360 = data.cmPer360;
+
+        if (ClientsideGameManager._mainCamera != null)
+        {
+            ClientsideGameManager._mainCamera.fieldOfView = (float)data.FOV;
+        }
     }
 
     /// <summary>

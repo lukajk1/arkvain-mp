@@ -191,6 +191,8 @@ public class SettingsMenu : MonoBehaviour
 
         if (_targetFrameRateInputField != null)
             _targetFrameRateInputField.SetTextWithoutNotify(GameSettings.Instance.data.targetFrameRate.ToString());
+
+        UpdateTargetFrameRateInputState();
     }
 
     // Audio callbacks
@@ -331,6 +333,7 @@ public class SettingsMenu : MonoBehaviour
     {
         GameSettings.Instance.data.vsyncEnabled = value;
         GameSettings.Instance.ApplySettings();
+        UpdateTargetFrameRateInputState();
     }
 
     private void OnTargetFrameRateInputChanged(string text)
@@ -356,6 +359,17 @@ public class SettingsMenu : MonoBehaviour
             {
                 _targetFrameRateInputField.text = GameSettings.Instance.data.targetFrameRate.ToString();
             }
+        }
+    }
+
+    /// <summary>
+    /// Updates the interactable state of the target frame rate input field based on VSync setting
+    /// </summary>
+    private void UpdateTargetFrameRateInputState()
+    {
+        if (_targetFrameRateInputField != null && GameSettings.Instance != null)
+        {
+            _targetFrameRateInputField.interactable = !GameSettings.Instance.data.vsyncEnabled;
         }
     }
 

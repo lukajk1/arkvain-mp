@@ -21,8 +21,8 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private Slider _sfxVolumeSlider;
 
     [Header("Input")]
-    [SerializeField] private Slider _mouseSensitivitySlider;
     [SerializeField] private TMP_InputField _mouseDPIInputField;
+    [SerializeField] private Slider _cmPer360Slider;
     [SerializeField] private TMP_InputField _cmPer360InputField;
 
     [Header("Graphics")]
@@ -71,11 +71,11 @@ public class SettingsMenu : MonoBehaviour
         if (_sfxVolumeSlider != null)
             _sfxVolumeSlider.onValueChanged.AddListener(OnSFXVolumeChanged);
 
-        if (_mouseSensitivitySlider != null)
-            _mouseSensitivitySlider.onValueChanged.AddListener(OnMouseSensitivityChanged);
-
         if (_mouseDPIInputField != null)
             _mouseDPIInputField.onEndEdit.AddListener(OnMouseDPIInputChanged);
+
+        if (_cmPer360Slider != null)
+            _cmPer360Slider.onValueChanged.AddListener(OnCmPer360SliderChanged);
 
         if (_cmPer360InputField != null)
             _cmPer360InputField.onEndEdit.AddListener(OnCmPer360InputChanged);
@@ -121,11 +121,11 @@ public class SettingsMenu : MonoBehaviour
         if (_sfxVolumeSlider != null)
             _sfxVolumeSlider.onValueChanged.RemoveListener(OnSFXVolumeChanged);
 
-        if (_mouseSensitivitySlider != null)
-            _mouseSensitivitySlider.onValueChanged.RemoveListener(OnMouseSensitivityChanged);
-
         if (_mouseDPIInputField != null)
             _mouseDPIInputField.onEndEdit.RemoveListener(OnMouseDPIInputChanged);
+
+        if (_cmPer360Slider != null)
+            _cmPer360Slider.onValueChanged.RemoveListener(OnCmPer360SliderChanged);
 
         if (_cmPer360InputField != null)
             _cmPer360InputField.onEndEdit.RemoveListener(OnCmPer360InputChanged);
@@ -175,11 +175,15 @@ public class SettingsMenu : MonoBehaviour
         if (_sfxVolumeSlider != null)
             _sfxVolumeSlider.value = GameSettings.Instance.data.sfxVolume;
 
-        if (_mouseSensitivitySlider != null)
-            _mouseSensitivitySlider.value = GameSettings.Instance.data.mouseSensitivity;
-
         if (_mouseDPIInputField != null)
             _mouseDPIInputField.text = GameSettings.Instance.data.mouseDPI.ToString();
+
+        if (_cmPer360Slider != null)
+        {
+            // Normalize cm/360 (10-100) to slider range (0-1)
+            float normalizedCm360 = (GameSettings.Instance.data.cmPer360 - 10f) / (100f - 10f);
+            _cmPer360Slider.SetValueWithoutNotify(normalizedCm360);
+        }
 
         if (_cmPer360InputField != null)
             _cmPer360InputField.text = GameSettings.Instance.data.cmPer360.ToString("F1");
@@ -282,11 +286,6 @@ public class SettingsMenu : MonoBehaviour
     }
 
     // Input callbacks
-    private void OnMouseSensitivityChanged(float value)
-    {
-        GameSettings.Instance.data.mouseSensitivity = value;
-    }
-
     private void OnMouseDPIInputChanged(string text)
     {
         if (int.TryParse(text, out int dpiValue))
@@ -311,13 +310,34 @@ public class SettingsMenu : MonoBehaviour
         }
     }
 
+    private void OnCmPer360SliderChanged(float value)
+    {
+        // Convert normalized slider value (0-1) to cm/360 range (10-100)
+        float cm360 = 10f + (value * (100f - 10f));
+        GameSettings.Instance.data.cmPer360 = cm360;
+
+        // Update input field to match slider (prevent feedback loop)
+        if (_cmPer360InputField != null)
+        {
+            _cmPer360InputField.SetTextWithoutNotify(cm360.ToString("F1"));
+        }
+    }
+
     private void OnCmPer360InputChanged(string text)
     {
         if (float.TryParse(text, out float cmValue))
         {
-            // Clamp to reasonable values
-            cmValue = Mathf.Clamp(cmValue, 5f, 100f);
+            // Clamp to 10-100
+            cmValue = Mathf.Clamp(cmValue, 10f, 100f);
             GameSettings.Instance.data.cmPer360 = cmValue;
+
+            // Update slider to match input (prevent feedback loop)
+            if (_cmPer360Slider != null)
+            {
+                // Normalize cm/360 to 0-1 range for slider
+                float normalizedCm360 = (cmValue - 10f) / (100f - 10f);
+                _cmPer360Slider.SetValueWithoutNotify(normalizedCm360);
+            }
 
             // Update input field with clamped value
             if (_cmPer360InputField != null)

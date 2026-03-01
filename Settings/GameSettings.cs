@@ -23,7 +23,6 @@ public struct GameSettingsData
     public float sfxVolume;
 
     // Input
-    public float mouseSensitivity;
     public bool invertY;
     public int mouseDPI;
     public float cmPer360;
@@ -47,7 +46,6 @@ public struct GameSettingsData
             musicVolume = 1.0f,
             sfxVolume = 1.0f,
 
-            mouseSensitivity = 1.0f,
             invertY = false,
             mouseDPI = 800,
             cmPer360 = 35f,

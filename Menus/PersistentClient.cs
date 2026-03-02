@@ -2,6 +2,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 public class PersistentClient : MonoBehaviour
 {
     public static PersistentClient Instance { get; private set; }
@@ -37,7 +38,16 @@ public class PersistentClient : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        _cursorDefaultState = CursorLockMode.Confined;
+        _cursorDefaultState = CursorLockMode.None;
+    }
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void Start()
@@ -55,7 +65,13 @@ public class PersistentClient : MonoBehaviour
         GameSettings.Instance?.ApplySettings();
         Debug.Log("Settings reapplied after 1 frame");
     }
-
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (scene.name == "Lobby")
+        {
+            SetDefaultCursorState(CursorLockMode.None);
+        }
+    }
     public static void SetDefaultCursorState(CursorLockMode state)
     {
         _cursorDefaultState = state;

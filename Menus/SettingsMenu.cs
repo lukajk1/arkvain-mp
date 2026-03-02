@@ -314,6 +314,9 @@ public class SettingsMenu : MonoBehaviour
     {
         // Convert normalized slider value (0-1) to cm/360 range (10-100)
         float cm360 = 10f + (value * (100f - 10f));
+
+        // Round to whole number for slider input
+        cm360 = Mathf.Round(cm360);
         GameSettings.Instance.data.cmPer360 = cm360;
 
         // Update input field to match slider (prevent feedback loop)

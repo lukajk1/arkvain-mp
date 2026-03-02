@@ -15,7 +15,10 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [Header("Camera")]
     [SerializeField] private Camera _mainCamera;
     [SerializeField] private FirstPersonCamera _firstPersonCamera;
+
+    [Header("Death")]
     [SerializeField] private GameObject _deadPlayerPrefab;
+    [SerializeField] private GameObject _ragdoll;
 
     [SerializeField] private PlayerHealth _playerHealth;
     [SerializeField] private PlayerMovement _playerMovement;
@@ -132,9 +135,13 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
     private void OnPlayerDeath(PlayerInfo? playerId)
     {
-        // should only fire if this instance is the local player--logic below this only pertains to this case
-        if (!isOwner) return;
-        //Debug.Log("WWW this shoudl run on one client");
+
+        //if (_ragdoll != null)
+            //Instantiate(_ragdoll, transform.position + (Vector3.up * 2f), transform.rotation);
+
+        
+        if (!isOwner) return; // logic below only for remote players
+
         if (_deadPlayerPrefab != null)
             Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
     }

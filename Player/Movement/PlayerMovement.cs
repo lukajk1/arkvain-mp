@@ -32,7 +32,6 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     private float _spamAccelPenaltyMultiplier = 0.4f;
 
     [Header("Ground")]
-    [SerializeField] private float _groundDrag = 8f;
     private float _groundCheckRadius = 0.2f;
     [SerializeField] private float _jumpCooldown = 0.2f;
     [SerializeField] private float _landCooldown = 0.15f;

@@ -29,7 +29,7 @@ public class FirstPersonCamera : MonoBehaviour
             gameObject.AddComponent<AudioListener>();
 
         mainCameraTransform = transform;
-        _cachedLookAction = InputManager.Instance.Player.Look;
+        _cachedLookAction = PersistentClient.Instance.inputManager.Player.Look;
     }
 
     void LateUpdate()

@@ -9,7 +9,7 @@ public class DeathCamera : MonoBehaviour
     public void Start()
     {
         _yRotation = transform.eulerAngles.y;
-        _cachedLookAction = InputManager.Instance.Player.Look;
+        _cachedLookAction = PersistentClient.Instance.inputManager.Player.Look;
     }
 
     private void LateUpdate()

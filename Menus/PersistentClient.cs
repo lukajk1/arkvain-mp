@@ -7,6 +7,8 @@ public class PersistentClient : MonoBehaviour
 {
     public static PersistentClient Instance { get; private set; }
 
+    [SerializeField] public InputManager inputManager;
+
     public static float cm360;
     public static float playerDPI;
 

@@ -20,7 +20,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     [SerializeField] private AnimationCurve _damageFalloff;
 
     [Header("References")]
-    [SerializeField] private PlayerMovementLegacyV1 _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
 
@@ -215,8 +215,8 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
 
     protected override void UpdateInput(ref ShootInput input)
     {
-        input.shoot |= InputManager.Instance.Player.Attack.IsPressed();
-        input.reload |= InputManager.Instance.Player.Reload.WasPressedThisFrame();
+        input.shoot |= PersistentClient.Instance.inputManager.Player.Attack.IsPressed();
+        input.reload |= PersistentClient.Instance.inputManager.Player.Reload.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)

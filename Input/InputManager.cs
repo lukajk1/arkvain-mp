@@ -3,8 +3,6 @@ using UnityEngine;
 
 public class InputManager : MonoBehaviour
 {
-    public static InputManager Instance { get; private set; }
-
     private InputSystem_Actions _actions;
 
     public InputSystem_Actions.PlayerActions Player => _actions.Player;
@@ -12,29 +10,9 @@ public class InputManager : MonoBehaviour
 
     // Track what's locking player controls (merged from LockActionMap)
     private readonly HashSet<object> _playerControlsLocks = new HashSet<object>();
-
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            _actions = new InputSystem_Actions();
-            _actions.Player.Enable();
-            _actions.UI.Enable();
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
     private void OnDestroy()
     {
-        if (Instance == this)
-        {
-            _actions?.Dispose();
-        }
+        _actions?.Dispose();
     }
 
     /// <summary>

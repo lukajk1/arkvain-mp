@@ -65,7 +65,7 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             HUDManager.Instance?.HideAbilityUI();
         else
         {
-            HUDManager.Instance?.SetAbilityBindingName(InputManager.Instance.Player.UseAbility.GetBindingDisplayString());
+            HUDManager.Instance?.SetAbilityBindingName(PersistentClient.Instance.inputManager.Player.UseAbility.GetBindingDisplayString());
         }
     }
 

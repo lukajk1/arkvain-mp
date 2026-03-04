@@ -21,9 +21,9 @@ public class EscapeMenu : MonoBehaviour
         _menu.gameObject.SetActive(false);
 
         // Subscribe to escape key input (in Start to ensure InputManager is initialized)
-        if (InputManager.Instance != null)
+        if (PersistentClient.Instance.inputManager != null)
         {
-            InputManager.Instance.UI.Escape.performed += OnEscapePressed;
+            PersistentClient.Instance.inputManager.UI.Escape.performed += OnEscapePressed;
         }
 
         // Subscribe to button clicks
@@ -45,8 +45,7 @@ public class EscapeMenu : MonoBehaviour
         if (_menu != null)
         {
             _menu.gameObject.SetActive(value);
-            InputManager.Instance.ModifyPlayerControlsLockList(value, this);
-            PersistentClient.ModifyCursorUnlockList(value, this);
+            
         }
     }
 
@@ -58,9 +57,9 @@ public class EscapeMenu : MonoBehaviour
     private void OnDisable()
     {
         // Unsubscribe from escape key input
-        if (InputManager.Instance != null)
+        if (PersistentClient.Instance.inputManager != null)
         {
-            InputManager.Instance.UI.Escape.performed -= OnEscapePressed;
+            PersistentClient.Instance.inputManager.UI.Escape.performed -= OnEscapePressed;
         }
 
         // Unsubscribe from button clicks

@@ -192,8 +192,8 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
 
     protected override void UpdateInput(ref ShootInput input)
     {
-        input.shoot |= InputManager.Instance.Player.Attack.IsPressed();
-        input.reload |= InputManager.Instance.Player.Reload.WasPressedThisFrame();
+        input.shoot |= PersistentClient.Instance.inputManager.Player.Attack.IsPressed();
+        input.reload |= PersistentClient.Instance.inputManager.Player.Reload.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)

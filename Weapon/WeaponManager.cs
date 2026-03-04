@@ -176,11 +176,11 @@ public class WeaponManager : PredictedIdentity<WeaponManager.SwitchInput, Weapon
 
     protected override void UpdateInput(ref SwitchInput input)
     {
-        input.quickSwitch |= InputManager.Instance.Player.QuickSwitchWeapon.WasPressedThisFrame();
-        input.selectPrimary |= InputManager.Instance.Player.PrimaryWeapon.WasPressedThisFrame();
-        input.selectSecondary |= InputManager.Instance.Player.SecondaryWeapon.WasPressedThisFrame();
-        input.scrollUp |= InputManager.Instance.Player.ScrollUp.WasPressedThisFrame();
-        input.scrollDown |= InputManager.Instance.Player.ScrollDown.WasPressedThisFrame();
+        input.quickSwitch |= PersistentClient.Instance.inputManager.Player.QuickSwitchWeapon.WasPressedThisFrame();
+        input.selectPrimary |= PersistentClient.Instance.inputManager.Player.PrimaryWeapon.WasPressedThisFrame();
+        input.selectSecondary |= PersistentClient.Instance.inputManager.Player.SecondaryWeapon.WasPressedThisFrame();
+        input.scrollUp |= PersistentClient.Instance.inputManager.Player.ScrollUp.WasPressedThisFrame();
+        input.scrollDown |= PersistentClient.Instance.inputManager.Player.ScrollDown.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref SwitchInput input)

@@ -203,7 +203,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
 
     protected override void UpdateInput(ref ShootInput input)
     {
-        bool attackPressed = InputManager.Instance.Player.Attack.IsPressed();
+        bool attackPressed = PersistentClient.Instance.inputManager.Player.Attack.IsPressed();
 
         if (attackPressed)
         {
@@ -211,7 +211,7 @@ public class CrossbowLogic : BaseWeaponLogic<CrossbowLogic.ShootInput, CrossbowL
         }
 
         input.shoot |= attackPressed;
-        input.reload |= InputManager.Instance.Player.Reload.WasPressedThisFrame();
+        input.reload |= PersistentClient.Instance.inputManager.Player.Reload.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)

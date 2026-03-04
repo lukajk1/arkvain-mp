@@ -76,13 +76,13 @@ public class DashAbility : BaseAbilityLogic<DashAbility.DashInput, DashAbility.S
 
     protected override void GetFinalInput(ref DashInput input)
     {
-        var move = InputManager.Instance.Player.Move.ReadValue<Vector2>();
+        var move = PersistentClient.Instance.inputManager.Player.Move.ReadValue<Vector2>();
         input.dashDirection = move.sqrMagnitude > 0.01f ? move : Vector2.up;
     }
 
     protected override void UpdateInput(ref DashInput input)
     {
-        input.dash |= InputManager.Instance.Player.UseAbility.WasPressedThisFrame();
+        input.dash |= PersistentClient.Instance.inputManager.Player.UseAbility.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref DashInput input)

@@ -184,7 +184,7 @@ public class NetworkedAnimation : PredictedIdentity<NetworkedAnimation.AnimInput
 
     protected override void GetFinalInput(ref AnimInput input)
     {
-        input.moveDirection = InputManager.Instance.Player.Move.ReadValue<Vector2>();
+        input.moveDirection = PersistentClient.Instance.inputManager.Player.Move.ReadValue<Vector2>();
     }
 
     protected override void SanitizeInput(ref AnimInput input)

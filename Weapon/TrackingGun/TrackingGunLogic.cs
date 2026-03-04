@@ -17,7 +17,7 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
     [SerializeField] private LayerMask _shotLayerMask;
 
     [Header("References")]
-    [SerializeField] private PlayerMovementLegacyV1 _playerMovement;
+    [SerializeField] private PlayerMovement _playerMovement;
 
     public float shootCooldown => 1 / _fireRate;
 
@@ -203,8 +203,8 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
 
     protected override void UpdateInput(ref ShootInput input)
     {
-        input.shoot |= InputManager.Instance.Player.Attack.IsPressed();
-        input.reload |= InputManager.Instance.Player.Reload.WasPressedThisFrame();
+        input.shoot |= PersistentClient.Instance.inputManager.Player.Attack.IsPressed();
+        input.reload |= PersistentClient.Instance.inputManager.Player.Reload.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref ShootInput input)

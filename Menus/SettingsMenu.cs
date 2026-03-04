@@ -48,11 +48,10 @@ public class SettingsMenu : MonoBehaviour
     public void SetState(bool value)
     {
         _canvas.gameObject.SetActive(value);
-
         if (value) LoadSettingsToUI();
 
         PersistentClient.ModifyCursorUnlockList(value, this);
-        InputManager.Instance.ModifyPlayerControlsLockList(value, this);
+        PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(value, this);
     }
 
     #region onenable/disable subscriptions

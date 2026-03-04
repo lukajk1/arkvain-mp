@@ -345,7 +345,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     protected override void UpdateInput(ref MoveInput input)
     {
         // if a or/(|=) b, a = true
-        input.jump |= InputManager.Instance.Player.Jump.IsPressed();
+        input.jump |= PersistentClient.Instance.inputManager.Player.Jump.IsPressed();
 
         if (_pendingBlink.HasValue)
         {
@@ -358,7 +358,7 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
     // this runs each tick (as opposed to each frame)
     protected override void GetFinalInput(ref MoveInput input)
     {
-        input.moveDirection = InputManager.Instance.Player.Move.ReadValue<UnityEngine.Vector2>();
+        input.moveDirection = PersistentClient.Instance.inputManager.Player.Move.ReadValue<UnityEngine.Vector2>();
         input.cameraForward = _camera.forward;
     }
 

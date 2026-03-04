@@ -7,41 +7,27 @@ using UnityEditor;
 
 public class NewMonoBehaviourScript : MonoBehaviour
 {
-    [SerializeField] private Button play;
+    [SerializeField] private Button browse;
+    [SerializeField] private Button host;
     [SerializeField] private Button options;
     [SerializeField] private Button quit;
-    #if UNITY_EDITOR
-    [SerializeField] private SceneAsset playSceneAsset;
-    #endif
-    private string playSceneName;
-
-    #if UNITY_EDITOR
-    void OnValidate()
-    {
-        if (playSceneAsset != null)
-        {
-            playSceneName = playSceneAsset.name;
-        }
-    }
-    #endif
 
     void OnEnable()
     {
-        play.onClick.AddListener(OnPlayButtonClicked);
-        options.onClick.AddListener(OnOptionsButtonClicked);
-        quit.onClick.AddListener(OnQuitButtonClicked);
+        if (host != null) host.onClick.AddListener(OnHostButtonClicked);
+        if (options != null) options.onClick.AddListener(OnOptionsButtonClicked);
+        if (quit != null) quit.onClick.AddListener(OnQuitButtonClicked);
     }
 
     void OnDisable()
     {
-        play.onClick.RemoveListener(OnPlayButtonClicked);
-        options.onClick.RemoveListener(OnOptionsButtonClicked);
-        quit.onClick.RemoveListener(OnQuitButtonClicked);
+        if (host != null) host.onClick.RemoveListener(OnHostButtonClicked);
+        if (options != null) options.onClick.RemoveListener(OnOptionsButtonClicked);
+        if (quit != null) quit.onClick.RemoveListener(OnQuitButtonClicked);
     }
 
-    private void OnPlayButtonClicked()
+    private void OnHostButtonClicked()
     {
-        SceneManager.LoadScene(playSceneName);
     }
 
     private void OnOptionsButtonClicked()

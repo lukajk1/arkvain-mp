@@ -122,11 +122,11 @@ public class ViewmodelSway : MonoBehaviour
     private void GetInput()
     {
         // Get movement input
-        Vector2 moveInput = InputManager.Instance.Player.Move.ReadValue<Vector2>();
+        Vector2 moveInput = PersistentClient.Instance.inputManager.Player.Move.ReadValue<Vector2>();
         _walkInput = moveInput.normalized;
 
         // Get look input (mouse delta)
-        Vector2 lookDelta = InputManager.Instance.Player.Look.ReadValue<Vector2>();
+        Vector2 lookDelta = PersistentClient.Instance.inputManager.Player.Look.ReadValue<Vector2>();
         _lookInput = lookDelta;
     }
 

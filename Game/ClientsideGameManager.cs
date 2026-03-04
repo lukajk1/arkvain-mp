@@ -25,15 +25,4 @@ public class ClientsideGameManager : MonoBehaviour
     // the distance at which to stop rendering environmental hit effects
     public static float maxVFXDistance = 38f;
 
-    private void Start()
-    {
-        PersistentClient.SetDefaultCursorState(CursorLockMode.Locked);
-    }
-
-    private void OnDestroy()
-    {
-        // Restore default to Confined when leaving game scene
-        PersistentClient.SetDefaultCursorState(CursorLockMode.Confined);
-    }
-
 }

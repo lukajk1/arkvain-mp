@@ -7,12 +7,11 @@ public class PersistentClient : MonoBehaviour
 {
     public static PersistentClient Instance { get; private set; }
 
-    [SerializeField] public InputManager inputManager;
+    [SerializeField] private InputManager inputManager;
+    public static InputManager InputManager => Instance?.inputManager;
 
     public static float cm360;
     public static float playerDPI;
-
-    private static CursorLockMode _cursorDefaultState;
 
     private static CursorLockMode _cursorLockState;
     public static CursorLockMode CursorLockState
@@ -40,7 +39,7 @@ public class PersistentClient : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        _cursorDefaultState = CursorLockMode.None;
+        Debug.Log(inputManager);
     }
     void OnEnable()
     {
@@ -69,23 +68,15 @@ public class PersistentClient : MonoBehaviour
     }
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == "Lobby")
-        {
-            SetDefaultCursorState(CursorLockMode.None);
-        }
     }
-    public static void SetDefaultCursorState(CursorLockMode state)
+
+    public void SetCursorToPlayMode(bool value)
     {
-        _cursorDefaultState = state;
-
-        // Reapply cursor state if no overrides are active
-        if (cursorLockList.Count == 0)
-        {
-            CursorLockState = _cursorDefaultState;
-        }
+        inputManager.ModifyPlayerControlsLockList(value, this);
+        ModifyCursorUnlockList(value, this);
     }
 
-    public static void ModifyCursorUnlockList(bool isAdding, object obj)
+    private static void ModifyCursorUnlockList(bool isAdding, object obj)
     {
         if (isAdding)
         {
@@ -103,7 +94,7 @@ public class PersistentClient : MonoBehaviour
         }
         else
         {
-            CursorLockState = _cursorDefaultState;
+            CursorLockState = CursorLockMode.Locked;
         }
     }
 

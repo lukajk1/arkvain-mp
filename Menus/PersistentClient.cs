@@ -8,6 +8,9 @@ public class PersistentClient : MonoBehaviour
     public static PersistentClient Instance { get; private set; }
     [SerializeField] public InputManager inputManager;
 
+    [Header("Scene References")]
+    [SerializeField] public SceneNameHolder gameScene;
+
     public static float cm360;
     public static float playerDPI;
 
@@ -64,12 +67,16 @@ public class PersistentClient : MonoBehaviour
     }
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        if (scene.name == gameScene.sceneName)
+        {
+            SetCursorToPlayMode(true);
+        }
     }
 
     public void SetCursorToPlayMode(bool value)
     {
-        PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(value, this);
-        ModifyCursorUnlockList(value, this);
+        PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(!value, this);
+        ModifyCursorUnlockList(!value, this);
     }
 
     private static void ModifyCursorUnlockList(bool isAdding, object obj)

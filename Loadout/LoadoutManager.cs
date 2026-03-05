@@ -1,5 +1,9 @@
-using UnityEngine;
+using Heathen.SteamworksIntegration;
+using PurrLobby;
+using Steamworks;
 using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 public enum HeroType
 {
@@ -20,15 +24,16 @@ public struct LoadoutSelection
     public WeaponType Weapon;
 }
 
-public class Loadout : MonoBehaviour
+public class LoadoutManager : MonoBehaviour
 {
     [SerializeField] private Canvas canvas;
 
     [SerializeField] private TMP_Dropdown heroDropdown;
     [SerializeField] private TMP_Dropdown weaponDropdown;
+    [SerializeField] private Button closeButton;
 
     public static LoadoutSelection CurrentLoadout;
-    public static Loadout Instance { get; private set; }
+    public static LoadoutManager Instance { get; private set; }
 
     private void Awake()
     {
@@ -43,8 +48,20 @@ public class Loadout : MonoBehaviour
         }
     }
 
+    void OnEnable()
+    {
+        if (closeButton != null) closeButton.onClick.AddListener(CloseClicked);
+    }
+
+    void OnDisable()
+    {
+        if (closeButton != null) closeButton.onClick.RemoveListener(CloseClicked);
+    }
+
     void Start()
     {
+        SetState(false);
+
         if (heroDropdown != null)
         {
             heroDropdown.onValueChanged.AddListener(OnHeroChanged);
@@ -58,6 +75,15 @@ public class Loadout : MonoBehaviour
         }
     }
 
+    public void SetState(bool value)
+    {
+        canvas.gameObject.SetActive(value); 
+    }
+
+    private void CloseClicked()
+    {
+        SetState(false);
+    }
     private void OnHeroChanged(int index)
     {
         CurrentLoadout.Hero = (HeroType)index;

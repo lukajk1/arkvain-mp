@@ -52,10 +52,10 @@ public struct GameSettingsData
             FOV = 80,
 
             vsyncEnabled = true,
-            targetFrameRate = (int)Screen.currentResolution.refreshRateRatio.value,
+            targetFrameRate = 60,
             windowMode = WindowMode.Borderless,
-            resolutionWidth = Screen.currentResolution.width,
-            resolutionHeight = Screen.currentResolution.height
+            resolutionWidth = 1920,
+            resolutionHeight = 1080
         };
     }
 }
@@ -125,8 +125,13 @@ public class GameSettings : ScriptableObject
             }
             else
             {
-                Debug.Log("No settings file found, using defaults");
-                ResetToDefaults();
+                Debug.Log("No settings file found, using defaults with current screen resolution");
+                data = GameSettingsData.GetDefaults();
+                // Override resolution defaults with actual screen values
+                data.targetFrameRate = (int)Screen.currentResolution.refreshRateRatio.value;
+                data.resolutionWidth = Screen.currentResolution.width;
+                data.resolutionHeight = Screen.currentResolution.height;
+                SaveToFile();
             }
         }
         catch (System.Exception e)
@@ -215,6 +220,10 @@ public class GameSettings : ScriptableObject
     public void ResetToDefaults()
     {
         data = GameSettingsData.GetDefaults();
+        // Override resolution defaults with actual screen values
+        data.targetFrameRate = (int)Screen.currentResolution.refreshRateRatio.value;
+        data.resolutionWidth = Screen.currentResolution.width;
+        data.resolutionHeight = Screen.currentResolution.height;
         SaveToFile();
         ApplySettings();
     }

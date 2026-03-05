@@ -6,9 +6,7 @@ using UnityEngine.SceneManagement;
 public class PersistentClient : MonoBehaviour
 {
     public static PersistentClient Instance { get; private set; }
-
-    [SerializeField] private InputManager inputManager;
-    public static InputManager InputManager => Instance?.inputManager;
+    [SerializeField] public InputManager inputManager;
 
     public static float cm360;
     public static float playerDPI;
@@ -38,8 +36,6 @@ public class PersistentClient : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-
-        Debug.Log(inputManager);
     }
     void OnEnable()
     {
@@ -72,7 +68,7 @@ public class PersistentClient : MonoBehaviour
 
     public void SetCursorToPlayMode(bool value)
     {
-        inputManager.ModifyPlayerControlsLockList(value, this);
+        PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(value, this);
         ModifyCursorUnlockList(value, this);
     }
 

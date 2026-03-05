@@ -4,12 +4,24 @@ using UnityEngine;
 public class InputManager : MonoBehaviour
 {
     private InputSystem_Actions _actions;
-
     public InputSystem_Actions.PlayerActions Player => _actions.Player;
     public InputSystem_Actions.UIActions UI => _actions.UI;
 
     // Track what's locking player controls (merged from LockActionMap)
     private readonly HashSet<object> _playerControlsLocks = new HashSet<object>();
+
+    private bool initialized;
+    private void Awake()
+    {
+        // child of persistentclient -- doesn't have to check for uniqueness 
+        if (!initialized)
+        {
+            _actions = new InputSystem_Actions();
+            _actions.Player.Enable();
+            _actions.UI.Enable();
+            initialized = true;
+        }
+    }
     private void OnDestroy()
     {
         _actions?.Dispose();

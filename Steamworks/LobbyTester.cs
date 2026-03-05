@@ -12,6 +12,10 @@ public class LobbyTester : MonoBehaviour
     [SerializeField] private Button createLobbyButton;
     [SerializeField] private Button searchLobbiesButton;
     [SerializeField] private TMP_Text resultsText;
+    [SerializeField] private TMP_InputField chatInputField;
+    [SerializeField] private Button sendChatButton;
+    [SerializeField] private TMP_Text chatHistoryText;
+    [SerializeField] private Slider refreshProgressSlider;
 
     [Header("Lobby Settings")]
     [SerializeField] private int maxMembers = 4;
@@ -25,6 +29,8 @@ public class LobbyTester : MonoBehaviour
     private LobbyData _currentLobby;
     private float _lastSearchTime;
     private List<LobbyData> _searchResults = new List<LobbyData>();
+    private Callback<LobbyChatMsg_t> _lobbyChatMsgCallback;
+    private string _chatHistory = "";
 
     private void Start()
     {
@@ -34,14 +40,35 @@ public class LobbyTester : MonoBehaviour
         if (searchLobbiesButton != null)
             searchLobbiesButton.onClick.AddListener(OnSearchLobbiesClicked);
 
+        if (sendChatButton != null)
+            sendChatButton.onClick.AddListener(OnSendChatClicked);
+
+        // Subscribe to lobby chat messages
+        _lobbyChatMsgCallback = Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessage);
+
         UpdateResultsText("Ready to create or search lobbies.");
+        UpdateChatHistory("");
     }
 
     private void Update()
     {
-        if (autoRefresh && Time.time - _lastSearchTime >= refreshInterval)
+        if (autoRefresh)
         {
-            SearchForLobbies();
+            float timeSinceLastSearch = Time.time - _lastSearchTime;
+            float progress = Mathf.Clamp01(timeSinceLastSearch / refreshInterval);
+
+            if (refreshProgressSlider != null)
+                refreshProgressSlider.value = progress;
+
+            if (timeSinceLastSearch >= refreshInterval)
+            {
+                SearchForLobbies();
+            }
+        }
+        else
+        {
+            if (refreshProgressSlider != null)
+                refreshProgressSlider.value = 0f;
         }
     }
 
@@ -195,6 +222,78 @@ public class LobbyTester : MonoBehaviour
         }
     }
 
+    private void OnSendChatClicked()
+    {
+        if (!_currentLobby.IsValid)
+        {
+            Debug.LogWarning("[LobbyTester] Not in a lobby. Cannot send chat message.");
+            return;
+        }
+
+        if (chatInputField == null || string.IsNullOrEmpty(chatInputField.text))
+        {
+            Debug.LogWarning("[LobbyTester] Chat message is empty.");
+            return;
+        }
+
+        SendChatMessage(chatInputField.text);
+        chatInputField.text = "";
+    }
+
+    private void SendChatMessage(string message)
+    {
+        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
+        bool success = SteamMatchmaking.SendLobbyChatMsg(_currentLobby, messageBytes, messageBytes.Length);
+
+        if (success)
+        {
+            Debug.Log($"[LobbyTester] Sent chat message: {message}");
+        }
+        else
+        {
+            Debug.LogError("[LobbyTester] Failed to send chat message.");
+        }
+    }
+
+    private void OnLobbyChatMessage(LobbyChatMsg_t callback)
+    {
+        // Get the message data
+        byte[] data = new byte[4096];
+        CSteamID senderId;
+        EChatEntryType chatType;
+
+        int messageLength = SteamMatchmaking.GetLobbyChatEntry(
+            new CSteamID(callback.m_ulSteamIDLobby),
+            (int)callback.m_iChatID,
+            out senderId,
+            data,
+            data.Length,
+            out chatType
+        );
+
+        if (messageLength > 0)
+        {
+            // Convert bytes to string
+            string message = System.Text.Encoding.UTF8.GetString(data, 0, messageLength);
+
+            // Get sender name
+            UserData sender = senderId;
+            string senderName = sender.Name;
+
+            string chatLine = $"[{senderName}]: {message}";
+            _chatHistory += chatLine + "\n";
+            UpdateChatHistory(_chatHistory);
+
+            Debug.Log($"[LobbyTester] Chat message received: {chatLine}");
+        }
+    }
+
+    private void UpdateChatHistory(string history)
+    {
+        if (chatHistoryText != null)
+            chatHistoryText.text = history;
+    }
+
     private void OnDestroy()
     {
         if (createLobbyButton != null)
@@ -202,5 +301,8 @@ public class LobbyTester : MonoBehaviour
 
         if (searchLobbiesButton != null)
             searchLobbiesButton.onClick.RemoveListener(OnSearchLobbiesClicked);
+
+        if (sendChatButton != null)
+            sendChatButton.onClick.RemoveListener(OnSendChatClicked);
     }
 }

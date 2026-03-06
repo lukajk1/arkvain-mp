@@ -8,8 +8,8 @@ using UnityEditor;
 public class MainMenu : MonoBehaviour
 {
     [Header("Elements")]
-    [SerializeField] private Button browse;
     [SerializeField] private Button host;
+    [SerializeField] private Button browse;
     [SerializeField] private Button customize;
     [SerializeField] private Button options;
     [SerializeField] private Button quit;

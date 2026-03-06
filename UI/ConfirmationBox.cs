@@ -70,12 +70,12 @@ public class ConfirmationBox : MonoBehaviour
     private void OnConfirmClicked()
     {
         _onConfirm?.Invoke();
-        Destroy(gameObject);
+        Destroy(transform.root.gameObject);
     }
 
     private void OnCancelClicked()
     {
         _onCancel?.Invoke();
-        Destroy(gameObject);
+        Destroy(transform.root.gameObject);
     }
 }

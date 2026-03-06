@@ -12,6 +12,7 @@ public class LobbyTester : MonoBehaviour
     [SerializeField] private Button createLobbyButton;
     [SerializeField] private Button searchLobbiesButton;
     [SerializeField] private TMP_Text resultsText;
+    [SerializeField] private TMP_InputField lobbyCodeInputField;
     [SerializeField] private TMP_InputField chatInputField;
     [SerializeField] private Button sendChatButton;
     [SerializeField] private TMP_Text chatHistoryText;
@@ -93,13 +94,21 @@ public class LobbyTester : MonoBehaviour
         lobby["game_mode"] = "Test Mode";
         lobby["map"] = "Test Map";
 
+        // Display lobby code in the input field for easy copying
+        string lobbyCode = lobby.HexId;
+        if (lobbyCodeInputField != null)
+        {
+            lobbyCodeInputField.text = lobbyCode;
+        }
+
         UpdateResultsText($"Lobby Created Successfully!\n" +
                          $"Lobby ID: {lobby.SteamId}\n" +
+                         $"Lobby Code: {lobbyCode}\n" +
                          $"Type: {lobbyType}\n" +
                          $"Max Members: {maxMembers}\n" +
                          $"Owner: {lobby.Owner.user.Name}");
 
-        Debug.Log($"[LobbyTester] Created lobby with ID: {lobby.SteamId}");
+        Debug.Log($"[LobbyTester] Created lobby with ID: {lobby.SteamId}, Code: {lobbyCode}");
     }
 
     private void OnSearchLobbiesClicked()

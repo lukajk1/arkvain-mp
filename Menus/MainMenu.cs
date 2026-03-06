@@ -17,6 +17,7 @@ public class MainMenu : MonoBehaviour
     [Header("Classes")]
     [SerializeField] private LobbyCreator lobbyCreator;
     [SerializeField] private ServerBrowser serverBrowser;
+    [SerializeField] private SettingsMenu settingsMenu;
     
 
     void OnEnable()
@@ -52,7 +53,10 @@ public class MainMenu : MonoBehaviour
 
     private void OnOptionsButtonClicked()
     {
-        // Handle options button click
+        if (settingsMenu != null)
+        {
+            settingsMenu.SetState(true);    
+        }
     }
 
     private void OnCustomizeButtonClicked()

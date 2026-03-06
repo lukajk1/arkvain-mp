@@ -39,10 +39,13 @@ public class SettingsMenu : MonoBehaviour
     [SerializeField] private Button _saveButton;
     [SerializeField] private Button _resetButton;
 
+    private void Awake()
+    {
+        SetState(false);
+    }
     private void Start()
     {
         PopulateResolutionDropdown();
-        SetState(false);
     }
 
     public void SetState(bool value)
@@ -473,7 +476,7 @@ public class SettingsMenu : MonoBehaviour
         GameSettings.Instance.ApplySettings();
         GameSettings.Instance.SaveToFile();
         SetState(false);
-        _escapeMenu.SetState(false);
+        if (_escapeMenu != null) _escapeMenu.SetState(false);
     }
 
     private void OnResetClicked()

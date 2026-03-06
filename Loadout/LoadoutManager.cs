@@ -46,6 +46,8 @@ public class LoadoutManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+
+        SetState(false);
     }
 
     void OnEnable()

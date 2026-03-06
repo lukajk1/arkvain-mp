@@ -5,12 +5,12 @@ using TMPro;
 
 public class ServerBrowser : MonoBehaviour
 {
+    [SerializeField] private Canvas canvas;
     [SerializeField] private GameObject serverRowPrefab;
     [SerializeField] private Transform contentParent; // The "Content" GameObject of ScrollView
     [SerializeField] private TMP_Text refreshTimerText;
     [SerializeField] private UnityEngine.UI.Button refreshButton;
     [SerializeField] private UnityEngine.UI.Button backButton;
-    [SerializeField] private Canvas canvas;
     [SerializeField] private TMP_InputField joinCodeInputField;
 
     [Header("Auto Refresh Settings")]
@@ -20,6 +20,10 @@ public class ServerBrowser : MonoBehaviour
     private List<GameObject> activeRows = new List<GameObject>();
     private float _lastRefreshTime;
 
+    private void Awake()
+    {
+        SetState(false);
+    }
     void Start()
     {
         if (refreshButton != null)
@@ -36,7 +40,7 @@ public class ServerBrowser : MonoBehaviour
     {
         if (canvas != null)
         {
-            canvas.gameObject.SetActive(false);
+            canvas.gameObject.SetActive(value);
         }
     }
 

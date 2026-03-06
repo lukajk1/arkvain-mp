@@ -15,7 +15,7 @@ public class MainMenu : MonoBehaviour
     [SerializeField] private Button quit;
 
     [Header("Classes")]
-    [SerializeField] private LobbyCreator lobbyCreator;
+    [SerializeField] private LobbyManager lobbyCreator;
     [SerializeField] private ServerBrowser serverBrowser;
     [SerializeField] private SettingsMenu settingsMenu;
     

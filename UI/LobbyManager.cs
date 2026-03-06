@@ -5,7 +5,7 @@ using Heathen.SteamworksIntegration;
 using Steamworks;
 using API = Heathen.SteamworksIntegration.API;
 
-public class LobbyCreator : MonoBehaviour
+public class LobbyManager : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private Canvas canvas;

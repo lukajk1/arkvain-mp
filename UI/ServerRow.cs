@@ -26,23 +26,7 @@ public class ServerRow : MonoBehaviour
 
     private void ConfigureTextOverflow()
     {
-        if (serverNameText != null)
-        {
-            serverNameText.overflowMode = TextOverflowModes.Ellipsis;
-            serverNameText.textWrappingMode = TextWrappingModes.NoWrap;
-        }
-
-        if (gameModeText != null)
-        {
-            gameModeText.overflowMode = TextOverflowModes.Ellipsis;
-            gameModeText.textWrappingMode = TextWrappingModes.NoWrap;
-        }
-
-        if (mapText != null)
-        {
-            mapText.overflowMode = TextOverflowModes.Ellipsis;
-            mapText.textWrappingMode = TextWrappingModes.NoWrap;
-        }
+        TextUtilities.ConfigureEllipsisOverflow(serverNameText, gameModeText, mapText);
     }
 
     public void Setup(LobbyData lobby)

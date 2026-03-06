@@ -3,6 +3,7 @@ using UnityEngine;
 public class InitializeSteamworksHeathen : MonoBehaviour
 {
     [SerializeField] private GameObject confirmationBox;
+    public static bool SteamInitialized;
 
     private void Awake()
     {
@@ -26,7 +27,7 @@ public class InitializeSteamworksHeathen : MonoBehaviour
 
         if (SteamTools.Interface.IsReady)
         {
-            // Ready to go
+            SteamInitialized = true;
         }
         else
         {
@@ -37,6 +38,6 @@ public class InitializeSteamworksHeathen : MonoBehaviour
 
     private void Interface_OnReady()
     {
-        // Ready now
+        SteamInitialized = true;
     }
 }

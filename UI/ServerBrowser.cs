@@ -42,6 +42,8 @@ public class ServerBrowser : MonoBehaviour
         {
             canvas.gameObject.SetActive(value);
         }
+
+        if (value) RefreshServerList();
     }
 
     void Update()

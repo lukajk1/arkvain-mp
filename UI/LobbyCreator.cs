@@ -69,7 +69,7 @@ public class LobbyCreator : MonoBehaviour
         _currentLobby = lobby;
 
         // Set lobby name from input field, or use owner's Steam name as default
-        string lobbyName = lobby.Owner.user.Name;
+        string lobbyName = $"{lobby.Owner.user.Name}'s Lobby";
         if (lobbyNameInputField != null && !string.IsNullOrEmpty(lobbyNameInputField.text))
         {
             lobbyName = lobbyNameInputField.text;

@@ -199,9 +199,9 @@ public class GameSettings : ScriptableObject
         }
 
         // Apply audio settings via AudioManager
-        if (AudioManager.Instance != null)
+        if (AudioMixerManager.Instance != null)
         {
-            AudioManager.Instance.ApplyVolumeSettings();
+            AudioMixerManager.Instance.ApplyVolumeSettings();
         }
 
         // Apply input settings to ClientGame static fields

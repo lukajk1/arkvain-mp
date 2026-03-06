@@ -21,13 +21,8 @@ public class SoundManager : MonoBehaviour
     private void Awake()
     {
         if (i == null) { 
-        i = this;
-        DontDestroyOnLoad(gameObject);
+            i = this;
         }
-        else
-        {
-            Destroy(gameObject);
-            }
 
         InitializePool();
     }

@@ -231,7 +231,7 @@ public class SettingsMenu : MonoBehaviour
         }
 
         // Apply immediately for preview
-        AudioManager.Instance?.SetMasterVolume(value);
+        AudioMixerManager.Instance?.SetMasterVolume(value);
     }
 
     private void OnMasterVolumeInputChanged(string text)
@@ -257,7 +257,7 @@ public class SettingsMenu : MonoBehaviour
             }
 
             // Apply immediately for preview
-            AudioManager.Instance?.SetMasterVolume(volumeFloat);
+            AudioMixerManager.Instance?.SetMasterVolume(volumeFloat);
         }
         else
         {
@@ -272,13 +272,13 @@ public class SettingsMenu : MonoBehaviour
     private void OnMusicVolumeChanged(float value)
     {
         GameSettings.Instance.data.musicVolume = value;
-        AudioManager.Instance?.SetMusicVolume(value);
+        AudioMixerManager.Instance?.SetMusicVolume(value);
     }
 
     private void OnSFXVolumeChanged(float value)
     {
         GameSettings.Instance.data.sfxVolume = value;
-        AudioManager.Instance?.SetSFXVolume(value);
+        AudioMixerManager.Instance?.SetSFXVolume(value);
     }
 
     // Input callbacks

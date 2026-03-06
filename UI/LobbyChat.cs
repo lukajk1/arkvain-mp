@@ -11,6 +11,9 @@ public class LobbyChat : MonoBehaviour
     [SerializeField] private TMP_Text chatHistoryText;
     [SerializeField] private ScrollRect chatScrollRect;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip onNewMessageClip;
+
     [Header("Chat Settings")]
     [SerializeField] private int maxMessages = 100;
 
@@ -113,6 +116,7 @@ public class LobbyChat : MonoBehaviour
             ScrollToBottom();
 
             Debug.Log($"[LobbyChat] Chat message received: {chatLine}");
+            SoundManager.PlayNonDiegetic(onNewMessageClip);
         }
     }
 

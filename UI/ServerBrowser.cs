@@ -9,6 +9,9 @@ public class ServerBrowser : MonoBehaviour
     [SerializeField] private Transform contentParent; // The "Content" GameObject of ScrollView
     [SerializeField] private TMP_Text refreshTimerText;
     [SerializeField] private UnityEngine.UI.Button refreshButton;
+    [SerializeField] private UnityEngine.UI.Button backButton;
+    [SerializeField] private Canvas canvas;
+    [SerializeField] private TMP_InputField joinCodeInputField;
 
     [Header("Auto Refresh Settings")]
     [SerializeField] private bool autoRefresh = true;
@@ -21,10 +24,27 @@ public class ServerBrowser : MonoBehaviour
     {
         if (refreshButton != null)
             refreshButton.onClick.AddListener(OnRefreshButtonClicked);
+
+        if (backButton != null)
+            backButton.onClick.AddListener(OnBackButtonClicked);
+
+        if (joinCodeInputField != null)
+            joinCodeInputField.onSubmit.AddListener(OnJoinCodeSubmitted);
+    }
+
+    public void SetState(bool value)
+    {
+        if (canvas != null)
+        {
+            canvas.gameObject.SetActive(false);
+        }
     }
 
     void Update()
     {
+        // don't refresh when not visible
+        if (!canvas.gameObject.activeSelf) return;
+
         if (autoRefresh)
         {
             float timeSinceLastRefresh = Time.time - _lastRefreshTime;
@@ -94,6 +114,45 @@ public class ServerBrowser : MonoBehaviour
         RefreshServerList();
     }
 
+    private void OnBackButtonClicked()
+    {
+        SetState(false);
+    }
+
+    private void OnJoinCodeSubmitted(string lobbyCode)
+    {
+        if (string.IsNullOrEmpty(lobbyCode))
+        {
+            Debug.LogWarning("[ServerBrowser] Lobby code is empty!");
+            return;
+        }
+
+        Debug.Log($"[ServerBrowser] Attempting to join lobby with code: {lobbyCode}");
+
+        // Use the static Join method that accepts a string (HexId)
+        LobbyData.Join(lobbyCode, (enterData, ioError) =>
+        {
+            if (ioError)
+            {
+                Debug.LogError($"[ServerBrowser] Failed to join lobby: IO Error");
+                return;
+            }
+
+            if (enterData.Response == Steamworks.EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+            {
+                Debug.Log($"[ServerBrowser] Successfully joined lobby via code!");
+
+                // Clear the input field on success
+                if (joinCodeInputField != null)
+                    joinCodeInputField.text = "";
+            }
+            else
+            {
+                Debug.LogWarning($"[ServerBrowser] Failed to join lobby: {enterData.Response}");
+            }
+        });
+    }
+
     public void RefreshServerList()
     {
         _lastRefreshTime = Time.time;
@@ -118,5 +177,11 @@ public class ServerBrowser : MonoBehaviour
     {
         if (refreshButton != null)
             refreshButton.onClick.RemoveListener(OnRefreshButtonClicked);
+
+        if (backButton != null)
+            backButton.onClick.RemoveListener(OnBackButtonClicked);
+
+        if (joinCodeInputField != null)
+            joinCodeInputField.onSubmit.RemoveListener(OnJoinCodeSubmitted);
     }
 }

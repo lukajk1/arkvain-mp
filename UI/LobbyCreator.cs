@@ -46,6 +46,7 @@ public class LobbyCreator : MonoBehaviour
         // Set some test metadata
         lobby["game_mode"] = "Test Mode";
         lobby["map"] = "Test Map";
+        lobby.Name = "a long name to test the overflow";
 
         // Display lobby code in the input field for easy copying
         string lobbyCode = lobby.HexId;

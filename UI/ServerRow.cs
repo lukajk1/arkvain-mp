@@ -19,6 +19,30 @@ public class ServerRow : MonoBehaviour
     {
         if (joinButton != null)
             joinButton.onClick.AddListener(OnJoinClicked);
+
+        // Configure text overflow for text fields
+        ConfigureTextOverflow();
+    }
+
+    private void ConfigureTextOverflow()
+    {
+        if (serverNameText != null)
+        {
+            serverNameText.overflowMode = TextOverflowModes.Ellipsis;
+            serverNameText.textWrappingMode = TextWrappingModes.NoWrap;
+        }
+
+        if (gameModeText != null)
+        {
+            gameModeText.overflowMode = TextOverflowModes.Ellipsis;
+            gameModeText.textWrappingMode = TextWrappingModes.NoWrap;
+        }
+
+        if (mapText != null)
+        {
+            mapText.overflowMode = TextOverflowModes.Ellipsis;
+            mapText.textWrappingMode = TextWrappingModes.NoWrap;
+        }
     }
 
     public void Setup(LobbyData lobby)

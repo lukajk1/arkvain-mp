@@ -12,6 +12,7 @@ public class LobbyCreator : MonoBehaviour
     [SerializeField] private TMP_InputField lobbyCodeInputField;
     [SerializeField] private TMP_InputField lobbyNameInputField;
     [SerializeField] private TMP_Text statusText;
+    [SerializeField] private TMP_Text memberListText;
     [SerializeField] private Button backButton;
 
     [Header("Lobby Settings")]
@@ -25,8 +26,19 @@ public class LobbyCreator : MonoBehaviour
     }
     void Start()
     {
-
         UpdateStatusText("Ready to create lobby.");
+
+        if (lobbyNameInputField != null)
+            lobbyNameInputField.onSubmit.AddListener(OnLobbyNameSubmitted);
+    }
+
+    void Update()
+    {
+        // Update member list if in a lobby
+        if (_currentLobby.IsValid)
+        {
+            UpdateMemberList();
+        }
     }
     void OnEnable()
     {
@@ -36,11 +48,32 @@ public class LobbyCreator : MonoBehaviour
     void OnDisable()
     {
         if (backButton != null) backButton.onClick.RemoveListener(OnBackButtonClicked);
+
+        if (lobbyNameInputField != null)
+            lobbyNameInputField.onSubmit.RemoveListener(OnLobbyNameSubmitted);
     }
 
     private void OnBackButtonClicked()
     {
         SetState(false);
+    }
+
+    private void OnLobbyNameSubmitted(string newName)
+    {
+        if (!_currentLobby.IsValid)
+        {
+            Debug.LogWarning("[LobbyCreator] Not in a lobby. Cannot change name.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(newName))
+        {
+            Debug.LogWarning("[LobbyCreator] Lobby name cannot be empty.");
+            return;
+        }
+
+        _currentLobby.Name = newName;
+        Debug.Log($"[LobbyCreator] Lobby name changed to: {newName}");
     }
 
     public void SetState(bool state)
@@ -76,6 +109,12 @@ public class LobbyCreator : MonoBehaviour
         }
         lobby.Name = lobbyName;
 
+        // Populate the input field with the current lobby name
+        if (lobbyNameInputField != null)
+        {
+            lobbyNameInputField.text = lobbyName;
+        }
+
         // Set some test metadata
         lobby["game_mode"] = "Test Mode";
         lobby["map"] = "Test Map";
@@ -103,5 +142,30 @@ public class LobbyCreator : MonoBehaviour
             statusText.text = message;
 
         Debug.Log($"[LobbyCreator] {message}");
+    }
+
+    private void UpdateMemberList()
+    {
+        if (memberListText == null || !_currentLobby.IsValid)
+            return;
+
+        string memberList = $"Members ({_currentLobby.MemberCount}/{_currentLobby.MaxMembers}):\n";
+
+        foreach (var member in _currentLobby.Members)
+        {
+            string memberName = member.user.Name;
+            bool isOwner = member.user == _currentLobby.Owner.user;
+
+            if (isOwner)
+            {
+                memberList += $"[HOST] {memberName}\n";
+            }
+            else
+            {
+                memberList += $"{memberName}\n";
+            }
+        }
+
+        memberListText.text = memberList;
     }
 }

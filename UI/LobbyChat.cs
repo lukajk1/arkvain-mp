@@ -9,6 +9,10 @@ public class LobbyChat : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private TMP_InputField chatInputField;
     [SerializeField] private TMP_Text chatHistoryText;
+    [SerializeField] private ScrollRect chatScrollRect;
+
+    [Header("Chat Settings")]
+    [SerializeField] private int maxMessages = 100;
 
     private Callback<LobbyChatMsg_t> _lobbyChatMsgCallback;
     private string _chatHistory = "";
@@ -101,16 +105,45 @@ public class LobbyChat : MonoBehaviour
 
             string chatLine = $"[{senderName}]: {message}";
             _chatHistory += chatLine + "\n";
+
+            // Limit message history
+            LimitMessageHistory();
+
             UpdateChatHistory(_chatHistory);
+            ScrollToBottom();
 
             Debug.Log($"[LobbyChat] Chat message received: {chatLine}");
+        }
+    }
+
+    private void LimitMessageHistory()
+    {
+        string[] lines = _chatHistory.Split('\n');
+        if (lines.Length > maxMessages)
+        {
+            int startIndex = lines.Length - maxMessages;
+            _chatHistory = string.Join("\n", lines, startIndex, maxMessages);
         }
     }
 
     private void UpdateChatHistory(string history)
     {
         if (chatHistoryText != null)
+        {
             chatHistoryText.text = history;
+            // The tutorial mentions forcing a layout rebuild so the ScrollRect knows the new height
+            LayoutRebuilder.ForceRebuildLayoutImmediate(chatScrollRect.content);
+            ScrollToBottom();
+        }
+    }
+
+    private void ScrollToBottom()
+    {
+        if (chatScrollRect == null) return;
+
+        // Force canvas to update so the normalized position calculation is accurate
+        Canvas.ForceUpdateCanvases();
+        chatScrollRect.verticalNormalizedPosition = 0f;
     }
 
     void OnDestroy()

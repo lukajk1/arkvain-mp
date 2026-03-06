@@ -177,7 +177,7 @@ public class GameSettings : ScriptableObject
             Application.targetFrameRate = -1; // Let VSync control frame rate
         }
 
-        Debug.Log($"Applied settings - VSync: {data.vsyncEnabled}, TargetFPS: {Application.targetFrameRate}, QualityVSync: {QualitySettings.vSyncCount}");
+        //Debug.Log($"Applied settings - VSync: {data.vsyncEnabled}, TargetFPS: {Application.targetFrameRate}, QualityVSync: {QualitySettings.vSyncCount}");
 
         // Apply resolution (skip in editor to avoid issues)
         #if !UNITY_EDITOR

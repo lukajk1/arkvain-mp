@@ -1,5 +1,6 @@
 using PurrNet;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -32,16 +33,21 @@ public class MatchSessionManager : NetworkBehaviour
 
     private void Start()
     {
-        var networkManager = NetworkManager.main;
-        if (networkManager != null && networkManager.playerModule != null)
+        StartCoroutine(WaitForPlayerModule());
+    }
+
+    private IEnumerator WaitForPlayerModule()
+    {
+        // Wait until NetworkManager and playerModule are initialized
+        while (NetworkManager.main == null || NetworkManager.main.playerModule == null)
         {
-            networkManager.playerModule.onPlayerJoined += OnPlayerJoinedNetwork;
-            networkManager.playerModule.onPlayerLeft += OnPlayerLeftNetwork;
+            Debug.Log("[MatchSessionManager] Waiting for NetworkManager.playerModule to initialize...");
+            yield return new WaitForSeconds(0.1f);
         }
-        else
-        {
-            Debug.LogError("[MatchSessionManager] NetworkManager.main or playerModule is null!");
-        }
+
+        Debug.Log("[MatchSessionManager] PlayerModule initialized, subscribing to events");
+        NetworkManager.main.playerModule.onPlayerJoined += OnPlayerJoinedNetwork;
+        NetworkManager.main.playerModule.onPlayerLeft += OnPlayerLeftNetwork;
     }
 
     protected override void OnDestroy()

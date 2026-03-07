@@ -24,16 +24,21 @@ public class LobbyManager : MonoBehaviour
     [SerializeField] private ELobbyType lobbyType = ELobbyType.k_ELobbyTypePublic;
 
     private LobbyData _currentLobby;
+
     private void Awake()
     {
         SetState(false);
     }
+
     void Start()
     {
         UpdateStatusText("Ready to create lobby.");
 
         if (lobbyNameInputField != null)
             lobbyNameInputField.onSubmit.AddListener(OnLobbyNameSubmitted);
+
+        // Subscribe to lobby chat updates
+        SteamTools.Events.OnLobbyChatUpdate += OnLobbyChatUpdate;
     }
 
     void Update()
@@ -42,6 +47,38 @@ public class LobbyManager : MonoBehaviour
         if (_currentLobby.IsValid)
         {
             UpdateMemberList();
+            UpdateLobbyUI();
+        }
+    }
+
+    private void UpdateLobbyUI()
+    {
+        bool isHost = _currentLobby.IsOwner;
+
+        // Only host can see/click start button
+        if (startButton != null)
+            startButton.gameObject.SetActive(isHost);
+    }
+
+    private void OnLobbyChatUpdate(LobbyData lobby, UserData user, EChatMemberStateChange state)
+    {
+        if (!_currentLobby.IsValid) return;
+        if (lobby != _currentLobby) return;
+
+        // Check if someone left or disconnected
+        if (state == EChatMemberStateChange.k_EChatMemberStateChangeLeft ||
+            state == EChatMemberStateChange.k_EChatMemberStateChangeDisconnected)
+        {
+            // If the person who left is the owner, lobby is closing
+            if (user.id == _currentLobby.Owner.user.id)
+            {
+                Debug.Log("[LobbyManager] Host has closed the lobby!");
+                UpdateStatusText("Host closed the lobby.");
+
+                // Clear lobby and return to menu
+                _currentLobby = default;
+                SetState(false);
+            }
         }
     }
     void OnEnable()
@@ -57,10 +94,32 @@ public class LobbyManager : MonoBehaviour
 
         if (lobbyNameInputField != null)
             lobbyNameInputField.onSubmit.RemoveListener(OnLobbyNameSubmitted);
+
+        // Unsubscribe from lobby events
+        SteamTools.Events.OnLobbyChatUpdate -= OnLobbyChatUpdate;
     }
 
     private void OnBackButtonClicked()
     {
+        if (_currentLobby.IsValid)
+        {
+            if (_currentLobby.IsOwner)
+            {
+                // Host closes the lobby
+                Debug.Log("[LobbyManager] Host closing lobby...");
+                // Closing the lobby will kick all players
+                _currentLobby.Leave();
+            }
+            else
+            {
+                // Client leaves the lobby
+                Debug.Log("[LobbyManager] Leaving lobby...");
+                _currentLobby.Leave();
+            }
+
+            _currentLobby = default;
+        }
+
         SetState(false);
     }
 

@@ -192,6 +192,25 @@ public class MatchSessionManager : NetworkBehaviour
             .ToList();
     }
 
+    /// <summary>
+    /// Updates a player's Steam ID and name. Called by PlayerSteamIdentity when a player spawns.
+    /// </summary>
+    public void UpdatePlayerSteamInfo(PlayerID playerId, ulong steamId, string steamName)
+    {
+        if (!isServer) return;
+
+        if (_playerStats.TryGetValue(playerId, out var playerData))
+        {
+            // Update existing player data with Steam info
+            playerData.UpdateSteamInfo(steamId, steamName);
+            Debug.Log($"[MatchSessionManager] Updated Steam info for {playerId}: {steamName} ({steamId})");
+        }
+        else
+        {
+            Debug.LogWarning($"[MatchSessionManager] Player {playerId} not found in stats when updating Steam info");
+        }
+    }
+
     // Reset all stats (for new match)
     [ServerRpc(requireOwnership: false)]
     public void ResetAllStats()

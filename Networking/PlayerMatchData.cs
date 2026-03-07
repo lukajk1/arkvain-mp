@@ -45,6 +45,13 @@ public class PlayerMatchData
 
     public void SetConnected(bool connected) => IsConnected = connected;
 
+    // Update Steam info after creation
+    public void UpdateSteamInfo(ulong steamId, string steamName)
+    {
+        SteamId = steamId;
+        PlayerName = steamName;
+    }
+
     // Ping tracking with rolling average
     public void UpdatePing(float newPing)
     {

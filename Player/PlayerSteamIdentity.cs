@@ -1,36 +1,30 @@
 using PurrNet;
-using Steamworks;
+using PurrNet.Prediction;
+using Heathen.SteamworksIntegration;
 using UnityEngine;
 
 /// <summary>
 /// Sends the local player's Steam identity to the server when they spawn.
 /// Attach this to the player prefab.
 /// </summary>
-public class PlayerSteamIdentity : NetworkBehaviour
+public class PlayerSteamIdentity : PredictedIdentity<PlayerSteamIdentity.EmptyState>
 {
-    private void Start()
+    protected override void LateAwake()
     {
+        Debug.Log($"[PlayerSteamIdentity] LateAwake - isOwner: {isOwner}");
+
         // Only run on the owning client
         if (!isOwner)
             return;
 
-        // Get local Steam info
-        CSteamID localSteamId = SteamUser.GetSteamID();
-        string localSteamName = SteamFriends.GetPersonaName();
+        // Get local Steam info using Heathen (same as UserProfile)
+        UserData localUser = UserData.Me;
+        ulong localSteamId = (ulong)localUser.id;
+        string localSteamName = localUser.Name;
 
         Debug.Log($"[PlayerSteamIdentity] Sending Steam info to server: {localSteamName} ({localSteamId})");
 
-        // Send to server
-        ReportSteamInfo((ulong)localSteamId, localSteamName);
-    }
-
-    [ServerRpc(requireOwnership: false)]
-    private void ReportSteamInfo(ulong steamId, string steamName)
-    {
-        if (!isServer)
-            return;
-
-        // Get the PlayerID from the owner of this NetworkBehaviour
+        // Get PlayerID before sending
         if (!owner.HasValue)
         {
             Debug.LogError("[PlayerSteamIdentity] Owner is null!");
@@ -39,6 +33,13 @@ public class PlayerSteamIdentity : NetworkBehaviour
 
         PlayerID playerId = owner.Value;
 
+        // Send to server with PlayerID included
+        ReportSteamInfo(playerId, localSteamId, localSteamName);
+    }
+
+    [ServerRpc(requireOwnership: false)]
+    private static void ReportSteamInfo(PlayerID playerId, ulong steamId, string steamName)
+    {
         Debug.Log($"[PlayerSteamIdentity] Server received Steam info for PlayerID {playerId}: {steamName} ({steamId})");
 
         // Update MatchSessionManager with Steam info
@@ -50,5 +51,11 @@ public class PlayerSteamIdentity : NetworkBehaviour
         {
             Debug.LogError("[PlayerSteamIdentity] MatchSessionManager.Instance is null!");
         }
+    }
+
+    // Empty state struct - required by PredictedIdentity but unused
+    public struct EmptyState : IPredictedData<EmptyState>
+    {
+        public void Dispose() { }
     }
 }

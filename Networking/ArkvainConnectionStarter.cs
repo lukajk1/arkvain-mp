@@ -15,7 +15,6 @@ public class ArkvainConnectionStarter : MonoBehaviour
     private SteamTransport _steamTransport;
     private UDPTransport _udpTransport;
     private NetworkManager _networkManager;
-    private ArkvainLobbyData _lobbyData;
 
     private bool _isFromLobby;
 
@@ -37,8 +36,7 @@ public class ArkvainConnectionStarter : MonoBehaviour
         }
 
         // Check if we have lobby data
-        _lobbyData = ArkvainLobbyData.Instance;
-        if (_lobbyData != null && _lobbyData.HasValidLobby())
+        if (ArkvainLobbyData.HasValidLobby())
         {
             _isFromLobby = true;
         }
@@ -57,9 +55,9 @@ public class ArkvainConnectionStarter : MonoBehaviour
             return;
         }
 
-        if (_isFromLobby && _lobbyData != null && _lobbyData.HasValidLobby())
+        if (_isFromLobby && ArkvainLobbyData.HasValidLobby())
         {
-            LobbyData lobby = _lobbyData.CurrentLobby;
+            LobbyData lobby = ArkvainLobbyData.CurrentLobby;
             Debug.Log($"[ArkvainConnectionStarter] Starting from lobby: {lobby.Name}");
             Debug.Log($"[ArkvainConnectionStarter] Lobby Members ({lobby.MemberCount}/{lobby.MaxMembers}):");
 
@@ -97,19 +95,13 @@ public class ArkvainConnectionStarter : MonoBehaviour
     {
         _networkManager.transport = _steamTransport;
 
-        if (!_lobbyData)
-        {
-            PurrLogger.LogError($"Failed to start connection. {nameof(ArkvainLobbyData)} is null!", this);
-            return;
-        }
-
-        if (!_lobbyData.HasValidLobby())
+        if (!ArkvainLobbyData.HasValidLobby())
         {
             PurrLogger.LogError($"Failed to start connection. Lobby is invalid!", this);
             return;
         }
 
-        LobbyData lobby = _lobbyData.CurrentLobby;
+        LobbyData lobby = ArkvainLobbyData.CurrentLobby;
 
         // Get the lobby owner's CSteamID
         CSteamID hostId = lobby.Owner.user.id;

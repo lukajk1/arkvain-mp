@@ -7,6 +7,9 @@ using API = Heathen.SteamworksIntegration.API;
 
 public class LobbyManager : MonoBehaviour
 {
+    [Header("References")]
+    [SerializeField] private SceneNameHolder gameScene;
+    
     [Header("UI References")]
     [SerializeField] private Canvas canvas;
     [SerializeField] private TMP_InputField lobbyCodeInputField;
@@ -14,6 +17,7 @@ public class LobbyManager : MonoBehaviour
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private TMP_Text memberListText;
     [SerializeField] private Button backButton;
+    [SerializeField] private Button startButton;
 
     [Header("Lobby Settings")]
     [SerializeField] private int maxMembers = 4;
@@ -43,11 +47,13 @@ public class LobbyManager : MonoBehaviour
     void OnEnable()
     {
         if (backButton != null) backButton.onClick.AddListener(OnBackButtonClicked);
+        if (startButton != null) startButton.onClick.AddListener(OnStartButtonClicked);
     }
 
     void OnDisable()
     {
         if (backButton != null) backButton.onClick.RemoveListener(OnBackButtonClicked);
+        if (startButton != null) startButton.onClick.RemoveListener(OnStartButtonClicked);
 
         if (lobbyNameInputField != null)
             lobbyNameInputField.onSubmit.RemoveListener(OnLobbyNameSubmitted);
@@ -56,6 +62,26 @@ public class LobbyManager : MonoBehaviour
     private void OnBackButtonClicked()
     {
         SetState(false);
+    }
+
+    private void OnStartButtonClicked()
+    {
+        if (!_currentLobby.IsValid)
+        {
+            Debug.LogWarning("[LobbyManager] Cannot start - not in a valid lobby!");
+            return;
+        }
+
+        if (!_currentLobby.IsOwner)
+        {
+            Debug.LogWarning("[LobbyManager] Only the host can start the game!");
+            return;
+        }
+
+        Debug.Log("[LobbyManager] Starting game...");
+        ArkvainLobbyData.SetLobby(_currentLobby);
+
+        UnityEngine.SceneManagement.SceneManager.LoadScene(gameScene.sceneName);
     }
 
     private void OnLobbyNameSubmitted(string newName)

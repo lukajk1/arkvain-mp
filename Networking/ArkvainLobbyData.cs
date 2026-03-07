@@ -1,47 +1,22 @@
 using UnityEngine;
 using Heathen.SteamworksIntegration;
 
-public class ArkvainLobbyData : MonoBehaviour
+public static class ArkvainLobbyData
 {
-    private static ArkvainLobbyData _instance;
-    public static ArkvainLobbyData Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                _instance = FindFirstObjectByType<ArkvainLobbyData>();
-            }
-            return _instance;
-        }
-    }
+    public static LobbyData CurrentLobby { get; private set; }
 
-    public LobbyData CurrentLobby { get; private set; }
-
-    void Awake()
-    {
-        if (_instance != null && _instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        _instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
-
-    public void SetLobby(LobbyData lobby)
+    public static void SetLobby(LobbyData lobby)
     {
         CurrentLobby = lobby;
         Debug.Log($"[ArkvainLobbyData] Lobby set: {lobby.Name} (Owner: {lobby.Owner.user.Name})");
     }
 
-    public bool HasValidLobby()
+    public static bool HasValidLobby()
     {
         return CurrentLobby.IsValid;
     }
 
-    public void ClearLobby()
+    public static void Clear()
     {
         CurrentLobby = default;
         Debug.Log("[ArkvainLobbyData] Lobby cleared");

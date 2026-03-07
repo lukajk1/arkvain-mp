@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using Heathen.SteamworksIntegration;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -15,10 +17,18 @@ public class MainMenu : MonoBehaviour
     [SerializeField] private Button quit;
 
     [Header("Classes")]
-    [SerializeField] private LobbyManager lobbyCreator;
+    [SerializeField] private LobbyManager lobbyView;
     [SerializeField] private ServerBrowser serverBrowser;
     [SerializeField] private SettingsMenu settingsMenu;
-    
+
+    public static MainMenu Instance;
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+    }
 
     void OnEnable()
     {
@@ -45,10 +55,9 @@ public class MainMenu : MonoBehaviour
     }
     private void OnHostButtonClicked()
     {
-        if (lobbyCreator == null) return;
+        if (lobbyView == null) return;
 
-        lobbyCreator.SetState(true);
-        lobbyCreator.CreateLobby();
+        lobbyView.CreateLobby();
     }
 
     private void OnOptionsButtonClicked()
@@ -57,6 +66,11 @@ public class MainMenu : MonoBehaviour
         {
             settingsMenu.SetState(true);    
         }
+    }
+
+    public void JoinLobby(LobbyData lobby)
+    {
+        lobbyView.JoinLobby(lobby);
     }
 
     private void OnCustomizeButtonClicked()

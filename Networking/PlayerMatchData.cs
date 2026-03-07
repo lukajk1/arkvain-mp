@@ -11,6 +11,7 @@ public class PlayerMatchData
     public int Kills { get; private set; }
     public int Deaths { get; private set; }
     public int Assists { get; private set; }
+    public int DamageDealt { get; private set; }
 
     public float AveragePing { get; private set; }
     public bool IsConnected { get; private set; }
@@ -40,6 +41,7 @@ public class PlayerMatchData
     public void AddKill() => Kills++;
     public void AddDeath() => Deaths++;
     public void AddAssist() => Assists++;
+    public void AddDamageDealt(int damage) => DamageDealt += damage;
 
     public void SetConnected(bool connected) => IsConnected = connected;
 

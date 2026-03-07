@@ -1,8 +1,9 @@
+using Heathen.SteamworksIntegration;
+using PurrLobby;
+using Steamworks;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using Heathen.SteamworksIntegration;
-using Steamworks;
 using API = Heathen.SteamworksIntegration.API;
 
 public class LobbyManager : MonoBehaviour
@@ -75,9 +76,14 @@ public class LobbyManager : MonoBehaviour
                 Debug.Log("[LobbyManager] Host has closed the lobby!");
                 UpdateStatusText("Host closed the lobby.");
 
+                System.Action onConfirmDelegate = () => SetState(false);
+                PersistentClient.Instance.CreateConfirmationDialog(
+                    onConfirm: onConfirmDelegate,
+                    message: "Host has closed the lobby.", 
+                    confirmText: "Main Menu");
+
                 // Clear lobby and return to menu
                 _currentLobby = default;
-                SetState(false);
             }
         }
     }
@@ -105,24 +111,30 @@ public class LobbyManager : MonoBehaviour
         {
             if (_currentLobby.IsOwner)
             {
-                // Host closes the lobby
-                Debug.Log("[LobbyManager] Host closing lobby...");
-                // Closing the lobby will kick all players
-                _currentLobby.Leave();
+                PersistentClient.Instance.CreateConfirmationDialog(
+                    onConfirm: ConfirmExitLobby, 
+                    message: "Exit to Main Menu? This will close the Lobby.");
             }
             else
             {
                 // Client leaves the lobby
                 Debug.Log("[LobbyManager] Leaving lobby...");
                 _currentLobby.Leave();
+                SetState(false);
+                _currentLobby = default;
             }
-
-            _currentLobby = default;
         }
 
-        SetState(false);
     }
-
+    private void ConfirmExitLobby()
+    {
+        // Host closes the lobby
+        Debug.Log("[LobbyManager] Host closing lobby...");
+        // Closing the lobby will kick all players
+        _currentLobby.Leave();
+        SetState(false);
+        _currentLobby = default;
+    }
     private void OnStartButtonClicked()
     {
         if (!_currentLobby.IsValid)
@@ -161,7 +173,7 @@ public class LobbyManager : MonoBehaviour
         Debug.Log($"[LobbyCreator] Lobby name changed to: {newName}");
     }
 
-    public void SetState(bool state)
+    private void SetState(bool state)
     {
         if (canvas != null)
         {
@@ -174,6 +186,34 @@ public class LobbyManager : MonoBehaviour
         UpdateStatusText("Creating lobby...");
 
         API.Matchmaking.Client.CreateLobby(lobbyType, SteamLobbyModeType.Session, maxMembers, HandleLobbyCreated);
+
+        SetState(true);
+    }
+
+    public void JoinLobby(LobbyData lobby)
+    {
+
+        Debug.Log($"[ServerRow] Attempting to join lobby: {lobby.Name}");
+
+        lobby.Join((enterData, ioError) =>
+        {
+            if (ioError)
+            {
+                Debug.LogError($"[ServerRow] Failed to join lobby: IO Error");
+                return;
+            }
+
+            if (enterData.Response == Steamworks.EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+            {
+                Debug.Log($"[ServerRow] Successfully joined lobby!");
+            }
+            else
+            {
+                Debug.LogWarning($"[ServerRow] Failed to join lobby: {enterData.Response}");
+            }
+        });
+
+        SetState(true);
     }
 
     private void HandleLobbyCreated(EResult result, LobbyData lobby, bool ioError)

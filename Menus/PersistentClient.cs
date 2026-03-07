@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -7,6 +6,7 @@ public class PersistentClient : MonoBehaviour
 {
     public static PersistentClient Instance { get; private set; }
     [SerializeField] public InputManager inputManager;
+    [SerializeField] private GameObject confirmationBox;
 
     [Header("Scene References")]
     [SerializeField] public SceneNameHolder gameScene;
@@ -33,12 +33,13 @@ public class PersistentClient : MonoBehaviour
     {
         if (Instance != null)
         {
-            Debug.LogError($"More than one instance of {Instance} in scene");
             Destroy(gameObject);
         }
-
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
+        else
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
     }
     void OnEnable()
     {
@@ -72,7 +73,16 @@ public class PersistentClient : MonoBehaviour
             SetCursorToPlayMode(true);
         }
     }
-
+    public void CreateConfirmationDialog(
+        Action onConfirm = null,
+        Action onCancel = null,
+        string message = "no message was provided",
+        string confirmText = "Confirm",
+        string cancelText = "Cancel")
+    {
+        GameObject boxInstance = Instantiate(confirmationBox);
+        boxInstance.GetComponentInChildren<ConfirmationBox>().Initialize(onConfirm, onCancel, message, confirmText, cancelText);
+    }
     public void SetCursorToPlayMode(bool value)
     {
         PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(!value, this);

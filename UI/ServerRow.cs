@@ -63,25 +63,7 @@ public class ServerRow : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[ServerRow] Attempting to join lobby: {lobbyData.Name}");
-
-        lobbyData.Join((enterData, ioError) =>
-        {
-            if (ioError)
-            {
-                Debug.LogError($"[ServerRow] Failed to join lobby: IO Error");
-                return;
-            }
-
-            if (enterData.Response == Steamworks.EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
-            {
-                Debug.Log($"[ServerRow] Successfully joined lobby!");
-            }
-            else
-            {
-                Debug.LogWarning($"[ServerRow] Failed to join lobby: {enterData.Response}");
-            }
-        });
+        MainMenu.Instance.JoinLobby(lobbyData);
     }
 
     void OnDestroy()

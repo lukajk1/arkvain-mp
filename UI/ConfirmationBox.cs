@@ -48,7 +48,7 @@ public class ConfirmationBox : MonoBehaviour
     /// <param name="confirmText">Confirm button text (optional, defaults to "Confirm")</param>
     /// <param name="cancelText">Cancel button text (optional, defaults to "Cancel")</param>
     public void Initialize(
-        Action onConfirm,
+        Action onConfirm = null,
         Action onCancel = null,
         string message = null,
         string confirmText = "Confirm",

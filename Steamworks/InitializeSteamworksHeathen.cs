@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class InitializeSteamworksHeathen : MonoBehaviour
 {
-    [SerializeField] private GameObject confirmationBox;
     public static bool SteamInitialized;
 
     private void Awake()
@@ -17,8 +16,7 @@ public class InitializeSteamworksHeathen : MonoBehaviour
 
     void OnInitializationError(string error)
     {
-        GameObject boxInstance = Instantiate(confirmationBox);
-        boxInstance.GetComponentInChildren<ConfirmationBox>().Initialize(null, message: $"Error: {error}", confirmText: "Okay");
+        PersistentClient.Instance.CreateConfirmationDialog(message: $"Error: {error}", confirmText: "Okay");
     }
 
     private void Start()

@@ -44,8 +44,10 @@ public class MatchSessionManager : NetworkBehaviour
         }
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
+
         var networkManager = NetworkManager.main;
         if (networkManager != null && networkManager.playerModule != null)
         {

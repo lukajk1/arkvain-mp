@@ -9,7 +9,7 @@ public class MatchSessionManager : NetworkBehaviour
 {
     public static MatchSessionManager Instance { get; private set; }
 
-    private Dictionary<PlayerID, PlayerMatchData> _playerStats = new Dictionary<PlayerID, PlayerMatchData>();
+    private readonly SyncList<PlayerMatchData> _playerStats = new();
 
     [Header("Ping Settings")]
     [SerializeField] private float pingUpdateInterval = 2f;
@@ -29,6 +29,7 @@ public class MatchSessionManager : NetworkBehaviour
         }
 
         Instance = this;
+        _playerStats.onChanged += OnStatsListChanged;
     }
 
     private void Start()
@@ -41,24 +42,36 @@ public class MatchSessionManager : NetworkBehaviour
         // Wait until NetworkManager and playerModule are initialized
         while (NetworkManager.main == null || NetworkManager.main.playerModule == null)
         {
-            Debug.Log("[MatchSessionManager] Waiting for NetworkManager.playerModule to initialize...");
             yield return new WaitForSeconds(0.1f);
         }
 
-        Debug.Log("[MatchSessionManager] PlayerModule initialized, subscribing to events");
-        NetworkManager.main.playerModule.onPlayerJoined += OnPlayerJoinedNetwork;
-        NetworkManager.main.playerModule.onPlayerLeft += OnPlayerLeftNetwork;
+        if (isServer)
+        {
+            NetworkManager.main.playerModule.onPlayerJoined += OnPlayerJoinedNetwork;
+            NetworkManager.main.playerModule.onPlayerLeft += OnPlayerLeftNetwork;
+        }
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
 
+        if (_playerStats != null)
+            _playerStats.onChanged -= OnStatsListChanged;
+
         var networkManager = NetworkManager.main;
-        if (networkManager != null && networkManager.playerModule != null)
+        if (isServer && networkManager != null && networkManager.playerModule != null)
         {
             networkManager.playerModule.onPlayerJoined -= OnPlayerJoinedNetwork;
             networkManager.playerModule.onPlayerLeft -= OnPlayerLeftNetwork;
+        }
+    }
+
+    private void OnStatsListChanged(SyncListChange<PlayerMatchData> change)
+    {
+        if (change.operation == SyncListOperation.Set || change.operation == SyncListOperation.Added)
+        {
+            OnPlayerStatsChanged?.Invoke(change.value);
         }
     }
 
@@ -80,19 +93,16 @@ public class MatchSessionManager : NetworkBehaviour
 
         Debug.Log($"[MatchSessionManager] Player joined: {player}");
 
-        // If reconnecting, mark as connected
-        if (_playerStats.ContainsKey(player))
+        int index = FindPlayerIndex(player);
+        if (index != -1)
         {
-            _playerStats[player].SetConnected(true);
-            Debug.Log($"[MatchSessionManager] Player {player} reconnected - restoring stats");
+            _playerStats[index].SetConnected(true);
+            _playerStats.SetDirty(index);
         }
         else
         {
-            // Create new player data
-            // TODO: Get Steam name and ID from Steam API
             var playerData = new PlayerMatchData(player, 0, $"Player_{player}");
-            _playerStats[player] = playerData;
-            Debug.Log($"[MatchSessionManager] Created new player data for {player}");
+            _playerStats.Add(playerData);
         }
 
         OnPlayerJoined?.Invoke(player);
@@ -102,15 +112,24 @@ public class MatchSessionManager : NetworkBehaviour
     {
         if (!asServer) return;
 
-        Debug.Log($"[MatchSessionManager] Player left: {player}");
-
-        // Mark as disconnected but keep data for persistence
-        if (_playerStats.ContainsKey(player))
+        int index = FindPlayerIndex(player);
+        if (index != -1)
         {
-            _playerStats[player].SetConnected(false);
+            _playerStats[index].SetConnected(false);
+            _playerStats.SetDirty(index);
         }
 
         OnPlayerLeft?.Invoke(player);
+    }
+
+    private int FindPlayerIndex(PlayerID playerId)
+    {
+        for (int i = 0; i < _playerStats.Count; i++)
+        {
+            if (_playerStats[i].PlayerId == playerId)
+                return i;
+        }
+        return -1;
     }
 
     // Server-only stat modification methods
@@ -119,17 +138,18 @@ public class MatchSessionManager : NetworkBehaviour
     {
         if (!isServer) return;
 
-        if (_playerStats.TryGetValue(killer, out var killerData))
+        int killerIdx = FindPlayerIndex(killer);
+        if (killerIdx != -1)
         {
-            killerData.AddKill();
-            OnPlayerStatsChanged?.Invoke(killerData);
-            Debug.Log($"[MatchSessionManager] {killer} killed {victim}");
+            _playerStats[killerIdx].AddKill();
+            _playerStats.SetDirty(killerIdx);
         }
 
-        if (_playerStats.TryGetValue(victim, out var victimData))
+        int victimIdx = FindPlayerIndex(victim);
+        if (victimIdx != -1)
         {
-            victimData.AddDeath();
-            OnPlayerStatsChanged?.Invoke(victimData);
+            _playerStats[victimIdx].AddDeath();
+            _playerStats.SetDirty(victimIdx);
         }
     }
 
@@ -138,86 +158,72 @@ public class MatchSessionManager : NetworkBehaviour
     {
         if (!isServer) return;
 
-        if (_playerStats.TryGetValue(assister, out var assisterData))
+        int assisterIdx = FindPlayerIndex(assister);
+        if (assisterIdx != -1)
         {
-            assisterData.AddAssist();
-            OnPlayerStatsChanged?.Invoke(assisterData);
-            Debug.Log($"[MatchSessionManager] {assister} assisted on kill of {victim}");
+            _playerStats[assisterIdx].AddAssist();
+            _playerStats.SetDirty(assisterIdx);
         }
     }
 
     private void UpdateAllPlayerPings()
     {
-        foreach (var kvp in _playerStats)
+        for (int i = 0; i < _playerStats.Count; i++)
         {
-            PlayerID playerId = kvp.Key;
-            PlayerMatchData playerData = kvp.Value;
-
+            PlayerMatchData playerData = _playerStats[i];
             if (!playerData.IsConnected) continue;
 
-            // Get ping from PurrNet's connection
-            // TODO: Implement actual ping measurement from transport layer
-            float ping = GetPlayerPing(playerId);
+            float ping = GetPlayerPing(playerData.PlayerId);
             playerData.UpdatePing(ping);
+            _playerStats.SetDirty(i);
         }
     }
 
     private float GetPlayerPing(PlayerID playerId)
     {
-        // TODO: Get actual RTT from PurrNet transport
-        // For now, return a placeholder
         return UnityEngine.Random.Range(20f, 100f);
     }
 
     // Public query methods
     public PlayerMatchData GetPlayerData(PlayerID playerId)
     {
-        return _playerStats.TryGetValue(playerId, out var data) ? data : null;
+        return _playerStats.FirstOrDefault(p => p.PlayerId == playerId);
     }
 
     public List<PlayerMatchData> GetAllPlayers()
     {
-        return _playerStats.Values.ToList();
+        return _playerStats.ToList();
     }
 
     public List<PlayerMatchData> GetConnectedPlayers()
     {
-        return _playerStats.Values.Where(p => p.IsConnected).ToList();
+        return _playerStats.Where(p => p.IsConnected).ToList();
     }
 
     public List<PlayerMatchData> GetLeaderboard()
     {
-        return _playerStats.Values
+        return _playerStats
             .OrderByDescending(p => p.CalculateScore())
             .ToList();
     }
 
-    /// <summary>
-    /// Updates a player's Steam ID and name. Called by PlayerSteamIdentity when a player spawns.
-    /// </summary>
     public void UpdatePlayerSteamInfo(PlayerID playerId, ulong steamId, string steamName)
     {
         if (!isServer) return;
 
-        if (_playerStats.TryGetValue(playerId, out var playerData))
+        int index = FindPlayerIndex(playerId);
+        if (index != -1)
         {
-            // Update existing player data with Steam info
-            playerData.UpdateSteamInfo(steamId, steamName);
+            _playerStats[index].UpdateSteamInfo(steamId, steamName);
+            _playerStats.SetDirty(index);
             Debug.Log($"[MatchSessionManager] Updated Steam info for {playerId}: {steamName} ({steamId})");
-        }
-        else
-        {
-            Debug.LogWarning($"[MatchSessionManager] Player {playerId} not found in stats when updating Steam info");
         }
     }
 
-    // Reset all stats (for new match)
     [ServerRpc(requireOwnership: false)]
     public void ResetAllStats()
     {
         if (!isServer) return;
-
         _playerStats.Clear();
-        Debug.Log("[MatchSessionManager] All stats reset");
     }
 }

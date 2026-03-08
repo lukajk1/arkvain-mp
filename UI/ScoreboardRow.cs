@@ -1,10 +1,12 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Heathen.SteamworksIntegration;
 
 public class ScoreboardRow : MonoBehaviour
 {
     [Header("UI References")]
+    [SerializeField] private RawImage avatar;
     [SerializeField] private TMP_Text playerNameText;
     [SerializeField] private TMP_Text killsText;
     [SerializeField] private TMP_Text deathsText;
@@ -20,6 +22,7 @@ public class ScoreboardRow : MonoBehaviour
     [SerializeField] private Color disconnectedColor = new Color(0.3f, 0.1f, 0.1f, 0.5f);
 
     public PlayerMatchData PlayerData { get; private set; }
+    private ulong _loadedSteamId;
 
     public void UpdateData(PlayerMatchData playerData)
     {
@@ -50,8 +53,23 @@ public class ScoreboardRow : MonoBehaviour
         if (pingText != null)
             pingText.text = $"{playerData.AveragePing:F0}ms";
 
+        // Load avatar if Steam ID changed and is valid
+        if (avatar != null && playerData.SteamId != 0 && playerData.SteamId != _loadedSteamId)
+        {
+            _loadedSteamId = playerData.SteamId;
+            UserData.Get(playerData.SteamId).LoadAvatar(OnAvatarLoaded);
+        }
+
         // Update background color
         UpdateBackgroundColor(playerData);
+    }
+
+    private void OnAvatarLoaded(Texture2D texture)
+    {
+        if (avatar != null && texture != null)
+        {
+            avatar.texture = texture;
+        }
     }
 
     private void UpdateBackgroundColor(PlayerMatchData playerData)

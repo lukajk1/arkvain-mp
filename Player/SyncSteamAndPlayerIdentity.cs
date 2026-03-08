@@ -7,7 +7,7 @@ using UnityEngine;
 /// Sends the local player's Steam identity to the server when they spawn.
 /// Attach this to the player prefab.
 /// </summary>
-public class PlayerSteamIdentity : PredictedIdentity<PlayerSteamIdentity.EmptyState>
+public class SyncSteamAndPlayerIdentity : StatelessPredictedIdentity
 {
     protected override void LateAwake()
     {
@@ -51,11 +51,5 @@ public class PlayerSteamIdentity : PredictedIdentity<PlayerSteamIdentity.EmptySt
         {
             Debug.LogError("[PlayerSteamIdentity] MatchSessionManager.Instance is null!");
         }
-    }
-
-    // Empty state struct - required by PredictedIdentity but unused
-    public struct EmptyState : IPredictedData<EmptyState>
-    {
-        public void Dispose() { }
     }
 }

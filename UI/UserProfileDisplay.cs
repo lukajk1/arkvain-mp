@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using Heathen.SteamworksIntegration;
 
-public class UserProfile : MonoBehaviour
+public class UserProfileDisplay : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private RawImage avatarImage;

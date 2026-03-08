@@ -50,6 +50,7 @@ public class LobbyManager : MonoBehaviour
 
     void Start()
     {
+        InitializeDropdowns();
         UpdateStatusText("Ready to create lobby.");
 
         if (lobbyNameInputField != null)
@@ -64,6 +65,23 @@ public class LobbyManager : MonoBehaviour
         // Subscribe to lobby events
         SteamTools.Events.OnLobbyChatUpdate += OnLobbyChatUpdate;
         SteamTools.Events.OnLobbyDataUpdate += OnLobbyDataUpdate;
+    }
+
+    private void InitializeDropdowns()
+    {
+        if (gameModeDropdown != null && gameModeMapConfigs != null && gameModeMapConfigs.Count > 0)
+        {
+            // Clear and populate game modes from config
+            gameModeDropdown.ClearOptions();
+            List<TMP_Dropdown.OptionData> options = gameModeMapConfigs
+                .Select(c => new TMP_Dropdown.OptionData(c.gameModeName))
+                .ToList();
+            gameModeDropdown.AddOptions(options);
+
+            // Set first one as default and sync maps
+            gameModeDropdown.SetValueWithoutNotify(0);
+            RepopulateMapDropdown(gameModeMapConfigs[0].gameModeName);
+        }
     }
 
     void Update()

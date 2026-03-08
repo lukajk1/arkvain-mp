@@ -145,8 +145,15 @@ public class LobbyManager : MonoBehaviour
                 // Ensure ArkvainLobbyData is set
                 ArkvainLobbyData.SetLobby(_currentLobby);
 
-                // Load game scene
-                UnityEngine.SceneManagement.SceneManager.LoadScene(gameScene.sceneName);
+                // Load game scene via LoadingManager
+                if (LoadingManager.Instance != null)
+                {
+                    LoadingManager.Instance.LoadScene(gameScene.sceneName);
+                }
+                else
+                {
+                    UnityEngine.SceneManagement.SceneManager.LoadScene(gameScene.sceneName);
+                }
             }
         }
     }
@@ -229,8 +236,15 @@ public class LobbyManager : MonoBehaviour
         // Store lobby data for persistence
         ArkvainLobbyData.SetLobby(_currentLobby);
 
-        // Load game scene
-        UnityEngine.SceneManagement.SceneManager.LoadScene(gameScene.sceneName);
+        // Load game scene via LoadingManager
+        if (LoadingManager.Instance != null)
+        {
+            LoadingManager.Instance.LoadScene(gameScene.sceneName);
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene(gameScene.sceneName);
+        }
     }
 
     private void OnLobbyNameSubmitted(string newName)

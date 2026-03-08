@@ -14,9 +14,11 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
     }
     protected override void StateSimulate(ref WaitState state, float delta)
     {
-        if (predictionManager.players.currentState.players.Count >= _expectedPlayers)
+        bool isMapLoaded = MapLoader.Instance != null && MapLoader.Instance.CurrentMapData != null && !MapLoader.Instance.IsLoading;
+
+        if (predictionManager.players.currentState.players.Count >= _expectedPlayers && isMapLoaded)
         {
-            Debug.Log("moving to next state from waiting state");
+            Debug.Log("[WaitForPlayersState] All players joined and map is loaded - proceeding to next state.");
             machine.Next();
         }
     }

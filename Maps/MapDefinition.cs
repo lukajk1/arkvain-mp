@@ -3,9 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewMapDefinition", menuName = "Arkvain/Map Definition")]
 public class MapDefinition : ScriptableObject
 {
-    [Header("Steam Metadata")]
-    [Tooltip("This must match the 'map' string stored in the Steam Lobby metadata.")]
-    public string internalName;
+    public string InternalName => sceneAsset != null ? sceneAsset.name : string.Empty;
 
     [Header("Display Info")]
     public string displayName;
@@ -13,8 +11,10 @@ public class MapDefinition : ScriptableObject
     [TextArea] public string description;
 
     [Header("Loading Info")]
-    [Tooltip("The exact name of the Unity Scene to load additively.")]
-    public string sceneName;
+    [Tooltip("The SceneNameHolder containing the name of the Unity Scene to load additively.")]
+    public SceneNameHolder sceneAsset;
+
+    public string SceneName => sceneAsset != null ? sceneAsset.sceneName : string.Empty;
 
     [Header("Gameplay Settings")]
     public bool supportsTDM = true;

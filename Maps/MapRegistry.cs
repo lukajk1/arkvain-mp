@@ -14,7 +14,7 @@ public class MapRegistry : ScriptableObject
     /// </summary>
     public MapDefinition GetMapByInternalName(string internalName)
     {
-        return maps.FirstOrDefault(m => m.internalName == internalName);
+        return maps.FirstOrDefault(m => m.InternalName == internalName);
     }
 
     /// <summary>
@@ -22,7 +22,7 @@ public class MapRegistry : ScriptableObject
     /// </summary>
     public MapDefinition GetMapBySceneName(string sceneName)
     {
-        return maps.FirstOrDefault(m => m.sceneName == sceneName);
+        return maps.FirstOrDefault(m => m.SceneName == sceneName);
     }
 
     /// <summary>

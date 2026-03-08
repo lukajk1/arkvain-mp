@@ -8,13 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using API = Heathen.SteamworksIntegration.API;
 
-[System.Serializable]
-public class GameModeMapSettings
-{
-    public string gameModeName;
-    public List<string> allowedMaps = new List<string>();
-}
-
 public class LobbyManager : MonoBehaviour
 {
     [Header("References")]
@@ -38,8 +31,8 @@ public class LobbyManager : MonoBehaviour
     [SerializeField] private int maxMembers = 4;
     [SerializeField] private ELobbyType lobbyType = ELobbyType.k_ELobbyTypePublic;
 
-    [Header("Game Mode/Map Configuration")]
-    [SerializeField] private List<GameModeMapSettings> gameModeMapConfigs = new List<GameModeMapSettings>();
+    [Header("Game Configuration")]
+    [SerializeField] private GameRegistry gameRegistry;
 
     private LobbyData _currentLobby;
 
@@ -69,18 +62,18 @@ public class LobbyManager : MonoBehaviour
 
     private void InitializeDropdowns()
     {
-        if (gameModeDropdown != null && gameModeMapConfigs != null && gameModeMapConfigs.Count > 0)
+        if (gameModeDropdown != null && gameRegistry != null && gameRegistry.modeConfigs.Count > 0)
         {
-            // Clear and populate game modes from config
+            // Clear and populate game modes from registry
             gameModeDropdown.ClearOptions();
-            List<TMP_Dropdown.OptionData> options = gameModeMapConfigs
-                .Select(c => new TMP_Dropdown.OptionData(c.gameModeName))
+            List<TMP_Dropdown.OptionData> options = gameRegistry.modeConfigs
+                .Select(c => new TMP_Dropdown.OptionData(c.modeName))
                 .ToList();
             gameModeDropdown.AddOptions(options);
 
             // Set first one as default and sync maps
             gameModeDropdown.SetValueWithoutNotify(0);
-            RepopulateMapDropdown(gameModeMapConfigs[0].gameModeName);
+            RepopulateMapDropdown(gameRegistry.modeConfigs[0].modeName);
         }
     }
 
@@ -308,25 +301,121 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
+    private void SyncDropdownsFromLobby()
+    {
+        if (!_currentLobby.IsValid || gameRegistry == null)
+            return;
+
+        string gameMode = _currentLobby["game_mode"];
+        string mapInternalName = _currentLobby["map"];
+
+        // Sync game mode dropdown
+        if (gameModeDropdown != null && !string.IsNullOrEmpty(gameMode))
+        {
+            for (int i = 0; i < gameModeDropdown.options.Count; i++)
+            {
+                if (gameModeDropdown.options[i].text == gameMode)
+                {
+                    gameModeDropdown.SetValueWithoutNotify(i);
+                    break;
+                }
+            }
+
+            // Repopulate map dropdown for the current game mode (without triggering events)
+            RepopulateMapDropdownSilent(gameMode);
+        }
+
+        // Sync map dropdown using the display name from internal name
+        if (mapDropdown != null && !string.IsNullOrEmpty(mapInternalName))
+        {
+            var mapDef = gameRegistry.FindMapByInternalName(mapInternalName);
+            string targetDisplayName = mapDef != null ? mapDef.displayName : mapInternalName;
+
+            for (int i = 0; i < mapDropdown.options.Count; i++)
+            {
+                if (mapDropdown.options[i].text == targetDisplayName)
+                {
+                    mapDropdown.SetValueWithoutNotify(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void RepopulateMapDropdown(string gameMode)
+    {
+        if (mapDropdown == null || gameRegistry == null)
+            return;
+
+        // Find the configuration for this game mode
+        var config = gameRegistry.GetModeConfig(gameMode);
+
+        if (config == null || config.allowedMaps.Count == 0)
+        {
+            Debug.LogWarning($"[LobbyManager] No map configuration found for game mode: {gameMode}");
+            return;
+        }
+
+        // Clear existing options
+        mapDropdown.ClearOptions();
+
+        // Use display names from the MapDefinition objects
+        List<TMP_Dropdown.OptionData> newOptions = config.allowedMaps
+            .Select(m => new TMP_Dropdown.OptionData(m.displayName))
+            .ToList();
+
+        mapDropdown.AddOptions(newOptions);
+
+        // Set first map as default and update lobby metadata (using internal name)
+        if (config.allowedMaps.Count > 0)
+        {
+            mapDropdown.SetValueWithoutNotify(0);
+
+            if (_currentLobby.IsValid && _currentLobby.IsOwner)
+            {
+                string internalName = config.allowedMaps[0].InternalName;
+                _currentLobby["map"] = internalName;
+                Debug.Log($"[LobbyManager] Map automatically set to: {internalName}");
+            }
+        }
+    }
+
+    private void RepopulateMapDropdownSilent(string gameMode)
+    {
+        if (mapDropdown == null || gameRegistry == null)
+            return;
+
+        var config = gameRegistry.GetModeConfig(gameMode);
+
+        if (config == null || config.allowedMaps.Count == 0)
+            return;
+
+        // Clear existing options
+        mapDropdown.ClearOptions();
+
+        List<TMP_Dropdown.OptionData> newOptions = config.allowedMaps
+            .Select(m => new TMP_Dropdown.OptionData(m.displayName))
+            .ToList();
+
+        mapDropdown.AddOptions(newOptions);
+    }
+
     private void OnMapChanged(int index)
     {
-        if (!_currentLobby.IsValid)
-        {
-            Debug.LogWarning("[LobbyManager] Not in a lobby. Cannot change map.");
+        if (!_currentLobby.IsValid || gameRegistry == null)
             return;
-        }
 
         if (!_currentLobby.IsOwner)
-        {
-            Debug.LogWarning("[LobbyManager] Only the host can change map.");
             return;
-        }
 
-        if (mapDropdown != null)
+        string currentGameMode = _currentLobby["game_mode"];
+        var config = gameRegistry.GetModeConfig(currentGameMode);
+        
+        if (config != null && index < config.allowedMaps.Count)
         {
-            string selectedMap = mapDropdown.options[index].text;
-            _currentLobby["map"] = selectedMap;
-            Debug.Log($"[LobbyManager] Map changed to: {selectedMap}");
+            MapDefinition selectedMap = config.allowedMaps[index];
+            _currentLobby["map"] = selectedMap.InternalName;
+            Debug.Log($"[LobbyManager] Map changed to: {selectedMap.InternalName}");
         }
     }
 
@@ -504,106 +593,5 @@ public class LobbyManager : MonoBehaviour
         }
 
         memberListText.text = memberList;
-    }
-
-    private void SyncDropdownsFromLobby()
-    {
-        if (!_currentLobby.IsValid)
-            return;
-
-        string gameMode = _currentLobby["game_mode"];
-        string map = _currentLobby["map"];
-
-        // Sync game mode dropdown
-        if (gameModeDropdown != null && !string.IsNullOrEmpty(gameMode))
-        {
-            for (int i = 0; i < gameModeDropdown.options.Count; i++)
-            {
-                if (gameModeDropdown.options[i].text == gameMode)
-                {
-                    gameModeDropdown.SetValueWithoutNotify(i);
-                    break;
-                }
-            }
-
-            // Repopulate map dropdown for the current game mode (without triggering events)
-            RepopulateMapDropdownSilent(gameMode);
-        }
-
-        // Sync map dropdown
-        if (mapDropdown != null && !string.IsNullOrEmpty(map))
-        {
-            for (int i = 0; i < mapDropdown.options.Count; i++)
-            {
-                if (mapDropdown.options[i].text == map)
-                {
-                    mapDropdown.SetValueWithoutNotify(i);
-                    break;
-                }
-            }
-        }
-    }
-
-    private void RepopulateMapDropdown(string gameMode)
-    {
-        if (mapDropdown == null)
-            return;
-
-        // Find the configuration for this game mode
-        GameModeMapSettings config = gameModeMapConfigs.FirstOrDefault(c => c.gameModeName == gameMode);
-
-        if (config == null || config.allowedMaps.Count == 0)
-        {
-            Debug.LogWarning($"[LobbyManager] No map configuration found for game mode: {gameMode}");
-            return;
-        }
-
-        // Clear existing options
-        mapDropdown.ClearOptions();
-
-        // Add new options from configuration
-        List<TMP_Dropdown.OptionData> newOptions = config.allowedMaps
-            .Select(mapName => new TMP_Dropdown.OptionData(mapName))
-            .ToList();
-
-        mapDropdown.AddOptions(newOptions);
-
-        // Set first map as default and update lobby metadata
-        if (newOptions.Count > 0)
-        {
-            mapDropdown.SetValueWithoutNotify(0);
-
-            if (_currentLobby.IsValid && _currentLobby.IsOwner)
-            {
-                _currentLobby["map"] = config.allowedMaps[0];
-                Debug.Log($"[LobbyManager] Map automatically set to: {config.allowedMaps[0]}");
-            }
-        }
-    }
-
-    private void RepopulateMapDropdownSilent(string gameMode)
-    {
-        if (mapDropdown == null)
-            return;
-
-        // Find the configuration for this game mode
-        GameModeMapSettings config = gameModeMapConfigs.FirstOrDefault(c => c.gameModeName == gameMode);
-
-        if (config == null || config.allowedMaps.Count == 0)
-        {
-            return;
-        }
-
-        // Clear existing options
-        mapDropdown.ClearOptions();
-
-        // Add new options from configuration
-        List<TMP_Dropdown.OptionData> newOptions = config.allowedMaps
-            .Select(mapName => new TMP_Dropdown.OptionData(mapName))
-            .ToList();
-
-        mapDropdown.AddOptions(newOptions);
-
-        // Don't set a value or update metadata - let SyncDropdownsFromLobby handle that
     }
 }

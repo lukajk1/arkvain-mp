@@ -8,39 +8,35 @@ using UnityEngine;
 public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnState>
 {
     [SerializeField] private GameObject _playerPrefab;
-    [SerializeField] private List<Transform> spawnPoints = new List<Transform>();
     [SerializeField] RoundRunningState _roundRunningState;
     [SerializeField] private ScoreboardUI_1v1 _scoreboard;
-
-    private int _currentSpawnPoint;
 
     public override void ViewEnter(bool isVerified)
     {
         if (!isVerified) return;
 
-        //Debug.Log("entered player spawning state QQQ");
+        MapData mapData = MapLoader.Instance.CurrentMapData;
+        if (mapData == null)
+        {
+            Debug.LogError("[PlayerSpawningState] MapData is null during spawn!");
+            return;
+        }
 
         for (var i = 0; i < predictionManager.players.currentState.players.Count; i++)
         {
-            PredictedObjectID? newPlayer;
-
             PlayerID player = predictionManager.players.currentState.players[i];
+            
+            // For now, let's alternate teams based on index
+            int teamIndex = i % 2;
+            
+            // In a real TDM, we might want a more complex team lookup
+            Transform spawnPoint = mapData.GetRandomSpawnPoint(teamIndex);
 
-            if (spawnPoints.Count > 0)
-            {
-                var spawnPoint = spawnPoints[_currentSpawnPoint];
-                _currentSpawnPoint = (_currentSpawnPoint + 1) % spawnPoints.Count;
-                newPlayer = hierarchy.Create(_playerPrefab, spawnPoint.position, spawnPoint.rotation, player);
-                Debug.Log($"Spawn World Rot: {spawnPoint.rotation.eulerAngles}");
-                Debug.Log($"Spawn Local Rot: {spawnPoint.localRotation.eulerAngles}");
-            }
-            else
-            {
-                newPlayer = hierarchy.Create(_playerPrefab, owner: player);
-            }
+            PredictedObjectID? newPlayer;
+            newPlayer = hierarchy.Create(_playerPrefab, spawnPoint.position, spawnPoint.rotation, player);
 
             if (!newPlayer.HasValue)
-                return;
+                continue;
 
             predictionManager.SetOwnership(newPlayer, player);
 

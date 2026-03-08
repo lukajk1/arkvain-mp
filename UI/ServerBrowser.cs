@@ -148,7 +148,14 @@ public class ServerBrowser : MonoBehaviour
             {
                 Debug.Log($"[ServerBrowser] Successfully joined lobby via code!");
 
-                // Clear the input field on success
+                // Transition to the lobby UI using the MainMenu flow
+                if (MainMenu.Instance != null)
+                {
+                    MainMenu.Instance.JoinLobby(LobbyData.Get(lobbyCode));
+                    SetState(false); // Hide the server browser
+                }
+
+                // Clear the input field
                 if (joinCodeInputField != null)
                     joinCodeInputField.text = "";
             }

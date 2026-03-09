@@ -7,7 +7,10 @@ public abstract class BaseGameModeLogic : NetworkBehaviour
 
     [Header("Settings")]
     [SerializeField] protected string modeDisplayName = "Game Mode";
+    [SerializeField] protected int minPlayersToStart = 2;
+
     public string DisplayName => modeDisplayName;
+    public int MinPlayersToStart => minPlayersToStart;
 
     protected virtual void Awake()
     {

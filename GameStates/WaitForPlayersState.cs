@@ -6,32 +6,36 @@ using UnityEngine;
 
 public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitState>
 {
-    [SerializeField] private int _expectedPlayers;
     [SerializeField] private GameObject _playerPrefab;
     [SerializeField] private GameRunningState _matchRunningState;
 
     private HashSet<PlayerID> _spawnedPlayers = new HashSet<PlayerID>();
+    private int _lastPlayerCount = -1;
 
     public override void Enter()
     {
         Debug.Log($"[WaitForPlayersState] Entered waiting for players state.");
+        _lastPlayerCount = -1;
         
-        if (GameStateUI.Instance != null)
-        {
-            GameStateUI.Instance.UpdateStatus("Waiting for players...");
-        }
+        // Initial UI update
+        UpdateUI();
     }
 
     protected override void StateSimulate(ref WaitState state, float delta)
     {
         bool isMapLoaded = MapLoader.Instance != null && MapLoader.Instance.CurrentMapData != null && !MapLoader.Instance.IsLoading;
+        bool isLogicReady = BaseGameModeLogic.Instance != null;
+
+        // Always update UI while in this state
+        UpdateUI();
 
         if (isMapLoaded)
         {
             // Immediate spawn logic: check for players who haven't spawned yet
-            for (var i = 0; i < predictionManager.players.currentState.players.Count; i++)
+            var players = predictionManager.players.currentState.players;
+            for (var i = 0; i < players.Count; i++)
             {
-                PlayerID player = predictionManager.players.currentState.players[i];
+                PlayerID player = players[i];
                 if (!_spawnedPlayers.Contains(player))
                 {
                     SpawnPlayer(player, i);
@@ -40,10 +44,36 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
             }
         }
 
-        if (predictionManager.players.currentState.players.Count >= _expectedPlayers && isMapLoaded)
+        if (isMapLoaded && isLogicReady)
         {
-            Debug.Log("[WaitForPlayersState] All players joined and map is loaded - proceeding to next state.");
-            machine.Next();
+            int required = BaseGameModeLogic.Instance.MinPlayersToStart;
+            if (predictionManager.players.currentState.players.Count >= required)
+            {
+                Debug.Log("[WaitForPlayersState] Win condition met - proceeding to match.");
+                machine.Next();
+            }
+        }
+    }
+
+    private void UpdateUI()
+    {
+        if (GameStateUI.Instance == null) return;
+
+        var players = predictionManager.players.currentState.players;
+        if (players.Count != _lastPlayerCount)
+        {
+            _lastPlayerCount = players.Count;
+            
+            if (BaseGameModeLogic.Instance != null)
+            {
+                int required = BaseGameModeLogic.Instance.MinPlayersToStart;
+                GameStateUI.Instance.UpdateWaitingStatus(_lastPlayerCount, required);
+            }
+            else
+            {
+                // Fallback if logic hasn't spawned yet
+                GameStateUI.Instance.UpdateStatus($"Waiting for players... ({_lastPlayerCount})");
+            }
         }
     }
 
@@ -61,8 +91,8 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
             predictionManager.SetOwnership(newPlayer, player);
             PlayerInfoManager.Register(player);
             _matchRunningState.OnPlayerSpawned(player, newPlayer.Value);
-        }
-    }
+            }
+            }
 
     public override void Exit()
     {

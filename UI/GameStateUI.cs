@@ -40,6 +40,14 @@ public class GameStateUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Specifically updates the waiting status with a player count fraction.
+    /// </summary>
+    public void UpdateWaitingStatus(int current, int required)
+    {
+        UpdateStatus($"Waiting for players... ({current}/{required})");
+    }
+
+    /// <summary>
     /// Shows a countdown before the round starts
     /// </summary>
     public void ShowCountdown(int seconds)

@@ -10,6 +10,7 @@ public class GameRegistry : ScriptableObject
     public class GameModeConfig
     {
         public string modeName;
+        public GameObject gameModeLogicPrefab;
         public List<MapDefinition> allowedMaps = new List<MapDefinition>();
     }
 

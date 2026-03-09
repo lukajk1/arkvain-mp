@@ -8,7 +8,7 @@ using UnityEngine;
 public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnState>
 {
     [SerializeField] private GameObject _playerPrefab;
-    [SerializeField] RoundRunningState _roundRunningState;
+    [SerializeField] MatchRunningState _matchRunningState;
     [SerializeField] private ScoreboardUI_1v1 _scoreboard;
 
     public override void ViewEnter(bool isVerified)
@@ -45,7 +45,7 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
             // Register player info
             PlayerInfoManager.Register(player);
 
-            _roundRunningState.OnPlayerSpawned(player, newPlayer.Value);
+            _matchRunningState.OnPlayerSpawned(player, newPlayer.Value);
         }
 
         // Refresh scoreboard to show player names immediately

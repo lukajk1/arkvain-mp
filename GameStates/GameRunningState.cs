@@ -4,11 +4,21 @@ using PurrNet.Prediction;
 using PurrNet.Prediction.StateMachine;
 using UnityEngine;
 
-public class RoundRunningState : PredictedStateNode<RoundRunningState.RoundState>
+public class GameRunningState : PredictedStateNode<GameRunningState.MatchState>
 {
-    protected override RoundState GetInitialState()
+    public override void Enter()
     {
-        return new RoundState()
+        Debug.Log("[MatchRunningState] Match is officially starting!");
+        
+        if (BaseGameModeLogic.Instance != null)
+        {
+            BaseGameModeLogic.Instance.OnMatchStarted();
+        }
+    }
+
+    protected override MatchState GetInitialState()
+    {
+        return new MatchState()
         {
             playersAlive = DisposableDictionary<PlayerID, PredictedObjectID>.Create()
         };
@@ -17,6 +27,11 @@ public class RoundRunningState : PredictedStateNode<RoundRunningState.RoundState
     public override void Exit()
     {
         currentState.playersAlive.Clear();
+        
+        if (BaseGameModeLogic.Instance != null)
+        {
+            BaseGameModeLogic.Instance.OnMatchEnded();
+        }
     }
 
     private void OnEnable()
@@ -36,20 +51,17 @@ public class RoundRunningState : PredictedStateNode<RoundRunningState.RoundState
     private void OnPlayerDied(PlayerInfo? player)
     {
         if (!player.HasValue) return;
-        if (machine.currentStateNode is not RoundRunningState) return;
+        if (machine.currentStateNode is not GameRunningState) return;
 
         currentState.playersAlive.Remove(player.Value.playerID);
-
-        if (currentState.playersAlive.Count <= 1)
-        {
-            machine.Next();
-        }
+        
+        // Note: We no longer check for playersAlive.Count <= 1 here.
+        // Win conditions are now handled by BaseGameModeLogic.
     }
 
-    public struct RoundState : IPredictedData<RoundState>
+    public struct MatchState : IPredictedData<MatchState>
     {
         public DisposableDictionary<PlayerID, PredictedObjectID> playersAlive;
-
 
         public void Dispose() 
         {
@@ -58,7 +70,7 @@ public class RoundRunningState : PredictedStateNode<RoundRunningState.RoundState
 
         public override string ToString()
         {
-            if (playersAlive.isDisposed) return "Game not running";
+            if (playersAlive.isDisposed) return "Match not running";
 
             string log = $"players alive: {playersAlive.Count}";
             foreach (var player in playersAlive)

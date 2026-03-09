@@ -8,7 +8,7 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
 {
     [SerializeField] private int _expectedPlayers;
     [SerializeField] private GameObject _playerPrefab;
-    [SerializeField] private RoundRunningState _roundRunningState;
+    [SerializeField] private GameRunningState _matchRunningState;
 
     private HashSet<PlayerID> _spawnedPlayers = new HashSet<PlayerID>();
 
@@ -60,7 +60,7 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         {
             predictionManager.SetOwnership(newPlayer, player);
             PlayerInfoManager.Register(player);
-            _roundRunningState.OnPlayerSpawned(player, newPlayer.Value);
+            _matchRunningState.OnPlayerSpawned(player, newPlayer.Value);
         }
     }
 

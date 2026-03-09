@@ -45,6 +45,7 @@ public class MapLoader : MonoBehaviour
         }
 
         string mapInternalName = ArkvainLobbyData.CurrentLobby["map"];
+        string gameModeName = ArkvainLobbyData.CurrentLobby["game_mode"];
         
         if (string.IsNullOrEmpty(mapInternalName))
         {
@@ -52,10 +53,10 @@ public class MapLoader : MonoBehaviour
             return;
         }
 
-        LoadMap(mapInternalName);
+        LoadMapAndMode(mapInternalName, gameModeName);
     }
 
-    public void LoadMap(string internalName)
+    public void LoadMapAndMode(string mapInternalName, string gameModeName)
     {
         if (gameRegistry == null)
         {
@@ -63,26 +64,30 @@ public class MapLoader : MonoBehaviour
             return;
         }
 
-        MapDefinition def = gameRegistry.FindMapByInternalName(internalName);
+        MapDefinition mapDef = gameRegistry.FindMapByInternalName(mapInternalName);
+        var modeConfig = gameRegistry.GetModeConfig(gameModeName);
 
-        if (def == null)
-            return;
-
-        if (IsLoading)
+        if (mapDef == null)
         {
-            Debug.LogWarning("[MapLoader] Already loading a map!");
+            Debug.LogError($"[MapLoader] Map '{mapInternalName}' not found in registry!");
             return;
         }
 
-        StartCoroutine(LoadMapRoutine(def));
+        if (IsLoading)
+        {
+            Debug.LogWarning("[MapLoader] Already loading!");
+            return;
+        }
+
+        StartCoroutine(LoadMapAndModeRoutine(mapDef, modeConfig));
     }
 
-    private IEnumerator LoadMapRoutine(MapDefinition def)
+    private IEnumerator LoadMapAndModeRoutine(MapDefinition mapDef, GameRegistry.GameModeConfig modeConfig)
     {
         IsLoading = true;
-        Debug.Log($"[MapLoader] Starting additive load of map: {def.displayName} ({def.SceneName})");
+        Debug.Log($"[MapLoader] Starting load of map: {mapDef.displayName} and mode: {modeConfig?.modeName ?? "None"}");
 
-        // If a map is already loaded, unload it first
+        // 1. Unload old map if exists
         if (CurrentMapData != null)
         {
             Scene currentScene = CurrentMapData.gameObject.scene;
@@ -91,21 +96,14 @@ public class MapLoader : MonoBehaviour
             CurrentMapData = null;
         }
 
-        // Load the new map scene additively
-        AsyncOperation loadOp = SceneManager.LoadSceneAsync(def.SceneName, LoadSceneMode.Additive);
-        
-        while (!loadOp.isDone)
-        {
-            yield return null;
-        }
+        // 2. Load the new map scene additively
+        AsyncOperation loadOp = SceneManager.LoadSceneAsync(mapDef.SceneName, LoadSceneMode.Additive);
+        while (!loadOp.isDone) yield return null;
 
-        // Find MapData in the newly loaded scene
-        Scene loadedScene = SceneManager.GetSceneByName(def.SceneName);
+        // 3. Find MapData
+        Scene loadedScene = SceneManager.GetSceneByName(mapDef.SceneName);
         if (loadedScene.IsValid())
         {
-            // Set as active scene so lighting/skybox from the map scene can take effect if configured
-            // SceneManager.SetActiveScene(loadedScene);
-
             GameObject[] rootObjects = loadedScene.GetRootGameObjects();
             foreach (var obj in rootObjects)
             {
@@ -118,16 +116,56 @@ public class MapLoader : MonoBehaviour
             }
         }
 
+        // 4. Spawn Game Mode Logic (Server Only)
+        if (PurrNet.NetworkManager.main != null && PurrNet.NetworkManager.main.isServer)
+        {
+            if (modeConfig != null && modeConfig.gameModeLogicPrefab != null)
+            {
+                Debug.Log($"[MapLoader] Spawning Game Mode Logic: {modeConfig.modeName}");
+                
+                // Find the PredictionManager in the scene
+                var predManager = FindObjectOfType<PurrNet.Prediction.PredictionManager>();
+                if (predManager != null && predManager.hierarchy != null)
+                {
+                    predManager.hierarchy.Create(modeConfig.gameModeLogicPrefab);
+                }
+                else
+                {
+                    Debug.LogWarning("[MapLoader] PredictionManager or Hierarchy not found! Game mode logic may not be predicted.");
+                    // Fallback to standard spawn if prediction isn't available
+                    if (PurrNet.NetworkManager.main.TryGetModule<PurrNet.Modules.HierarchyFactory>(true, out var factory))
+                    {
+                        if (factory.TryGetHierarchy(gameObject.scene, out var hierarchy))
+                        {
+                            // In HierarchyV2, the method is InternalSpawn for GameObjects
+                            hierarchy.OnGameObjectCreated(Instantiate(modeConfig.gameModeLogicPrefab), modeConfig.gameModeLogicPrefab);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[MapLoader] No GameModeLogic prefab found for this mode!");
+            }
+        }
+
         if (CurrentMapData == null)
         {
-            Debug.LogError($"[MapLoader] Could not find MapData component in scene: {def.SceneName}");
+            Debug.LogError($"[MapLoader] Could not find MapData component in scene: {mapDef.SceneName}");
         }
         else
         {
-            Debug.Log($"[MapLoader] Map '{def.displayName}' loaded successfully.");
+            Debug.Log($"[MapLoader] Map and Mode loaded successfully.");
             OnMapLoaded?.Invoke(CurrentMapData);
         }
 
         IsLoading = false;
+    }
+
+    public void LoadMap(string internalName)
+    {
+        // Keep for backward compatibility or direct calls
+        string gameModeName = ArkvainLobbyData.HasValidLobby() ? ArkvainLobbyData.CurrentLobby["game_mode"] : "";
+        LoadMapAndMode(internalName, gameModeName);
     }
 }

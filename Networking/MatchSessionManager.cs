@@ -151,6 +151,36 @@ public class MatchSessionManager : NetworkBehaviour
             _playerStats[victimIdx].AddDeath();
             _playerStats.SetDirty(victimIdx);
         }
+
+        // Notify the current game mode logic
+        if (BaseGameModeLogic.Instance != null)
+        {
+            BaseGameModeLogic.Instance.OnPlayerKilled(killer, victim);
+        }
+    }
+
+    /// <summary>
+    /// Called by GameModeLogic to request the match to end.
+    /// </summary>
+    public void RequestEndMatch()
+    {
+        if (!isServer) return;
+
+        var sm = FindObjectOfType<PurrNet.Prediction.StateMachine.PredictedStateMachine>();
+        if (sm != null)
+        {
+            var endState = sm.GetComponent<GameEndedState>();
+            if (endState != null)
+            {
+                Debug.Log("[MatchSessionManager] Explicitly setting state to GameEndedState.");
+                sm.SetState(endState);
+            }
+            else
+            {
+                Debug.LogWarning("[MatchSessionManager] GameEndedState component not found on StateMachine! Falling back to Next().");
+                sm.Next();
+            }
+        }
     }
 
     [ServerRpc(requireOwnership: false)]

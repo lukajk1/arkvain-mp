@@ -26,11 +26,13 @@ public class PlayerSpawningState : PredictedStateNode<PlayerSpawningState.SpawnS
         {
             PlayerID player = predictionManager.players.currentState.players[i];
             
-            // For now, let's alternate teams based on index
+            // Alternating teams based on index
             int teamIndex = i % 2;
             
-            // In a real TDM, we might want a more complex team lookup
-            Transform spawnPoint = mapData.GetRandomSpawnPoint(teamIndex);
+            // Use sequential, deterministic spawning for networking
+            Transform spawnPoint = mapData.GetSpawnPointSequential(i, teamIndex);
+
+            Debug.Log($"[PlayerSpawningState] Spawning player {player} at {spawnPoint.position} (Team {teamIndex}, MapData: {mapData.name})");
 
             PredictedObjectID? newPlayer;
             newPlayer = hierarchy.Create(_playerPrefab, spawnPoint.position, spawnPoint.rotation, player);

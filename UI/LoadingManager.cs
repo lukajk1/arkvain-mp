@@ -35,6 +35,84 @@ public class LoadingManager : MonoBehaviour
             loadingCanvas.gameObject.SetActive(false);
     }
 
+    public void LoadGame(string coreSceneName, string mapInternalName)
+    {
+        _isSceneLoaded = false;
+        _isNetworkReady = false;
+        
+        StopAllCoroutines();
+        StartCoroutine(GameLoadRoutine(coreSceneName, mapInternalName));
+    }
+
+    private IEnumerator GameLoadRoutine(string coreSceneName, string mapInternalName)
+    {
+        if (loadingCanvas != null)
+            loadingCanvas.gameObject.SetActive(true);
+
+        if (progressSlider != null)
+            progressSlider.value = 0f;
+
+        // Phase 1: Core Scene Loading
+        if (statusText != null)
+            statusText.text = "Loading Core Systems...";
+
+        AsyncOperation coreOp = SceneManager.LoadSceneAsync(coreSceneName);
+        while (!coreOp.isDone)
+        {
+            if (progressSlider != null)
+                progressSlider.value = (coreOp.progress / 0.9f) * 0.4f; // First 40%
+            yield return null;
+        }
+
+        // Phase 2: Wait for MapLoader to initialize in the new scene
+        if (statusText != null)
+            statusText.text = "Initializing Map Loader...";
+
+        while (MapLoader.Instance == null)
+        {
+            yield return null;
+        }
+
+        // Phase 3: Additive Map Loading
+        if (statusText != null)
+            statusText.text = $"Loading Map: {mapInternalName}...";
+
+        MapLoader.Instance.LoadMap(mapInternalName);
+
+        while (MapLoader.Instance.IsLoading || MapLoader.Instance.CurrentMapData == null)
+        {
+            // Fill from 40% to 80% while map loads
+            if (progressSlider != null && progressSlider.value < 0.8f)
+                progressSlider.value = Mathf.MoveTowards(progressSlider.value, 0.8f, Time.deltaTime * 0.2f);
+            yield return null;
+        }
+
+        _isSceneLoaded = true;
+
+        // Phase 4: Wait for Network Registration
+        if (statusText != null)
+            statusText.text = "Waiting for response from host...";
+
+        while (NetworkManager.main == null || NetworkManager.main.localPlayer == default)
+        {
+            if (progressSlider != null && progressSlider.value < 1.0f)
+                progressSlider.value = Mathf.MoveTowards(progressSlider.value, 1.0f, Time.deltaTime * 0.1f);
+            
+            yield return null;
+        }
+
+        if (progressSlider != null)
+            progressSlider.value = 1.0f;
+
+        if (statusText != null)
+            statusText.text = "Readying...";
+
+        yield return new WaitForSeconds(0.5f);
+
+        if (loadingCanvas != null)
+            loadingCanvas.gameObject.SetActive(false);
+    }
+
     public void LoadScene(string sceneName)
     {
         _targetScene = sceneName;

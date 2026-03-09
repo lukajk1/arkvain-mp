@@ -159,7 +159,7 @@ public class LobbyManager : MonoBehaviour
                 // Load game scene via LoadingManager
                 if (LoadingManager.Instance != null)
                 {
-                    LoadingManager.Instance.LoadScene(gameScene.sceneName);
+                    LoadingManager.Instance.LoadGame(gameScene.sceneName, lobby["map"]);
                 }
                 else
                 {
@@ -250,7 +250,7 @@ public class LobbyManager : MonoBehaviour
         // Load game scene via LoadingManager
         if (LoadingManager.Instance != null)
         {
-            LoadingManager.Instance.LoadScene(gameScene.sceneName);
+            LoadingManager.Instance.LoadGame(gameScene.sceneName, _currentLobby["map"]);
         }
         else
         {

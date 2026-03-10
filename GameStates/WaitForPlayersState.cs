@@ -29,9 +29,10 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         // Always update UI while in this state
         UpdateUI();
 
-        if (isMapLoaded)
+        if (isMapLoaded && predictionManager.isServer)
         {
             // Immediate spawn logic: check for players who haven't spawned yet
+            // Only the server spawns bodies; hierarchy.Create replicates them to clients automatically.
             var players = predictionManager.players.currentState.players;
             for (var i = 0; i < players.Count; i++)
             {
@@ -49,7 +50,7 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
             int required = BaseGameModeLogic.Instance.MinPlayersToStart;
             if (predictionManager.players.currentState.players.Count >= required)
             {
-                Debug.Log("[WaitForPlayersState] Win condition met - proceeding to match.");
+                Debug.Log("[WaitForPlayersState] wait condition met - proceeding to match.");
                 machine.Next();
             }
         }
@@ -96,8 +97,8 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
             PlayerInfoManager.Register(player);
             _matchRunningState.OnPlayerSpawned(player, newPlayer.Value);
             GameEvents.OnPlayerSpawned?.Invoke(player);
-            }
-            }
+        }
+    }
 
     public override void Exit()
     {

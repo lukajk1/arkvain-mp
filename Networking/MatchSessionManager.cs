@@ -5,6 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+/// <summary>
+/// Manages the networked state of a match session, including player lifecycle (joining/leaving),
+/// synchronized player statistics (kills, deaths, assists), and loadout configuration.
+/// Acts as a central hub for reporting gameplay events to the server and broadcasting 
+/// session-wide updates to all clients via SyncLists and events.
+/// </summary>
 public class MatchSessionManager : NetworkBehaviour
 {
     public static MatchSessionManager Instance { get; private set; }
@@ -247,6 +253,28 @@ public class MatchSessionManager : NetworkBehaviour
             _playerStats[index].UpdateSteamInfo(steamId, steamName);
             _playerStats.SetDirty(index);
             Debug.Log($"[MatchSessionManager] Updated Steam info for {playerId}: {steamName} ({steamId})");
+        }
+    }
+
+    [ServerRpc(requireOwnership: false)]
+    public void UpdatePlayerLoadout(PlayerID playerId, LoadoutSelection selection)
+    {
+        if (!isServer) return;
+
+        // Basic validation
+        if (!System.Enum.IsDefined(typeof(HeroType), selection.Hero) || 
+            !System.Enum.IsDefined(typeof(WeaponType), selection.Weapon))
+        {
+            Debug.LogWarning($"[MatchSessionManager] Received invalid loadout from {playerId}");
+            return;
+        }
+
+        int index = FindPlayerIndex(playerId);
+        if (index != -1)
+        {
+            _playerStats[index].UpdateLoadout(selection);
+            _playerStats.SetDirty(index);
+            Debug.Log($"[MatchSessionManager] Updated loadout for {playerId}: Hero={selection.Hero}, Weapon={selection.Weapon}");
         }
     }
 

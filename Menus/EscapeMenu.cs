@@ -13,6 +13,7 @@ public class EscapeMenu : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button _returnToGameButton;
     [SerializeField] private Button _settingsButton;
+    [SerializeField] private Button _loadoutButton;
     [SerializeField] private Button _leaveMatchButton;
     [SerializeField] private Button _quitToDesktopButton;
 
@@ -32,6 +33,9 @@ public class EscapeMenu : MonoBehaviour
 
         if (_settingsButton != null)
             _settingsButton.onClick.AddListener(OnSettings);
+
+        if (_loadoutButton != null)
+            _loadoutButton.onClick.AddListener(OnLoadoutPressed);
 
         if (_leaveMatchButton != null)
             _leaveMatchButton.onClick.AddListener(OnLeaveMatch);
@@ -69,6 +73,9 @@ public class EscapeMenu : MonoBehaviour
         if (_settingsButton != null)
             _settingsButton.onClick.RemoveListener(OnSettings);
 
+        if (_loadoutButton != null)
+            _loadoutButton.onClick.RemoveListener(OnLoadoutPressed);
+
         if (_leaveMatchButton != null)
             _leaveMatchButton.onClick.RemoveListener(OnLeaveMatch);
 
@@ -88,6 +95,14 @@ public class EscapeMenu : MonoBehaviour
     private void OnReturnToGame()
     {
         SetState(false);
+    }
+
+    private void OnLoadoutPressed()
+    {
+        if (LoadoutManager.Instance != null)
+        {
+            LoadoutManager.Instance.SetState(true);
+        }
     }
 
     private void OnSettings()

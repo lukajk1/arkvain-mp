@@ -64,9 +64,13 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         {
             _lastPlayerCount = players.Count;
             
-            if (BaseGameModeLogic.Instance != null)
+            // Try singleton first, then direct scene search
+            var logic = BaseGameModeLogic.Instance;
+            if (logic == null) logic = FindObjectOfType<BaseGameModeLogic>();
+
+            if (logic != null)
             {
-                int required = BaseGameModeLogic.Instance.MinPlayersToStart;
+                int required = logic.MinPlayersToStart;
                 GameStateUI.Instance.UpdateWaitingStatus(_lastPlayerCount, required);
             }
             else
@@ -91,6 +95,7 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
             predictionManager.SetOwnership(newPlayer, player);
             PlayerInfoManager.Register(player);
             _matchRunningState.OnPlayerSpawned(player, newPlayer.Value);
+            GameEvents.OnPlayerSpawned?.Invoke(player);
             }
             }
 

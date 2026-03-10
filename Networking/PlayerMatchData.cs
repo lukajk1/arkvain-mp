@@ -17,6 +17,8 @@ public class PlayerMatchData
     public float AveragePing { get; set; }
     public bool IsConnected { get; set; }
 
+    public LoadoutSelection Loadout { get; set; }
+
     public PlayerMatchData() { }
 
     public PlayerMatchData(PlayerID playerId, ulong steamId, string playerName)
@@ -30,6 +32,7 @@ public class PlayerMatchData
         Assists = 0;
         AveragePing = 0f;
         IsConnected = true;
+        Loadout = new LoadoutSelection { Hero = HeroType.Richter, Weapon = WeaponType.Crossbow };
     }
 
     // Stat modification methods
@@ -39,6 +42,11 @@ public class PlayerMatchData
     public void AddDamageDealt(int damage) => DamageDealt += damage;
 
     public void SetConnected(bool connected) => IsConnected = connected;
+
+    public void UpdateLoadout(LoadoutSelection newLoadout)
+    {
+        Loadout = newLoadout;
+    }
 
     // Update Steam info after creation
     public void UpdateSteamInfo(ulong steamId, string steamName)

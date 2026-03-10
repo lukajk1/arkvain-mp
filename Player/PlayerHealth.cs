@@ -15,6 +15,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
     [HideInInspector] public PredictedEvent<(int health, int maxHealth)> _onHealthChanged;
+    [HideInInspector] public PredictedEvent _onDeathPredictedEvent;
 
     protected override void LateAwake()
     {
@@ -23,6 +24,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
         _onDamageTaken = new PredictedEvent<DamageInfo>(predictionManager, this);
         _onHealthChanged = new PredictedEvent<(int, int)>(predictionManager, this);
+        _onDeathPredictedEvent = new PredictedEvent(predictionManager, this);
     }
 
     protected override void OnDestroy()
@@ -35,7 +37,8 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         return new HealthState()
         {
             health = _maxHealth,
-            lastHealth = _maxHealth
+            lastHealth = _maxHealth,
+            lastVisualHealth = _maxHealth
         };
     }
 
@@ -49,29 +52,40 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         GameEvents.RespawnAllPlayers -= OnRespawnAllPlayers;
     }
 
-
-    private void Die(PlayerInfo? attacker = null)
+    /// <summary>
+    /// Server-authoritative death execution.
+    /// Triggered only when the server confirms isDead is true.
+    /// </summary>
+    private void ExecuteDeath(PlayerInfo? attacker = null)
     {
+        if (!predictionManager.isServer) return;
+
+        PlayerID victimId = owner ?? PlayerID.Server;
+        PlayerID killerId = attacker?.playerID ?? PlayerID.Server;
+
+        // Tallying Path: Authoritative scoring in MatchSessionManager
+        if (MatchSessionManager.Instance != null && victimId != PlayerID.Server)
+        {
+            MatchSessionManager.Instance.ReportKill(killerId, victimId);
+            Debug.Log($"[PlayerHealth] Reported death to MatchSessionManager: Victim={victimId}, Killer={killerId}");
+        }
+
         PlayerInfo? ownerInfo = owner.HasValue ? new PlayerInfo(owner.Value) : null;
 
+        // Signaling Path: Local actions for any server-side listeners
         OnPlayerDeath?.Invoke(ownerInfo);
         OnDeath?.Invoke(ownerInfo);
 
-        // Broadcast kill event if there was an attacker
         if (attacker.HasValue && owner.HasValue)
         {
             OnPlayerKilled?.Invoke(attacker.Value, ownerInfo.Value);
         }
 
-        // Record kill/death in ScoreManager (server only)
-        if (predictionManager.isServer && attacker.HasValue && owner.HasValue)
+        // Legacy/Mode-Specific Scoring
+        GameManager1v1 scoreManager = FindFirstObjectByType<GameManager1v1>();
+        if (scoreManager != null && attacker.HasValue && owner.HasValue)
         {
-            GameManager1v1 scoreManager = FindFirstObjectByType<GameManager1v1>();
-            if (scoreManager != null)
-            {
-                scoreManager.RecordKill(attacker.Value, ownerInfo.Value);
-                HUDManager.Instance?.BroadcastEvent("Killed by testplayer");
-            }
+            scoreManager.RecordKill(attacker.Value, ownerInfo.Value);
         }
 
         predictionManager.hierarchy.Delete(gameObject);
@@ -79,7 +93,8 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     private void OnRespawnAllPlayers()
     {
-        predictionManager.hierarchy.Delete(gameObject);
+        if (predictionManager.isServer)
+            predictionManager.hierarchy.Delete(gameObject);
     }
 
     [ContextMenu("Kill Player")]
@@ -91,58 +106,50 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     protected override void Simulate(ref HealthState state, float delta)
     {
         // rb is safe to read from in simulate()
-        if (!state.isDead && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
+        if (predictionManager.isServer && !state.isDead && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
         {
             state.health = 0;
-            state.isDead = true;
+            ProcessDeath(ref state, null);
         }
     }
 
     protected override void LateSimulate(ref HealthState state, float delta)
     {
-        // Detect health change and fire event
-        if (state.health != state.lastHealth)
-        {
-            _onHealthChanged?.Invoke((state.health, _maxHealth));
-            state.lastHealth = state.health;
-        }
-    }
+        // Calculate visual health: clamp to 1 if not confirmed dead by server
+        int visualHealth = state.isDead ? 0 : Mathf.Max(1, state.health);
 
-    private bool _lastDead = false;
+        // Detect visual health change and fire event
+        if (visualHealth != state.lastVisualHealth)
+        {
+            _onHealthChanged?.Invoke((visualHealth, _maxHealth));
+            state.lastVisualHealth = visualHealth;
+        }
+
+        state.lastHealth = state.health;
+    }
 
     protected override void UpdateView(HealthState viewState, HealthState? verified)
     {
         base.UpdateView(viewState, verified);
-
-        // Health changes now handled by PredictedEvent in LateSimulate()
-        // Old C# event kept for backwards compatibility but not invoked from here
-
-        if (viewState.isDead && !_lastDead)
-        {
-            _lastDead = true;
-            Die(viewState.attacker);
-        }
     }
 
     public void ChangeHealth(int change, PlayerInfo? attacker = null)
     {
-        // Server-side validation: Clamp damage to maximum reasonable value
-        // This prevents a malicious client from dealing 9999 damage
-        if (change < 0) // Taking damage
-        {
-            int maxDamage = 100; // Maximum damage per hit (headshot with most powerful weapon)
+        if (currentState.isDead) return;
 
+        // Server-side validation: Clamp damage to maximum reasonable value
+        if (change < 0) 
+        {
+            int maxDamage = 100; 
             if (change < -maxDamage)
             {
                 if (predictionManager.isServer)
-                {
                     Debug.LogWarning($"[PlayerHealth] Clamping damage from {-change} to {maxDamage}. Attacker: {attacker?.ToString() ?? "unknown"}");
-                }
                 change = -maxDamage;
             }
         }
 
-        currentState.health = Mathf.Max(0, currentState.health + change);
+        currentState.health += change;
 
         // Fire damage event if taking damage (negative change)
         if (change < 0)
@@ -154,12 +161,21 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
             });
         }
 
-        if (currentState.health <= 0 && !currentState.isDead)
+        // Only the server can confirm a death
+        if (predictionManager.isServer && currentState.health <= 0 && !currentState.isDead)
         {
-            currentState.isDead = true;
-            currentState.attacker = attacker;
+            ProcessDeath(ref currentState, attacker);
         }
-        //Debug.Log($"health changed to {currentState.health}");
+    }
+
+    private void ProcessDeath(ref HealthState state, PlayerInfo? attacker)
+    {
+        state.isDead = true;
+        state.attacker = attacker;
+        _onDeathPredictedEvent.Invoke();
+        
+        // Final death execution (scoring and deletion)
+        ExecuteDeath(attacker);
     }
 
     public struct HealthState : IPredictedData<PlayerHealth.HealthState>
@@ -167,13 +183,14 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         public int health;
         public bool isDead;
         public PlayerInfo? attacker;
-        public int lastHealth; // Track previous tick's health for change detection
+        public int lastHealth; 
+        public int lastVisualHealth;
 
         public void Dispose() { }
 
         public override string ToString()
         {
-            return $"Health: {health}";
+            return $"Health: {health} (Dead: {isDead})";
         }
     }
 

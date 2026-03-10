@@ -12,7 +12,11 @@ public class LoadingManager : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private Canvas loadingCanvas;
     [SerializeField] private TMP_Text statusText;
+    [SerializeField] private TMP_Text flavorText;
     [SerializeField] private Slider progressSlider;
+
+    [Header("Content")]
+    [SerializeField] private LoadingTipsSO tipsData;
 
     [Header("Settings")]
     [SerializeField] private float fadeSpeed = 2f;
@@ -46,6 +50,8 @@ public class LoadingManager : MonoBehaviour
 
     private IEnumerator GameLoadRoutine(string coreSceneName, string mapInternalName)
     {
+        UpdateTips();
+
         if (loadingCanvas != null)
             loadingCanvas.gameObject.SetActive(true);
 
@@ -125,6 +131,8 @@ public class LoadingManager : MonoBehaviour
 
     private IEnumerator LoadingRoutine(string sceneName)
     {
+        UpdateTips();
+
         if (loadingCanvas != null)
             loadingCanvas.gameObject.SetActive(true);
 
@@ -175,5 +183,12 @@ public class LoadingManager : MonoBehaviour
         // Cleanup
         if (loadingCanvas != null)
             loadingCanvas.gameObject.SetActive(false);
+    }
+
+    private void UpdateTips()
+    {
+        if (flavorText == null || tipsData == null) return;
+        
+        flavorText.text = tipsData.GetRandomAny();
     }
 }

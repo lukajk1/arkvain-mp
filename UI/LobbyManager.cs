@@ -476,6 +476,23 @@ public class LobbyManager : MonoBehaviour
 
                 // Sync dropdown values from lobby metadata
                 SyncDropdownsFromLobby();
+
+                // Late Join Logic: If game is already started, jump into it
+                string gameStarted = lobby["game_started"];
+                if (gameStarted == "true")
+                {
+                    Debug.Log("[LobbyManager] Joined a lobby already in progress. Loading game scene...");
+                    UpdateStatusText("Joining match in progress...");
+                    
+                    if (LoadingManager.Instance != null)
+                    {
+                        LoadingManager.Instance.LoadGame(gameScene.sceneName, lobby["map"]);
+                    }
+                    else
+                    {
+                        UnityEngine.SceneManagement.SceneManager.LoadScene(gameScene.sceneName);
+                    }
+                }
             }
             else
             {

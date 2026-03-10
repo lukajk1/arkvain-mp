@@ -11,14 +11,46 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
 
     private HashSet<PlayerID> _spawnedPlayers = new HashSet<PlayerID>();
     private int _lastPlayerCount = -1;
+    private bool _wasMapReady = false;
 
     public override void Enter()
     {
         Debug.Log($"[WaitForPlayersState] Entered waiting for players state.");
         _lastPlayerCount = -1;
+        _wasMapReady = false;
         
-        // Initial UI update
+        if (predictionManager.players != null)
+        {
+            predictionManager.players.onPlayerAdded += OnPlayerAdded;
+        }
+
+        // Initial UI update and check
         UpdateUI();
+        CheckForMissingPlayers();
+    }
+
+    private void OnPlayerAdded(PlayerID player)
+    {
+        CheckForMissingPlayers();
+    }
+
+    private void CheckForMissingPlayers()
+    {
+        if (!predictionManager.isServer) return;
+
+        bool isMapLoaded = MapLoader.Instance != null && MapLoader.Instance.CurrentMapData != null && !MapLoader.Instance.IsLoading;
+        if (!isMapLoaded) return;
+
+        var players = predictionManager.players.currentState.players;
+        for (var i = 0; i < players.Count; i++)
+        {
+            PlayerID player = players[i];
+            if (!_spawnedPlayers.Contains(player))
+            {
+                SpawnPlayer(player, i);
+                _spawnedPlayers.Add(player);
+            }
+        }
     }
 
     protected override void StateSimulate(ref WaitState state, float delta)
@@ -29,20 +61,11 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         // Always update UI while in this state
         UpdateUI();
 
-        if (isMapLoaded && predictionManager.isServer)
+        // If map just finished loading, catch up on spawns
+        if (isMapLoaded && !_wasMapReady)
         {
-            // Immediate spawn logic: check for players who haven't spawned yet
-            // Only the server spawns bodies; hierarchy.Create replicates them to clients automatically.
-            var players = predictionManager.players.currentState.players;
-            for (var i = 0; i < players.Count; i++)
-            {
-                PlayerID player = players[i];
-                if (!_spawnedPlayers.Contains(player))
-                {
-                    SpawnPlayer(player, i);
-                    _spawnedPlayers.Add(player);
-                }
-            }
+            _wasMapReady = true;
+            CheckForMissingPlayers();
         }
 
         if (isMapLoaded && isLogicReady)
@@ -102,6 +125,11 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
 
     public override void Exit()
     {
+        if (predictionManager.players != null)
+        {
+            predictionManager.players.onPlayerAdded -= OnPlayerAdded;
+        }
+
         if (GameStateUI.Instance != null)
         {
             GameStateUI.Instance.UpdateStatus("", false);

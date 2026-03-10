@@ -15,7 +15,7 @@ public class LoadingTipsSO : ScriptableObject
     public string GetRandomAny()
     {
         int total = tips.Count + flavorTexts.Count;
-        if (total == 0) return "Loading...";
+        if (total == 0) return "";
 
         int index = Random.Range(0, total);
         if (index < tips.Count)

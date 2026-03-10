@@ -40,17 +40,24 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
     private float _footstepDistance;
     private bool _jumpEventsSubscribed;
+    private bool _deathEventSubscribed;
 
     private void OnEnable()
     {
-        if (_playerHealth != null)
-            _playerHealth.OnDeath += OnPlayerDeath;
+        // OnDeath action replaced by _onDeathPredictedEvent in OnDeathPredicted
     }
 
     private void OnDisable()
     {
         if (_playerHealth != null)
-            _playerHealth.OnDeath -= OnPlayerDeath;
+        {
+            if (_deathEventSubscribed)
+            {
+                _playerHealth._onDeathPredictedEvent.RemoveListener(OnDeathPredicted);
+                _deathEventSubscribed = false;
+            }
+        }
+
         if (_jumpEventsSubscribed && _playerMovement != null && _playerMovement._onJump != null)
         {
             _playerMovement._onJump.RemoveListener(OnJump);
@@ -58,6 +65,23 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             _jumpEventsSubscribed = false;
         }
     }
+
+    private void OnDeathPredicted(PlayerInfo? attacker)
+    {
+        // Hitmarker logic (only if we are the attacker)
+        if (attacker.HasValue && NetworkManager.main != null && attacker.Value.playerID == NetworkManager.main.localPlayer)
+        {
+            HitmarkerManager.Instance?.ReportKillConfirmed();
+        }
+
+        // Death visuals (dead player prefab)
+        if (isOwner)
+        {
+            if (_deadPlayerPrefab != null)
+                Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
+        }
+    }
+
     private void Start()
     {
         _ability = _abilityLogic as IAbility;
@@ -132,20 +156,6 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
         ScreenspaceEffectManager.SetGrayscale(false);
     }
 
-
-    private void OnPlayerDeath(PlayerInfo? playerId)
-    {
-
-        //if (_ragdoll != null)
-            //Instantiate(_ragdoll, transform.position + (Vector3.up * 2f), transform.rotation);
-
-        
-        if (!isOwner) return; // logic below only for remote players
-
-        if (_deadPlayerPrefab != null)
-            Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
-    }
-
     private void OnJump()
     {
         //Debug.Log("jump called");
@@ -189,6 +199,12 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             _playerMovement._onJump.AddListener(OnJump);
             _playerMovement._onLand.AddListener(OnLand);
             _jumpEventsSubscribed = true;
+        }
+
+        if (!_deathEventSubscribed && _playerHealth != null && _playerHealth._onDeathPredictedEvent != null)
+        {
+            _playerHealth._onDeathPredictedEvent.AddListener(OnDeathPredicted);
+            _deathEventSubscribed = true;
         }
 
         if (_playerMovement != null && _footstepClips.Count > 0

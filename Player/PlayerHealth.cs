@@ -9,22 +9,16 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     [SerializeField] private float _yHeightKillThreshold = -25f;
     [SerializeField] private PlayerMovement _playerMovement;
 
-    public static event Action<PlayerInfo?> OnPlayerDeath;
-    public static event Action<PlayerInfo, PlayerInfo> OnPlayerKilled; // (attacker, victim)
-    public event Action<PlayerInfo?> OnDeath;
-
-    [HideInInspector] public PredictedEvent<DamageInfo> _onDamageTaken;
     [HideInInspector] public PredictedEvent<(int health, int maxHealth)> _onHealthChanged;
-    [HideInInspector] public PredictedEvent _onDeathPredictedEvent;
-
+    // predicted event even though only the server can call this (ie no resimulation) to essentially have a tick-associated observer rpc
+    [HideInInspector] public PredictedEvent<PlayerInfo?> _onDeathPredictedEvent;
     protected override void LateAwake()
     {
         base.LateAwake();
         if (isOwner) gameObject.name = "local player";
 
-        _onDamageTaken = new PredictedEvent<DamageInfo>(predictionManager, this);
         _onHealthChanged = new PredictedEvent<(int, int)>(predictionManager, this);
-        _onDeathPredictedEvent = new PredictedEvent(predictionManager, this);
+        _onDeathPredictedEvent = new PredictedEvent<PlayerInfo?>(predictionManager, this);
     }
 
     protected override void OnDestroy()
@@ -68,24 +62,6 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         {
             MatchSessionManager.Instance.ReportKill(killerId, victimId);
             Debug.Log($"[PlayerHealth] Reported death to MatchSessionManager: Victim={victimId}, Killer={killerId}");
-        }
-
-        PlayerInfo? ownerInfo = owner.HasValue ? new PlayerInfo(owner.Value) : null;
-
-        // Signaling Path: Local actions for any server-side listeners
-        OnPlayerDeath?.Invoke(ownerInfo);
-        OnDeath?.Invoke(ownerInfo);
-
-        if (attacker.HasValue && owner.HasValue)
-        {
-            OnPlayerKilled?.Invoke(attacker.Value, ownerInfo.Value);
-        }
-
-        // Legacy/Mode-Specific Scoring
-        GameManager1v1 scoreManager = FindFirstObjectByType<GameManager1v1>();
-        if (scoreManager != null && attacker.HasValue && owner.HasValue)
-        {
-            scoreManager.RecordKill(attacker.Value, ownerInfo.Value);
         }
 
         predictionManager.hierarchy.Delete(gameObject);
@@ -151,16 +127,6 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
         currentState.health += change;
 
-        // Fire damage event if taking damage (negative change)
-        if (change < 0)
-        {
-            _onDamageTaken?.Invoke(new DamageInfo
-            {
-                damage = -change,
-                position = transform.position
-            });
-        }
-
         // Only the server can confirm a death
         if (predictionManager.isServer && currentState.health <= 0 && !currentState.isDead)
         {
@@ -172,7 +138,7 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     {
         state.isDead = true;
         state.attacker = attacker;
-        _onDeathPredictedEvent.Invoke();
+        _onDeathPredictedEvent.Invoke(attacker);
         
         // Final death execution (scoring and deletion)
         ExecuteDeath(attacker);

@@ -34,29 +34,34 @@ public class GameRunningState : PredictedStateNode<GameRunningState.MatchState>
         }
     }
 
-    private void OnEnable()
+    protected override void StateSimulate(ref MatchState state, float delta)
     {
-        PlayerHealth.OnPlayerDeath += OnPlayerDied;    
-    }
-    private void OnDisable()
-    {
-        PlayerHealth.OnPlayerDeath -= OnPlayerDied;
+        // PurrDiction: Tick-aligned player death detection
+        // If an object is deleted from the hierarchy, it will no longer be found here.
+        // This dictionary will automatically rollback if the server disagrees with a deletion.
+        
+        var toRemove = ListPool<PlayerID>.Instantiate();
+        
+        foreach (var kvp in state.playersAlive)
+        {
+            if (!predictionManager.hierarchy.TryGetGameObject(kvp.Value, out var go) || go == null)
+            {
+                toRemove.Add(kvp.Key);
+            }
+        }
+
+        foreach (var id in toRemove)
+        {
+            state.playersAlive.Remove(id);
+            Debug.Log($"[GameRunningState] Player {id} removed from playersAlive (object deleted)");
+        }
+
+        ListPool<PlayerID>.Destroy(toRemove);
     }
 
     public void OnPlayerSpawned(PlayerID player, PredictedObjectID obj)
     {
         currentState.playersAlive[player] = obj;
-    }
-
-    private void OnPlayerDied(PlayerInfo? player)
-    {
-        if (!player.HasValue) return;
-        if (machine.currentStateNode is not GameRunningState) return;
-
-        currentState.playersAlive.Remove(player.Value.playerID);
-        
-        // Note: We no longer check for playersAlive.Count <= 1 here.
-        // Win conditions are now handled by BaseGameModeLogic.
     }
 
     public struct MatchState : IPredictedData<MatchState>

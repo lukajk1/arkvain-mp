@@ -40,6 +40,10 @@ public class ArkvainConnectionStarter : MonoBehaviour
         {
             _isFromLobby = true;
         }
+        else
+        {
+            Debug.Log("connection starter - not from lobby");
+        }
     }
 
     private void Start()
@@ -81,6 +85,16 @@ public class ArkvainConnectionStarter : MonoBehaviour
     private void StartNormal()
     {
         _networkManager.transport = _udpTransport;
+
+        // Load a default map/mode if we are starting outside of a lobby
+        if (MapLoader.Instance != null)
+        {
+            // Fallback map/mode for scene-only launch
+            string defaultMap = "1v1_map"; // Corresponds to 1v1 Arena scene
+            string defaultMode = "1v1"; 
+            MapLoader.Instance.LoadMapAndMode(defaultMap, defaultMode);
+            Debug.Log($"[ArkvainConnectionStarter] Starting without lobby - Loading default map: {defaultMap} ({defaultMode})");
+        }
 
 #if UNITY_EDITOR
         if (!ClonesManager.IsClone())

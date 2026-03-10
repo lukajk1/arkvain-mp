@@ -2,6 +2,7 @@ using PurrNet;
 using PurrNet.Prediction;
 using Heathen.SteamworksIntegration;
 using UnityEngine;
+using Steamworks;
 
 /// <summary>
 /// Sends the local player's Steam identity to the server when they spawn.
@@ -17,13 +18,6 @@ public class SyncSteamAndPlayerIdentity : StatelessPredictedIdentity
         if (!isOwner)
             return;
 
-        // Get local Steam info using Heathen (same as UserProfile)
-        UserData localUser = UserData.Me;
-        ulong localSteamId = (ulong)localUser.id;
-        string localSteamName = localUser.Name;
-
-        Debug.Log($"[PlayerSteamIdentity] Sending Steam info to server: {localSteamName} ({localSteamId})");
-
         // Get PlayerID before sending
         if (!owner.HasValue)
         {
@@ -32,6 +26,29 @@ public class SyncSteamAndPlayerIdentity : StatelessPredictedIdentity
         }
 
         PlayerID playerId = owner.Value;
+        ulong localSteamId = 0;
+        string localSteamName = $"Player {playerId.id}";
+
+        // Check if Steam is actually initialized before using Heathen/Steamworks
+        if (SteamAPI.IsSteamRunning())
+        {
+            try 
+            {
+                // Get local Steam info using Heathen (same as UserProfile)
+                UserData localUser = UserData.Me;
+                localSteamId = (ulong)localUser.id;
+                localSteamName = localUser.Name;
+                Debug.Log($"[PlayerSteamIdentity] Steam active. Using: {localSteamName} ({localSteamId})");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[PlayerSteamIdentity] Failed to get Steam info despite API running: {e.Message}. Using fallback.");
+            }
+        }
+        else
+        {
+            Debug.Log($"[PlayerSteamIdentity] Steam NOT running. Using fallback: {localSteamName}");
+        }
 
         // Send to server with PlayerID included
         ReportSteamInfo(playerId, localSteamId, localSteamName);

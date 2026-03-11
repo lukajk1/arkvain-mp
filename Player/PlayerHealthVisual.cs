@@ -13,7 +13,6 @@ public class PlayerHealthVisual : MonoBehaviour
     [SerializeField] private PlayerHealth _playerHealth;
     [SerializeField] private Slider _healthSlider;
     [SerializeField] private Image _damageFlashPrefab;
-    [SerializeField] private Image _disconnectedSymbol;
 
     [Header("Screen Effects")]
     [SerializeField] private float _thresholdToShowSSDamage = 0.4f;

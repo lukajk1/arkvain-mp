@@ -18,13 +18,6 @@ public class LoadingManager : MonoBehaviour
     [Header("Content")]
     [SerializeField] private LoadingTipsSO tipsData;
 
-    [Header("Settings")]
-    [SerializeField] private float fadeSpeed = 2f;
-
-    private bool _isSceneLoaded;
-    private bool _isNetworkReady;
-    private string _targetScene;
-
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -33,162 +26,122 @@ public class LoadingManager : MonoBehaviour
             return;
         }
         Instance = this;
+        DontDestroyOnLoad(gameObject);
         
-        // Ensure UI is hidden initially
         if (loadingCanvas != null)
             loadingCanvas.gameObject.SetActive(false);
     }
 
+    /// <summary>
+    /// Loads the core game loop and a specific map.
+    /// Used when transitioning from Lobby to Match.
+    /// </summary>
     public void LoadGame(string coreSceneName, string mapInternalName)
     {
-        _isSceneLoaded = false;
-        _isNetworkReady = false;
-        
         StopAllCoroutines();
         StartCoroutine(GameLoadRoutine(coreSceneName, mapInternalName));
     }
 
+    /// <summary>
+    /// Simple scene load with flavor text.
+    /// Used for returning to menus or non-networked transitions.
+    /// </summary>
+    public void LoadScene(string sceneName)
+    {
+        StopAllCoroutines();
+        StartCoroutine(SimpleLoadingRoutine(sceneName));
+    }
+
     private IEnumerator GameLoadRoutine(string coreSceneName, string mapInternalName)
     {
-        UpdateTips();
-
-        if (loadingCanvas != null)
-            loadingCanvas.gameObject.SetActive(true);
-
-        if (progressSlider != null)
-            progressSlider.value = 0f;
+        PrepareUI();
 
         // Phase 1: Core Scene Loading
-        if (statusText != null)
-            statusText.text = "Loading Core Systems...";
+        SetStatus("Loading Core Systems...");
+        yield return StartCoroutine(AsyncLoad(coreSceneName, 0f, 0.4f));
 
-        AsyncOperation coreOp = SceneManager.LoadSceneAsync(coreSceneName);
-        while (!coreOp.isDone)
-        {
-            if (progressSlider != null)
-                progressSlider.value = (coreOp.progress / 0.9f) * 0.4f; // First 40%
-            yield return null;
-        }
-
-        // Phase 2: Wait for MapLoader to initialize in the new scene
-        if (statusText != null)
-            statusText.text = "Initializing Map Loader...";
-
-        while (MapLoader.Instance == null)
-        {
-            yield return null;
-        }
+        // Phase 2: Wait for MapLoader
+        SetStatus("Initializing Map Loader...");
+        while (MapLoader.Instance == null) yield return null;
 
         // Phase 3: Additive Map Loading
-        if (statusText != null)
-            statusText.text = $"Loading Map: {mapInternalName}...";
-
+        SetStatus($"Loading Map: {mapInternalName}...");
         MapLoader.Instance.LoadMap(mapInternalName);
 
         while (MapLoader.Instance.IsLoading || MapLoader.Instance.CurrentMapData == null)
         {
-            // Fill from 40% to 80% while map loads
-            if (progressSlider != null && progressSlider.value < 0.8f)
-                progressSlider.value = Mathf.MoveTowards(progressSlider.value, 0.8f, Time.deltaTime * 0.2f);
+            // Progress from 40% to 80%
+            UpdateProgress(Mathf.MoveTowards(progressSlider.value, 0.8f, Time.deltaTime * 0.2f));
             yield return null;
         }
 
-        _isSceneLoaded = true;
+        // Phase 4: Network Registration
+        SetStatus("Waiting for response from host...");
+        yield return StartCoroutine(WaitForNetwork(0.8f, 1.0f));
 
-        // Phase 4: Wait for Network Registration
-        if (statusText != null)
-            statusText.text = "Waiting for response from host...";
-
-        while (NetworkManager.main == null || NetworkManager.main.localPlayer == default)
-        {
-            if (progressSlider != null && progressSlider.value < 1.0f)
-                progressSlider.value = Mathf.MoveTowards(progressSlider.value, 1.0f, Time.deltaTime * 0.1f);
-            
-            yield return null;
-        }
-
-        if (progressSlider != null)
-            progressSlider.value = 1.0f;
-
-        if (statusText != null)
-            statusText.text = "Readying...";
-
-        yield return new WaitForSeconds(0.5f);
-
-        if (loadingCanvas != null)
-            loadingCanvas.gameObject.SetActive(false);
+        yield return StartCoroutine(FinishLoading());
     }
 
-    public void LoadScene(string sceneName)
+    private IEnumerator SimpleLoadingRoutine(string sceneName)
     {
-        _targetScene = sceneName;
-        _isSceneLoaded = false;
-        _isNetworkReady = false;
-        
-        StopAllCoroutines();
-        StartCoroutine(LoadingRoutine(sceneName));
+        PrepareUI();
+
+        SetStatus("Returning to Menu...");
+        yield return StartCoroutine(AsyncLoad(sceneName, 0f, 1.0f));
+
+        yield return StartCoroutine(FinishLoading());
     }
 
-    private IEnumerator LoadingRoutine(string sceneName)
+    private void PrepareUI()
     {
         UpdateTips();
+        if (loadingCanvas != null) loadingCanvas.gameObject.SetActive(true);
+        UpdateProgress(0f);
+    }
 
-        if (loadingCanvas != null)
-            loadingCanvas.gameObject.SetActive(true);
-
-        if (progressSlider != null)
-            progressSlider.value = 0f;
-
-        // Phase 1: Local Scene Loading
-        if (statusText != null)
-            statusText.text = "Loading Scene...";
-
+    private IEnumerator AsyncLoad(string sceneName, float minProgress, float maxProgress)
+    {
         AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
-        op.allowSceneActivation = true;
-
         while (!op.isDone)
         {
-            // Unity progress goes 0 to 0.9, then jumps to 1.0 when activated
-            float progress = Mathf.Clamp01(op.progress / 0.9f);
-            if (progressSlider != null)
-                progressSlider.value = progress * 0.8f; // Take up first 80% of bar
-            
+            float normalized = Mathf.Clamp01(op.progress / 0.9f);
+            UpdateProgress(Mathf.Lerp(minProgress, maxProgress, normalized));
             yield return null;
         }
+    }
 
-        _isSceneLoaded = true;
-
-        // Phase 2: Wait for Network Registration
-        if (statusText != null)
-            statusText.text = "Waiting for response from host...";
-
-        // Wait for NetworkManager to be ready and local player to be assigned
+    private IEnumerator WaitForNetwork(float minProgress, float maxProgress)
+    {
         while (NetworkManager.main == null || NetworkManager.main.localPlayer == default)
         {
-            // Fill the remaining 20% slowly to show "activity"
-            if (progressSlider != null && progressSlider.value < 1.0f)
-                progressSlider.value = Mathf.MoveTowards(progressSlider.value, 1.0f, Time.deltaTime * 0.1f);
-            
+            // Slow crawl to max progress to show activity
+            UpdateProgress(Mathf.MoveTowards(progressSlider.value, maxProgress, Time.deltaTime * 0.1f));
             yield return null;
         }
+        UpdateProgress(maxProgress);
+    }
 
-        if (progressSlider != null)
-            progressSlider.value = 1.0f;
-
-        if (statusText != null)
-            statusText.text = "Readying...";
-
+    private IEnumerator FinishLoading()
+    {
+        SetStatus("Readying...");
+        UpdateProgress(1.0f);
         yield return new WaitForSeconds(0.5f);
+        if (loadingCanvas != null) loadingCanvas.gameObject.SetActive(false);
+    }
 
-        // Cleanup
-        if (loadingCanvas != null)
-            loadingCanvas.gameObject.SetActive(false);
+    private void SetStatus(string text)
+    {
+        if (statusText != null) statusText.text = text;
+    }
+
+    private void UpdateProgress(float value)
+    {
+        if (progressSlider != null) progressSlider.value = value;
     }
 
     private void UpdateTips()
     {
         if (flavorText == null || tipsData == null) return;
-        
         flavorText.text = tipsData.GetRandomAny();
     }
 }

@@ -22,19 +22,29 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         if (predictionManager.players != null)
         {
             predictionManager.players.onPlayerAdded += OnPlayerAdded;
+            predictionManager.players.onPlayerRemoved += OnPlayerRemoved;
         }
 
         // Initial UI update and check
         UpdateUI();
-        CheckForMissingPlayers();
+        PollForNewPlayers();
     }
 
     private void OnPlayerAdded(PlayerID player)
     {
-        CheckForMissingPlayers();
+        PollForNewPlayers();
+        UpdateUI();
     }
 
-    private void CheckForMissingPlayers()
+    private void OnPlayerRemoved(PlayerID player)
+    {
+        if (!_spawnedPlayers.Contains(player))
+        {
+            _spawnedPlayers.Remove(player);
+        }
+    }
+
+    private void PollForNewPlayers()
     {
         if (!predictionManager.isServer) return;
 
@@ -42,6 +52,7 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         if (!isMapLoaded) return;
 
         var players = predictionManager.players.currentState.players;
+        bool spawnedAny = false;
         for (var i = 0; i < players.Count; i++)
         {
             PlayerID player = players[i];
@@ -49,8 +60,11 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
             {
                 SpawnPlayer(player, i);
                 _spawnedPlayers.Add(player);
+                spawnedAny = true;
             }
         }
+
+        if (spawnedAny) UpdateUI();
     }
 
     protected override void StateSimulate(ref WaitState state, float delta)
@@ -58,14 +72,12 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         bool isMapLoaded = MapLoader.Instance != null && MapLoader.Instance.CurrentMapData != null && !MapLoader.Instance.IsLoading;
         bool isLogicReady = BaseGameModeLogic.Instance != null;
 
-        // Always update UI while in this state
-        UpdateUI();
-
         // If map just finished loading, catch up on spawns
         if (isMapLoaded && !_wasMapReady)
         {
             _wasMapReady = true;
-            CheckForMissingPlayers();
+            PollForNewPlayers();
+            UpdateUI();
         }
 
         if (isMapLoaded && isLogicReady)
@@ -88,9 +100,9 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         {
             _lastPlayerCount = players.Count;
             
-            // Try singleton first, then direct scene search
+            // Try singleton first, then direct scene search (singleton might not be set yet during replication)
             var logic = BaseGameModeLogic.Instance;
-            if (logic == null) logic = FindObjectOfType<BaseGameModeLogic>();
+            if (logic == null) logic = FindAnyObjectByType<BaseGameModeLogic>();
 
             if (logic != null)
             {
@@ -99,7 +111,7 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
             }
             else
             {
-                // Fallback if logic hasn't spawned yet
+                // Fallback if logic hasn't spawned/replicated yet
                 GameStateUI.Instance.UpdateStatus($"Waiting for players... ({_lastPlayerCount})");
             }
         }
@@ -107,6 +119,8 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
 
     private void SpawnPlayer(PlayerID player, int index)
     {
+        Debug.Log("SPAWNING PLAYER");
+
         MapData mapData = MapLoader.Instance.CurrentMapData;
         int teamIndex = index % 2;
         Transform spawnPoint = mapData.GetSpawnPointSequential(index, teamIndex);
@@ -116,10 +130,17 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         var newPlayer = hierarchy.Create(_playerPrefab, spawnPoint.position, spawnPoint.rotation, player);
         if (newPlayer.HasValue)
         {
+            Debug.Log("SPAWNING PLAYER PLAYER HAS VALUE");
+
             predictionManager.SetOwnership(newPlayer, player);
             PlayerInfoManager.Register(player);
             _matchRunningState.OnPlayerSpawned(player, newPlayer.Value);
             GameEvents.OnPlayerSpawned?.Invoke(player);
+        }
+        else
+        {
+            Debug.Log("SPAWNING PLAYER PLAYER DOES NOT HAVE VALUE");
+
         }
     }
 
@@ -128,6 +149,8 @@ public class WaitForPlayersState : PredictedStateNode<WaitForPlayersState.WaitSt
         if (predictionManager.players != null)
         {
             predictionManager.players.onPlayerAdded -= OnPlayerAdded;
+            predictionManager.players.onPlayerRemoved -= OnPlayerRemoved;
+
         }
 
         if (GameStateUI.Instance != null)

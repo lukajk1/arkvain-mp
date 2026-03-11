@@ -1,10 +1,11 @@
+using PurrNet;
 using System;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class MapLoader : MonoBehaviour
+public class MapLoader : NetworkBehaviour
 {
     public static MapLoader Instance { get; private set; }
 
@@ -123,25 +124,8 @@ public class MapLoader : MonoBehaviour
             {
                 Debug.Log($"[MapLoader] Spawning Game Mode Logic: {modeConfig.modeName}");
                 
-                // Find the PredictionManager in the scene
-                var predManager = FindObjectOfType<PurrNet.Prediction.PredictionManager>();
-                if (predManager != null && predManager.hierarchy != null)
-                {
-                    predManager.hierarchy.Create(modeConfig.gameModeLogicPrefab);
-                }
-                else
-                {
-                    Debug.LogWarning("[MapLoader] PredictionManager or Hierarchy not found! Game mode logic may not be predicted.");
-                    // Fallback to standard spawn if prediction isn't available
-                    if (PurrNet.NetworkManager.main.TryGetModule<PurrNet.Modules.HierarchyFactory>(true, out var factory))
-                    {
-                        if (factory.TryGetHierarchy(gameObject.scene, out var hierarchy))
-                        {
-                            // In HierarchyV2, the method is InternalSpawn for GameObjects
-                            hierarchy.OnGameObjectCreated(Instantiate(modeConfig.gameModeLogicPrefab), modeConfig.gameModeLogicPrefab);
-                        }
-                    }
-                }
+                // Use standard PurrNet instantiate for NetworkBehaviours
+                Instantiate(modeConfig.gameModeLogicPrefab);
             }
             else
             {

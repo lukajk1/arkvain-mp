@@ -11,9 +11,14 @@ public class ServerRow : MonoBehaviour
     [SerializeField] private TMP_Text playerCountText;
     [SerializeField] private TMP_Text mapText;
     [SerializeField] private TMP_Text pingText;
+    [SerializeField] private TMP_Text statusText;
     [SerializeField] private Button joinButton;
 
+    [Header("Settings")]
+    [SerializeField] private float refreshInterval = 5f;
+
     private LobbyData lobbyData;
+    private float _nextRefreshTime;
 
     void Awake()
     {
@@ -50,9 +55,47 @@ public class ServerRow : MonoBehaviour
         // Ping (you'd need to implement actual ping logic)
         pingText.text = "? ms";
 
+        // Initial status update
+        RefreshStatusUI();
+
         // Disable join button if full
         if (joinButton != null)
             joinButton.interactable = !lobby.Full;
+
+        _nextRefreshTime = Time.time + refreshInterval;
+    }
+
+    void Update()
+    {
+        if (!lobbyData.IsValid) return;
+
+        if (Time.time >= _nextRefreshTime)
+        {
+            _nextRefreshTime = Time.time + refreshInterval;
+            // Request latest data from Steam
+            lobbyData.RequestData();
+            RefreshStatusUI();
+        }
+    }
+
+    private void RefreshStatusUI()
+    {
+        if (statusText == null) return;
+
+        string gameStarted = lobbyData["game_started"];
+        if (gameStarted == "true")
+        {
+            statusText.text = "In Game";
+            statusText.color = Color.green;
+        }
+        else
+        {
+            statusText.text = "In Lobby";
+            statusText.color = Color.white;
+        }
+
+        // Update member count while we're at it
+        playerCountText.text = $"{lobbyData.MemberCount}/{lobbyData.MaxMembers}";
     }
 
     private void OnJoinClicked()

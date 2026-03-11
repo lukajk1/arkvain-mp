@@ -3,6 +3,8 @@ using UnityEngine.UI;
 using TMPro;
 using Heathen.SteamworksIntegration;
 using Steamworks;
+using System.Collections.Generic;
+using System.Text;
 
 public class LobbyChat : MonoBehaviour
 {
@@ -18,10 +20,10 @@ public class LobbyChat : MonoBehaviour
     [SerializeField] private int maxMessages = 100;
 
     private Callback<LobbyChatMsg_t> _lobbyChatMsgCallback;
-    private string _chatHistory = "";
+    private List<string> _chatLines = new List<string>();
     private LobbyData _currentLobby;
 
-    void Start()
+    private void Start()
     {
         if (chatInputField != null)
         {
@@ -30,10 +32,10 @@ public class LobbyChat : MonoBehaviour
             chatInputField.onDeselect.AddListener(OnChatUnfocused);
         }
 
-        // Subscribe to lobby chat messages
+        // Subscribe to low-level lobby chat messages
         _lobbyChatMsgCallback = Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessage);
 
-        UpdateChatHistory("");
+        RefreshChatUI();
     }
 
     private void OnChatFocused(string value)
@@ -55,8 +57,13 @@ public class LobbyChat : MonoBehaviour
             PersistentClient.Instance.inputManager.UI.Submit.performed += OnSubmitPressed;
         }
 
-        // Subscribe to lobby chat updates (join/leave)
+        // Subscribe to lobby updates
         SteamTools.Events.OnLobbyChatUpdate += OnLobbyChatUpdate;
+        SteamTools.Events.OnLobbyEnterSuccess += OnLobbyEnterSuccess;
+        SteamTools.Events.OnLobbyLeave += OnLobbyLeave;
+
+        // Initialize current lobby if already in one
+        UpdateCurrentLobby();
     }
 
     private void OnDisable()
@@ -67,32 +74,106 @@ public class LobbyChat : MonoBehaviour
         }
 
         SteamTools.Events.OnLobbyChatUpdate -= OnLobbyChatUpdate;
+        SteamTools.Events.OnLobbyEnterSuccess -= OnLobbyEnterSuccess;
+        SteamTools.Events.OnLobbyLeave -= OnLobbyLeave;
+    }
+
+    private void OnLobbyEnterSuccess(LobbyData lobby)
+    {
+        _currentLobby = lobby;
+        AddSystemMessage("Joined the lobby.");
+    }
+
+    private void OnLobbyLeave(LobbyData lobby)
+    {
+        if (_currentLobby == lobby)
+        {
+            _currentLobby = default;
+        }
     }
 
     private void OnLobbyChatUpdate(LobbyData lobby, UserData user, EChatMemberStateChange state)
     {
+        // If we don't have a current lobby tracked, try to adopt this one if we are a member
+        if (!_currentLobby.IsValid)
+        {
+            UpdateCurrentLobby();
+        }
+
         if (!_currentLobby.IsValid || lobby != _currentLobby) return;
 
+        // Don't show "joined" message for ourselves if we already handled it in OnLobbyEnterSuccess
+        bool isLocalUser = user == UserData.Me;
+        
         string systemMessage = "";
         string colorTag = "<color=#AAAAAA>"; // Gray for system messages
+        string nameColor = "<color=#FFFFFF>"; // White for names in system messages
 
         switch (state)
         {
             case EChatMemberStateChange.k_EChatMemberStateChangeEntered:
-                systemMessage = $"{colorTag}[System]: {user.Name} joined the lobby.</color>";
+                if (!isLocalUser)
+                    systemMessage = $"{colorTag}[System]: {nameColor}{user.Name}</color> joined the lobby.</color>";
                 break;
             case EChatMemberStateChange.k_EChatMemberStateChangeLeft:
+                if (!isLocalUser)
+                    systemMessage = $"{colorTag}[System]: {nameColor}{user.Name}</color> left the lobby.</color>";
+                break;
             case EChatMemberStateChange.k_EChatMemberStateChangeDisconnected:
-                systemMessage = $"{colorTag}[System]: {user.Name} left the lobby.</color>";
+                systemMessage = $"{colorTag}[System]: {nameColor}{user.Name}</color> disconnected.</color>";
+                break;
+            case EChatMemberStateChange.k_EChatMemberStateChangeKicked:
+                systemMessage = $"{colorTag}[System]: {nameColor}{user.Name}</color> was kicked from the lobby.</color>";
+                break;
+            case EChatMemberStateChange.k_EChatMemberStateChangeBanned:
+                systemMessage = $"{colorTag}[System]: {nameColor}{user.Name}</color> was banned from the lobby.</color>";
                 break;
         }
 
         if (!string.IsNullOrEmpty(systemMessage))
         {
-            _chatHistory += systemMessage + "\n";
-            LimitMessageHistory();
-            UpdateChatHistory(_chatHistory);
-            ScrollToBottom();
+            AddChatMessage(systemMessage);
+        }
+    }
+
+    private void AddSystemMessage(string message)
+    {
+        string colorTag = "<color=#AAAAAA>";
+        AddChatMessage($"{colorTag}[System]: {message}</color>");
+    }
+
+    private void AddChatMessage(string line)
+    {
+        _chatLines.Add(line);
+        
+        if (_chatLines.Count > maxMessages)
+        {
+            _chatLines.RemoveAt(0);
+        }
+
+        RefreshChatUI();
+        
+        if (onNewMessageClip != null)
+            SoundManager.PlayNonDiegetic(onNewMessageClip);
+    }
+
+    private void RefreshChatUI()
+    {
+        if (chatHistoryText != null)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < _chatLines.Count; i++)
+            {
+                sb.AppendLine(_chatLines[i]);
+            }
+            chatHistoryText.text = sb.ToString();
+            
+            // Force layout rebuild so ScrollRect knows the new height
+            if (chatScrollRect != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(chatScrollRect.content);
+                ScrollToBottom();
+            }
         }
     }
 
@@ -104,31 +185,34 @@ public class LobbyChat : MonoBehaviour
         }
     }
 
-    void Update()
+    private void Update()
     {
-        // Automatically track which lobby we're in
+        // Safety check: if we somehow lost our lobby reference but are still in one
+        if (!_currentLobby.IsValid && LobbyData.MemberOfLobbies.Count > 0)
+        {
+            UpdateCurrentLobby();
+        }
+    }
+
+    private void UpdateCurrentLobby()
+    {
         if (LobbyData.MemberOfLobbies.Count > 0)
         {
             _currentLobby = LobbyData.MemberOfLobbies[0];
-        }
-        else
-        {
-            _currentLobby = default;
         }
     }
 
     private void OnChatSubmitted(string message)
     {
-        if (!_currentLobby.IsValid)
+        if (string.IsNullOrEmpty(message))
         {
-            Debug.LogWarning("[LobbyChat] Not in a lobby. Cannot send chat message.");
             chatInputField.ActivateInputField();
             return;
         }
 
-        if (string.IsNullOrEmpty(message))
+        if (!_currentLobby.IsValid)
         {
-            Debug.LogWarning("[LobbyChat] Chat message is empty.");
+            Debug.LogWarning("[LobbyChat] Not in a lobby. Cannot send chat message.");
             chatInputField.ActivateInputField();
             return;
         }
@@ -140,14 +224,10 @@ public class LobbyChat : MonoBehaviour
 
     private void SendChatMessage(string message)
     {
-        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(message);
+        byte[] messageBytes = Encoding.UTF8.GetBytes(message);
         bool success = SteamMatchmaking.SendLobbyChatMsg(_currentLobby, messageBytes, messageBytes.Length);
 
-        if (success)
-        {
-            Debug.Log($"[LobbyChat] Sent chat message: {message}");
-        }
-        else
+        if (!success)
         {
             Debug.LogError("[LobbyChat] Failed to send chat message.");
         }
@@ -155,7 +235,6 @@ public class LobbyChat : MonoBehaviour
 
     private void OnLobbyChatMessage(LobbyChatMsg_t callback)
     {
-        // Get the message data
         byte[] data = new byte[4096];
         CSteamID senderId;
         EChatEntryType chatType;
@@ -171,58 +250,22 @@ public class LobbyChat : MonoBehaviour
 
         if (messageLength > 0)
         {
-            // Convert bytes to string
-            string message = System.Text.Encoding.UTF8.GetString(data, 0, messageLength);
-
-            // Get sender name
+            string message = Encoding.UTF8.GetString(data, 0, messageLength);
             UserData sender = senderId;
-            string senderName = sender.Name;
-
-            string chatLine = $"[{senderName}]: {message}";
-            _chatHistory += chatLine + "\n";
-
-            // Limit message history
-            LimitMessageHistory();
-
-            UpdateChatHistory(_chatHistory);
-            ScrollToBottom();
-
-            Debug.Log($"[LobbyChat] Chat message received: {chatLine}");
-            SoundManager.PlayNonDiegetic(onNewMessageClip);
-        }
-    }
-
-    private void LimitMessageHistory()
-    {
-        string[] lines = _chatHistory.Split('\n');
-        if (lines.Length > maxMessages)
-        {
-            int startIndex = lines.Length - maxMessages;
-            _chatHistory = string.Join("\n", lines, startIndex, maxMessages);
-        }
-    }
-
-    private void UpdateChatHistory(string history)
-    {
-        if (chatHistoryText != null)
-        {
-            chatHistoryText.text = history;
-            // The tutorial mentions forcing a layout rebuild so the ScrollRect knows the new height
-            LayoutRebuilder.ForceRebuildLayoutImmediate(chatScrollRect.content);
-            ScrollToBottom();
+            
+            string chatLine = $"<color=#FFFFFF>[{sender.Name}]:</color> {message}";
+            AddChatMessage(chatLine);
         }
     }
 
     private void ScrollToBottom()
     {
         if (chatScrollRect == null) return;
-
-        // Force canvas to update so the normalized position calculation is accurate
         Canvas.ForceUpdateCanvases();
         chatScrollRect.verticalNormalizedPosition = 0f;
     }
 
-    void OnDestroy()
+    private void OnDestroy()
     {
         if (chatInputField != null)
             chatInputField.onSubmit.RemoveListener(OnChatSubmitted);

@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class EscapeMenu : MonoBehaviour
 {
+    public static EscapeMenu Instance { get; private set; }
+
     [Header("UI")]
     [SerializeField] private SceneNameHolder _lobbyScene;
     [SerializeField] private Canvas _menu;
@@ -16,6 +18,19 @@ public class EscapeMenu : MonoBehaviour
     [SerializeField] private Button _loadoutButton;
     [SerializeField] private Button _leaveMatchButton;
     [SerializeField] private Button _quitToDesktopButton;
+
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     private void Start()
     {
@@ -118,8 +133,32 @@ public class EscapeMenu : MonoBehaviour
 
     private void OnLeaveMatch()
     {
-        SetState(false); // necessary to clean up cursor lock modification
-        SceneManager.LoadScene(_lobbyScene.sceneName);
+        SetState(false); // Clean up cursor lock modification
+
+        // Leave Steam lobby if we are in one
+        if (ArkvainLobbyData.HasValidLobby())
+        {
+            Debug.Log("[EscapeMenu] Leaving Steam lobby...");
+            ArkvainLobbyData.CurrentLobby.Leave();
+            ArkvainLobbyData.Clear();
+        }
+
+        // Return to the main menu/lobby scene
+        if (_lobbyScene != null)
+        {
+            if (LoadingManager.Instance != null)
+            {
+                LoadingManager.Instance.LoadScene(_lobbyScene.sceneName);
+            }
+            else
+            {
+                SceneManager.LoadScene(_lobbyScene.sceneName);
+            }
+        }
+        else
+        {
+            Debug.LogError("[EscapeMenu] _lobbyScene is not assigned!");
+        }
     }
 
     private void OnQuitToDesktop()

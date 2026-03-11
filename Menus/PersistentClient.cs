@@ -68,10 +68,8 @@ public class PersistentClient : MonoBehaviour
     }
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == gameScene.sceneName)
-        {
-            SetCursorToPlayMode(true);
-        }
+        bool isGameScene = scene.name == gameScene.sceneName;
+        SetCursorToPlayMode(isGameScene);
     }
     public void CreateConfirmationDialog(
         Action onConfirm = null,

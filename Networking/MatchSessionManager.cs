@@ -155,6 +155,7 @@ public class MatchSessionManager : NetworkBehaviour
         if (victimIdx != -1)
         {
             _playerStats[victimIdx].AddDeath();
+            _playerStats[victimIdx].UpdateStatus(PlayerStatus.Dead);
             _playerStats.SetDirty(victimIdx);
         }
 
@@ -162,6 +163,19 @@ public class MatchSessionManager : NetworkBehaviour
         if (BaseGameModeLogic.Instance != null)
         {
             BaseGameModeLogic.Instance.OnPlayerKilled(killer, victim);
+        }
+    }
+
+    public void UpdatePlayerStatus(PlayerID playerId, PlayerStatus status)
+    {
+        if (!isServer) return;
+
+        int index = FindPlayerIndex(playerId);
+        if (index != -1)
+        {
+            _playerStats[index].UpdateStatus(status);
+            _playerStats.SetDirty(index);
+            Debug.Log($"[MatchSessionManager] Updated status for {playerId} to {status}");
         }
     }
 

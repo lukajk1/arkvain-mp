@@ -2,6 +2,13 @@ using PurrNet;
 using System;
 using UnityEngine;
 
+public enum PlayerStatus
+{
+    Alive,
+    Dead,
+    Spectating
+}
+
 [Serializable]
 public class PlayerMatchData
 {
@@ -18,6 +25,7 @@ public class PlayerMatchData
     public bool IsConnected { get; set; }
 
     public LoadoutSelection Loadout { get; set; }
+    public PlayerStatus Status { get; set; }
 
     public PlayerMatchData() { }
 
@@ -33,6 +41,7 @@ public class PlayerMatchData
         AveragePing = 0f;
         IsConnected = true;
         Loadout = new LoadoutSelection { Hero = HeroType.Richter, Weapon = WeaponType.Crossbow };
+        Status = PlayerStatus.Spectating;
     }
 
     // Stat modification methods
@@ -46,6 +55,11 @@ public class PlayerMatchData
     public void UpdateLoadout(LoadoutSelection newLoadout)
     {
         Loadout = newLoadout;
+    }
+
+    public void UpdateStatus(PlayerStatus newStatus)
+    {
+        Status = newStatus;
     }
 
     // Update Steam info after creation

@@ -32,6 +32,30 @@ public class LobbyChat : MonoBehaviour
         UpdateChatHistory("");
     }
 
+    private void OnEnable()
+    {
+        if (PersistentClient.Instance != null && PersistentClient.Instance.inputManager != null)
+        {
+            PersistentClient.Instance.inputManager.UI.Submit.performed += OnSubmitPressed;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (PersistentClient.Instance != null && PersistentClient.Instance.inputManager != null)
+        {
+            PersistentClient.Instance.inputManager.UI.Submit.performed -= OnSubmitPressed;
+        }
+    }
+
+    private void OnSubmitPressed(UnityEngine.InputSystem.InputAction.CallbackContext context)
+    {
+        if (chatInputField != null && !chatInputField.isFocused)
+        {
+            chatInputField.ActivateInputField();
+        }
+    }
+
     void Update()
     {
         // Automatically track which lobby we're in

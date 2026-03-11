@@ -64,6 +64,7 @@ public class MapData : MonoBehaviour
 
         if (selectedGroup == null || selectedGroup.Length == 0)
         {
+            Debug.LogWarning($"[MapData] No spawn points found for index {index} (Team: {teamIndex})! Spawning at map root.");
             return transform;
         }
 

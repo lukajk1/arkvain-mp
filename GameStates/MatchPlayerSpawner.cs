@@ -119,13 +119,18 @@ public class MatchPlayerSpawner : PredictedIdentity<MatchPlayerSpawner.SpawnStat
         return MapLoader.Instance != null && MapLoader.Instance.CurrentMapData != null && !MapLoader.Instance.IsLoading;
     }
 
-    private void SpawnPlayer(PlayerID player, int index, ref SpawnState state)
+    private void SpawnPlayer(PlayerID player, int listIndex, ref SpawnState state)
     {
         MapData mapData = MapLoader.Instance.CurrentMapData;
-        int teamIndex = index % 2;
-        Transform spawnPoint = mapData.GetSpawnPointSequential(index, teamIndex);
+        
+        // Use the persistent player ID value for the spawn index to ensure 
+        // reconnecting players target the same spawn point.
+        int spawnIndex = (int)(player.id.value % int.MaxValue);
+        int teamIndex = spawnIndex % 2;
+        
+        Transform spawnPoint = mapData.GetSpawnPointSequential(spawnIndex, teamIndex);
 
-        Debug.Log($"[MatchPlayerSpawner] Server spawning player {player} at {spawnPoint.position}");
+        Debug.Log($"[MatchPlayerSpawner] Server spawning player {player} (SpawnIdx: {spawnIndex}) at {spawnPoint.position}");
 
         var newPlayer = hierarchy.Create(_playerPrefab, spawnPoint.position, spawnPoint.rotation, player);
         if (newPlayer.HasValue)

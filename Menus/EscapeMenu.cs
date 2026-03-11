@@ -102,6 +102,12 @@ public class EscapeMenu : MonoBehaviour
     {
         if (_menu == null) return;
 
+        // If we are in a special context (like chat focused), don't open the menu
+        if (PersistentClient.Instance.currentEscapeContext != EscapeContext.Neutral)
+        {
+            return;
+        }
+
         bool stateToSetTo = !_menu.gameObject.activeSelf;
 
         SetState(stateToSetTo);

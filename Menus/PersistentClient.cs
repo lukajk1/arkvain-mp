@@ -2,6 +2,12 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+public enum EscapeContext
+{
+    Neutral,
+    CloseOutChat
+}
+
 public class PersistentClient : MonoBehaviour
 {
     public static PersistentClient Instance { get; private set; }
@@ -10,6 +16,8 @@ public class PersistentClient : MonoBehaviour
 
     [Header("Scene References")]
     [SerializeField] public SceneNameHolder gameScene;
+
+    public EscapeContext currentEscapeContext = EscapeContext.Neutral;
 
     public static float cm360;
     public static float playerDPI;

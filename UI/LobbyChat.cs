@@ -24,12 +24,28 @@ public class LobbyChat : MonoBehaviour
     void Start()
     {
         if (chatInputField != null)
+        {
             chatInputField.onSubmit.AddListener(OnChatSubmitted);
+            chatInputField.onSelect.AddListener(OnChatFocused);
+            chatInputField.onDeselect.AddListener(OnChatUnfocused);
+        }
 
         // Subscribe to lobby chat messages
         _lobbyChatMsgCallback = Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessage);
 
         UpdateChatHistory("");
+    }
+
+    private void OnChatFocused(string value)
+    {
+        if (PersistentClient.Instance != null)
+            PersistentClient.Instance.currentEscapeContext = EscapeContext.CloseOutChat;
+    }
+
+    private void OnChatUnfocused(string value)
+    {
+        if (PersistentClient.Instance != null)
+            PersistentClient.Instance.currentEscapeContext = EscapeContext.Neutral;
     }
 
     private void OnEnable()
@@ -38,6 +54,9 @@ public class LobbyChat : MonoBehaviour
         {
             PersistentClient.Instance.inputManager.UI.Submit.performed += OnSubmitPressed;
         }
+
+        // Subscribe to lobby chat updates (join/leave)
+        SteamTools.Events.OnLobbyChatUpdate += OnLobbyChatUpdate;
     }
 
     private void OnDisable()
@@ -45,6 +64,35 @@ public class LobbyChat : MonoBehaviour
         if (PersistentClient.Instance != null && PersistentClient.Instance.inputManager != null)
         {
             PersistentClient.Instance.inputManager.UI.Submit.performed -= OnSubmitPressed;
+        }
+
+        SteamTools.Events.OnLobbyChatUpdate -= OnLobbyChatUpdate;
+    }
+
+    private void OnLobbyChatUpdate(LobbyData lobby, UserData user, EChatMemberStateChange state)
+    {
+        if (!_currentLobby.IsValid || lobby != _currentLobby) return;
+
+        string systemMessage = "";
+        string colorTag = "<color=#AAAAAA>"; // Gray for system messages
+
+        switch (state)
+        {
+            case EChatMemberStateChange.k_EChatMemberStateChangeEntered:
+                systemMessage = $"{colorTag}[System]: {user.Name} joined the lobby.</color>";
+                break;
+            case EChatMemberStateChange.k_EChatMemberStateChangeLeft:
+            case EChatMemberStateChange.k_EChatMemberStateChangeDisconnected:
+                systemMessage = $"{colorTag}[System]: {user.Name} left the lobby.</color>";
+                break;
+        }
+
+        if (!string.IsNullOrEmpty(systemMessage))
+        {
+            _chatHistory += systemMessage + "\n";
+            LimitMessageHistory();
+            UpdateChatHistory(_chatHistory);
+            ScrollToBottom();
         }
     }
 

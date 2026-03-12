@@ -43,22 +43,6 @@ public class HUDManager : MonoBehaviour
             _broadcastText.alpha = 0f;
         }
     }
-
-    private void OnEnable()
-    {
-        WeaponManager.OnLocalWeaponManagerReady += OnWeaponManagerReady;
-    }
-
-    private void OnDisable()
-    {
-        WeaponManager.OnLocalWeaponManagerReady -= OnWeaponManagerReady;
-
-        if (_weaponManager != null)
-        {
-            _weaponManager.OnWeaponSwitched -= OnWeaponSwitched;
-        }
-    }
-
     public void SetHealthReadout(int currentHealth, int maxHealth)
     {
         if (_healthText != null)
@@ -72,37 +56,6 @@ public class HUDManager : MonoBehaviour
         if (_velocityText != null)
             _velocityText.text = $"{velocity.magnitude:F2}";
     }
-
-    private void OnWeaponManagerReady(WeaponManager weaponManager)
-    {
-        _weaponManager = weaponManager;
-
-        // Subscribe to weapon switch events
-        _weaponManager.OnWeaponSwitched += OnWeaponSwitched;
-
-        // Get currently active weapon (the primary weapon has already been activated)
-        // Since weapon switching happens before this event fires, we need to get the active weapon
-        IWeaponLogic[] weapons = weaponManager.GetAllWeapons();
-        if (weapons != null && weapons.Length > 0)
-        {
-            // Find the enabled weapon
-            foreach (var weapon in weapons)
-            {
-                var weaponMono = weapon as MonoBehaviour;
-                if (weaponMono != null && weaponMono.enabled)
-                {
-                    _currentWeapon = weapon;
-                    break;
-                }
-            }
-        }
-    }
-
-    private void OnWeaponSwitched(IWeaponLogic newWeapon)
-    {
-        _currentWeapon = newWeapon;
-    }
-
     public void SetAbilityCooldown(float normalizedCooldown, float remainingSeconds)
         => AbilityHUDManager.Instance?.SetAbilityCooldown(normalizedCooldown, remainingSeconds);
 

@@ -28,9 +28,7 @@ public class DeagleLogic : BaseWeaponLogic<DeagleLogic.ShootInput, DeagleLogic.S
     public override int CurrentAmmo => currentState.currentAmmo;
     public override int MaxAmmo => _clipSize;
 
-    // Additional events for DeagleVisual
-    public event System.Action onReload;
-
+    private Transform _selfRoot;
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
     private PredictedEvent _onReloadEvent;
@@ -38,6 +36,8 @@ public class DeagleLogic : BaseWeaponLogic<DeagleLogic.ShootInput, DeagleLogic.S
     protected override void LateAwake()
     {
         base.LateAwake();
+        _selfRoot = transform.root;
+
         _onShootEvent = new PredictedEvent(predictionManager, this);
         _onShootEvent.AddListener(OnShootEventHandler);
         _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
@@ -98,10 +98,7 @@ public class DeagleLogic : BaseWeaponLogic<DeagleLogic.ShootInput, DeagleLogic.S
         if (!input.shoot) return;
 
         // Can't shoot if no ammo
-        if (state.currentAmmo <= 0)
-        {
-            return;
-        }
+        if (state.currentAmmo <= 0) return;
 
         state.cooldownTimer = shootCooldown;
         Shoot(ref state);
@@ -137,26 +134,23 @@ public class DeagleLogic : BaseWeaponLogic<DeagleLogic.ShootInput, DeagleLogic.S
         bool isHeadshot = false;
         if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
         {
+            PlayerInfo? attackerInfo = owner.HasValue ? new PlayerInfo(owner.Value) : null;
+            
             // Calculate distance to target
             float distance = Vector3.Distance(position, hit.point);
-
-            // Map distance (0-100m) to curve time (0-1)
             float curveTime = Mathf.Clamp01(distance / 100f);
-
-            // Sample curve to get damage multiplier from falloff
             float damageMultiplier = _damageFalloff.Evaluate(curveTime);
 
-            // Apply headshot multiplier if hitting a head hurtbox
-            int baseDamage = _damage;
             if (hurtbox is HurtboxHead head)
             {
-                baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
-                //head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
+                int damage = Mathf.RoundToInt(_damage * _headShotModifier * damageMultiplier);
+                head.health.ChangeHealth(-damage, attackerInfo);
                 isHeadshot = true;
             }
             else
             {
-                //hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage * damageMultiplier), owner);
+                int damage = Mathf.RoundToInt(_damage * damageMultiplier);
+                hurtbox.health.ChangeHealth(-damage, attackerInfo);
             }
 
             hitPlayer = true;
@@ -172,44 +166,19 @@ public class DeagleLogic : BaseWeaponLogic<DeagleLogic.ShootInput, DeagleLogic.S
         });
     }
 
-    /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual and HitmarkerManager.
-    /// </summary>
     private void OnShootEventHandler()
     {
-        OnShoot?.Invoke(currentState.lastKnownForward);
+        InvokeOnShoot(currentState.lastKnownForward);
     }
 
-    /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual and HitmarkerManager.
-    /// </summary>
     private void OnHitEventHandler(HitInfo hitInfo)
     {
-        OnHit?.Invoke(hitInfo);
+        InvokeOnHit(hitInfo);
     }
 
-    /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for DeagleVisual.
-    /// </summary>
     private void OnReloadEventHandler()
     {
-        onReload?.Invoke();
-    }
-
-    /// <summary>
-    /// Called by WeaponManager when this weapon is equipped.
-    /// </summary>
-    public void TriggerEquipped()
-    {
-        OnEquipped?.Invoke();
-    }
-
-    /// <summary>
-    /// Called by WeaponManager when this weapon is holstered.
-    /// </summary>
-    public void TriggerHolstered()
-    {
-        OnHolstered?.Invoke();
+        InvokeReloadEvent();
     }
 
     protected override void UpdateInput(ref ShootInput input)

@@ -25,9 +25,6 @@ public class TrackingGunLogic : BaseWeaponLogic<TrackingGunLogic.ShootInput, Tra
     public override int CurrentAmmo => currentState.currentAmmo;
     public override int MaxAmmo => _clipSize;
 
-    // Additional events for TrackingGunVisual
-    public event System.Action onReload;
-
     private PredictedEvent _onShootEvent;
     private PredictedEvent<HitInfo> _onHitEvent;
     private PredictedEvent _onReloadEvent;
@@ -35,6 +32,7 @@ public class TrackingGunLogic : BaseWeaponLogic<TrackingGunLogic.ShootInput, Tra
     protected override void LateAwake()
     {
         base.LateAwake();
+
         _onShootEvent = new PredictedEvent(predictionManager, this);
         _onShootEvent.AddListener(OnShootEventHandler);
         _onHitEvent = new PredictedEvent<HitInfo>(predictionManager, this);
@@ -95,10 +93,7 @@ public class TrackingGunLogic : BaseWeaponLogic<TrackingGunLogic.ShootInput, Tra
         if (!input.shoot) return;
 
         // Can't shoot if no ammo
-        if (state.currentAmmo <= 0)
-        {
-            return;
-        }
+        if (state.currentAmmo <= 0) return;
 
         state.cooldownTimer = shootCooldown;
         Shoot(ref state);
@@ -134,17 +129,17 @@ public class TrackingGunLogic : BaseWeaponLogic<TrackingGunLogic.ShootInput, Tra
         bool isHeadshot = false;
         if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
         {
-            // Apply headshot multiplier if hitting a head hurtbox
-            int baseDamage = _damage;
+            PlayerInfo? attackerInfo = owner.HasValue ? new PlayerInfo(owner.Value) : null;
+
             if (hurtbox is HurtboxHead head)
             {
-                baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
-                //head.health.ChangeHealth(-baseDamage, owner);
+                int damage = Mathf.RoundToInt(_damage * _headShotModifier);
+                head.health.ChangeHealth(-damage, attackerInfo);
                 isHeadshot = true;
             }
             else
             {
-                //hurtbox.health.ChangeHealth(-baseDamage, owner);
+                hurtbox.health.ChangeHealth(-_damage, attackerInfo);
             }
 
             hitPlayer = true;
@@ -160,44 +155,19 @@ public class TrackingGunLogic : BaseWeaponLogic<TrackingGunLogic.ShootInput, Tra
         });
     }
 
-    /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for TrackingGunVisual and HitmarkerManager.
-    /// </summary>
     private void OnShootEventHandler()
     {
-        OnShoot?.Invoke(currentState.lastKnownForward);
+        InvokeOnShoot(currentState.lastKnownForward);
     }
 
-    /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for TrackingGunVisual and HitmarkerManager.
-    /// </summary>
     private void OnHitEventHandler(HitInfo hitInfo)
     {
-        OnHit?.Invoke(hitInfo);
+        InvokeOnHit(hitInfo);
     }
 
-    /// <summary>
-    /// Internal handler for PredictedEvent. Invokes public C# event for TrackingGunVisual.
-    /// </summary>
     private void OnReloadEventHandler()
     {
-        onReload?.Invoke();
-    }
-
-    /// <summary>
-    /// Called by WeaponManager when this weapon is equipped.
-    /// </summary>
-    public void TriggerEquipped()
-    {
-        OnEquipped?.Invoke();
-    }
-
-    /// <summary>
-    /// Called by WeaponManager when this weapon is holstered.
-    /// </summary>
-    public void TriggerHolstered()
-    {
-        OnHolstered?.Invoke();
+        InvokeReloadEvent();
     }
 
     protected override void UpdateInput(ref ShootInput input)

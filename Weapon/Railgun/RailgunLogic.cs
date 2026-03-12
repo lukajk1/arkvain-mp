@@ -129,30 +129,21 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
             return;
         }
 
-        if (hit.collider.transform.root == _selfRoot)
-            return;
-
         bool hitPlayer = false;
         bool isHeadshot = false;
         if (hit.collider.TryGetComponent(out A_Hurtbox hurtbox))
         {
-            // Calculate distance to target
-            float distance = Vector3.Distance(position, hit.point);
+            PlayerInfo? attackerInfo = owner.HasValue ? new PlayerInfo(owner.Value) : null;
 
-            // Map distance (0-100m) to curve time (0-1)
-            float curveTime = Mathf.Clamp01(distance / 100f);
-
-            // Apply headshot multiplier if hitting a head hurtbox
-            int baseDamage = _damage;
             if (hurtbox is HurtboxHead head)
             {
-                baseDamage = Mathf.RoundToInt(_damage * _headShotModifier);
-                //head.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
+                int damage = Mathf.RoundToInt(_damage * _headShotModifier);
+                head.health.ChangeHealth(-damage, attackerInfo);
                 isHeadshot = true;
             }
             else
             {
-                //hurtbox.health.ChangeHealth(-Mathf.RoundToInt(baseDamage), owner);
+                hurtbox.health.ChangeHealth(-_damage, attackerInfo);
             }
 
             hitPlayer = true;

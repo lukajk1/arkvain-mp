@@ -25,6 +25,8 @@ public abstract class BaseWeaponLogic<TInput, TState> : PredictedIdentity<TInput
     public abstract int CurrentAmmo { get; }
     public abstract int MaxAmmo { get; }
 
+    public bool IsCurrent { get; set; }
+
     // IWeaponLogic interface methods
     public void TriggerEquipped()
     {

@@ -76,6 +76,12 @@ public interface IWeaponLogic
     int MaxAmmo { get; }
 
     /// <summary>
+    /// Gets or sets whether this weapon is currently selected by the player.
+    /// Use this in Simulate() to gate weapon logic when multiple weapons are on one prefab.
+    /// </summary>
+    bool IsCurrent { get; set; }
+
+    /// <summary>
     /// Gets whether this weapon belongs to the local player.
     /// Used to determine if UI feedback (hitmarkers, sounds) should be shown.
     /// </summary>

@@ -52,6 +52,9 @@ public class RailgunLogic : BaseWeaponLogic<RailgunLogic.ShootInput, RailgunLogi
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
+        // Gating logic: Only run if this is the currently selected weapon
+        if (!IsCurrent) return;
+
         // Count down reload timer
         if (state.reloadTimer > 0)
         {

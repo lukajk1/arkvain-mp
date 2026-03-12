@@ -2,7 +2,7 @@ using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
 
-public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic.ShootState>, IWeaponLogic
+public class DeagleLogic : BaseWeaponLogic<DeagleLogic.ShootInput, DeagleLogic.ShootState>
 {
     [Header("Stats")]
     [SerializeField] private float _fireRate;
@@ -25,14 +25,8 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
     public float shootCooldown => 1 / _fireRate;
 
     // IWeaponLogic interface properties
-    public int CurrentAmmo => currentState.currentAmmo;
-    public int MaxAmmo => _clipSize;
-
-    // IWeaponLogic interface events (public for HitmarkerManager)
-    public event System.Action<HitInfo> OnHit;
-    public event System.Action<Vector3> OnShoot;
-    public event System.Action OnEquipped;
-    public event System.Action OnHolstered;
+    public override int CurrentAmmo => currentState.currentAmmo;
+    public override int MaxAmmo => _clipSize;
 
     // Additional events for DeagleVisual
     public event System.Action onReload;
@@ -62,6 +56,9 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
+        // Gating logic: Only run if this is the currently selected weapon
+        if (!IsCurrent) return;
+
         // Count down reload timer
         if (state.reloadTimer > 0)
         {
@@ -71,6 +68,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
                 // Reload complete
                 state.currentAmmo = _clipSize;
                 state.isReloading = false;
+                InvokeReloadCompleteEvent();
             }
             return; // Can't shoot while reloading
         }
@@ -117,6 +115,7 @@ public class DeagleLogic : PredictedIdentity<DeagleLogic.ShootInput, DeagleLogic
         state.reloadTimer = _reloadTime;
         state.isReloading = true;
         _onReloadEvent?.Invoke();
+        InvokeReloadEvent();
     }
 
     private void Shoot(ref ShootState state)

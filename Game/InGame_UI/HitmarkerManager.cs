@@ -49,37 +49,20 @@ public class HitmarkerManager : MonoBehaviour
 
     private void OnEnable()
     {
-        WeaponManager.OnLocalWeaponManagerReady += OnWeaponManagerReady;
+        // No longer subscribing to WeaponManager events
     }
 
     private void OnDisable()
     {
-        WeaponManager.OnLocalWeaponManagerReady -= OnWeaponManagerReady;
-
         if (_currentTweenId != -1) LeanTween.cancel(_currentTweenId);
         if (_killIconTweenId != -1) LeanTween.cancel(_killIconTweenId);
     }
 
-    public void ReportKillConfirmed()
+    /// <summary>
+    /// Reports a hit from a weapon. Should be called by the local player's weapon logic.
+    /// </summary>
+    public void ReportHit(HitInfo hitInfo)
     {
-        AnimateKillIcon();
-        if (_killSfx != null)
-            SoundManager.PlayNonDiegetic(_killSfx);
-    }
-
-    private void OnWeaponManagerReady(WeaponManager weaponManager)
-    {
-        foreach (IWeaponLogic weapon in weaponManager.GetAllWeapons())
-        {
-            IWeaponLogic capturedWeapon = weapon;
-            weapon.OnHit += (hitInfo) => ShowHitmarker(capturedWeapon, hitInfo);
-        }
-    }
-
-    private void ShowHitmarker(IWeaponLogic weapon, HitInfo hitInfo)
-    {
-        if (!weapon.isOwner) return;
-
         if (hitInfo.hitPlayer)
         {
             AnimateHitmarker(hitInfo.isHeadshot);
@@ -93,6 +76,13 @@ public class HitmarkerManager : MonoBehaviour
                 if (_bodyShotClip != null) SoundManager.Play(new SoundData(_bodyShotClip, varyPitch: false, varyVolume: false));
             }
         }
+    }
+
+    public void ReportKillConfirmed()
+    {
+        AnimateKillIcon();
+        if (_killSfx != null)
+            SoundManager.PlayNonDiegetic(_killSfx);
     }
 
     private void AnimateHitmarker(bool isHeadshot)

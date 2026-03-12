@@ -2,7 +2,7 @@ using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
 
-public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, TrackingGunLogic.ShootState>, IWeaponLogic
+public class TrackingGunLogic : BaseWeaponLogic<TrackingGunLogic.ShootInput, TrackingGunLogic.ShootState>
 {
     [Header("Stats")]
     [SerializeField] private float _fireRate;
@@ -22,14 +22,8 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
     public float shootCooldown => 1 / _fireRate;
 
     // IWeaponLogic interface properties
-    public int CurrentAmmo => currentState.currentAmmo;
-    public int MaxAmmo => _clipSize;
-
-    // IWeaponLogic interface events (public for HitmarkerManager)
-    public event System.Action<HitInfo> OnHit;
-    public event System.Action<Vector3> OnShoot;
-    public event System.Action OnEquipped;
-    public event System.Action OnHolstered;
+    public override int CurrentAmmo => currentState.currentAmmo;
+    public override int MaxAmmo => _clipSize;
 
     // Additional events for TrackingGunVisual
     public event System.Action onReload;
@@ -59,6 +53,9 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
 
     protected override void Simulate(ShootInput input, ref ShootState state, float delta)
     {
+        // Gating logic: Only run if this is the currently selected weapon
+        if (!IsCurrent) return;
+
         // Count down reload timer
         if (state.reloadTimer > 0)
         {
@@ -68,6 +65,7 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
                 // Reload complete
                 state.currentAmmo = _clipSize;
                 state.isReloading = false;
+                InvokeReloadCompleteEvent();
             }
             return; // Can't shoot while reloading
         }
@@ -114,6 +112,7 @@ public class TrackingGunLogic : PredictedIdentity<TrackingGunLogic.ShootInput, T
         state.reloadTimer = _reloadTime;
         state.isReloading = true;
         _onReloadEvent?.Invoke();
+        InvokeReloadEvent();
     }
 
     private void Shoot(ref ShootState state)

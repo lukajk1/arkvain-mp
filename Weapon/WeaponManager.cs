@@ -66,10 +66,19 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
         {
             SetWeaponActive(weapon, false);
         }
-    }
 
-    protected  void OnSpawned()
-    {
+        // Pull from networked loadout manager if available
+        if (owner.HasValue)
+        {
+            var loadout = PlayerLoadoutState.GetLoadout(owner.Value);
+            if (loadout != null)
+            {
+                var state = currentState;
+                state.activeWeaponIndex = loadout.weaponIndex;
+                ApplyActiveWeapon(state.activeWeaponIndex);
+            }
+        }
+
         // Initialize based on current state (important for late-joiners)
         ApplyActiveWeapon(currentState.activeWeaponIndex);
         _isInitialized = true;
@@ -91,12 +100,20 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
         // Update the predicted state
         var state = currentState;
         state.activeWeaponIndex = index;
-        // We don't call ApplyActiveWeapon here because the state change 
-        // will trigger a Simulate/Sync pass where it can be applied.
     }
 
     protected override void Simulate(ref WeaponState state, float delta)
     {
+        // Safety: If we are the owner but the state doesn't match our loadout yet (due to timing)
+        if (isOwner && owner.HasValue)
+        {
+            var loadout = PlayerLoadoutState.GetLoadout(owner.Value);
+            if (loadout != null && state.activeWeaponIndex != loadout.weaponIndex)
+            {
+                state.activeWeaponIndex = loadout.weaponIndex;
+            }
+        }
+
         // If the state says we should be using a different weapon than what is visually active
         ApplyActiveWeapon(state.activeWeaponIndex);
     }

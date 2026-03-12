@@ -7,7 +7,7 @@ using UnityEngine;
 /// In this version, weapon switching is disabled; a weapon is assigned at spawn and remains active.
 /// Broadcasts weapon events globally for systems like hitmarkers.
 /// </summary>
-public class WeaponManager : PredictedIdentity<WeaponManager.NoInput, WeaponManager.WeaponState>
+public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
 {
     [System.Serializable]
     public class WeaponPair
@@ -32,7 +32,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.NoInput, WeaponMana
     [SerializeField] private TrackingGunLogic _trackingGunLogic;
     [SerializeField] private TrackingGunVisual _trackingGunVisual;
 
-    [Header("Viewmodel Sway")]
+    [Header("Other")]
     [SerializeField] private ViewmodelSway _viewmodelSway;
 
     private WeaponPair[] _weapons;
@@ -95,7 +95,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.NoInput, WeaponMana
         // will trigger a Simulate/Sync pass where it can be applied.
     }
 
-    protected override void Simulate(NoInput input, ref WeaponState state, float delta)
+    protected override void Simulate(ref WeaponState state, float delta)
     {
         // If the state says we should be using a different weapon than what is visually active
         ApplyActiveWeapon(state.activeWeaponIndex);
@@ -172,22 +172,9 @@ public class WeaponManager : PredictedIdentity<WeaponManager.NoInput, WeaponMana
         return _weapons[_lastAppliedIndex].logic;
     }
 
-    public struct NoInput : IPredictedData<NoInput>
-    {
-        public void Dispose() { }
-    }
-
     public struct WeaponState : IPredictedData<WeaponState>
     {
         public int activeWeaponIndex;
         public void Dispose() { }
     }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (_crossbowLogic == null) Debug.LogWarning("[WeaponManager] Crossbow logic missing!");
-        if (_deagleLogic == null) Debug.LogWarning("[WeaponManager] Deagle logic missing!");
-    }
-#endif
 }

@@ -5,6 +5,7 @@ using Heathen.SteamworksIntegration;
 using Steamworks;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine.SceneManagement;
 
 public class LobbyChat : MonoBehaviour
 {
@@ -12,6 +13,12 @@ public class LobbyChat : MonoBehaviour
     [SerializeField] private TMP_InputField chatInputField;
     [SerializeField] private TMP_Text chatHistoryText;
     [SerializeField] private ScrollRect chatScrollRect;
+
+    [Header("To hide when in game scene")]
+    [SerializeField] private SceneNameHolder gameScene;
+    [SerializeField] private Image chatBacking;
+    [SerializeField] private Image scrollbarBack;
+    [SerializeField] private Image scrollbarHandle;
 
     [Header("Audio")]
     [SerializeField] private AudioClip onNewMessageClip;
@@ -23,6 +30,8 @@ public class LobbyChat : MonoBehaviour
     private List<string> _chatLines = new List<string>();
     private LobbyData _currentLobby;
 
+    private bool isGameScene = false;
+
     private void Start()
     {
         if (chatInputField != null)
@@ -30,7 +39,19 @@ public class LobbyChat : MonoBehaviour
             chatInputField.onSubmit.AddListener(OnChatSubmitted);
             chatInputField.onSelect.AddListener(OnChatFocused);
             chatInputField.onDeselect.AddListener(OnChatUnfocused);
+            
+            // Hide by default
+            chatInputField.gameObject.SetActive(false);
         }
+
+        // Determine if we are in the game scene
+        if (gameScene != null)
+        {
+            isGameScene = SceneManager.GetActiveScene().name == gameScene.sceneName;
+        }
+
+        // Initial visibility check
+        SetImagesVisibility(!isGameScene);
 
         // Subscribe to low-level lobby chat messages
         _lobbyChatMsgCallback = Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessage);
@@ -38,16 +59,55 @@ public class LobbyChat : MonoBehaviour
         RefreshChatUI();
     }
 
+    private void SetImagesVisibility(bool visible)
+    {
+        if (chatBacking != null) chatBacking.enabled = visible;
+        if (scrollbarBack != null) scrollbarBack.enabled = visible;
+        if (scrollbarHandle != null) scrollbarHandle.enabled = visible;
+    }
+
     private void OnChatFocused(string value)
     {
         if (PersistentClient.Instance != null)
+        {
             PersistentClient.Instance.currentEscapeContext = EscapeContext.CloseOutChat;
+            
+            // Lock player controls while typing
+            if (PersistentClient.Instance.inputManager != null)
+            {
+                PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(true, this);
+            }
+        }
+
+        if (isGameScene)
+        {
+            SetImagesVisibility(true);
+        }
     }
 
     private void OnChatUnfocused(string value)
     {
         if (PersistentClient.Instance != null)
+        {
             PersistentClient.Instance.currentEscapeContext = EscapeContext.Neutral;
+            
+            // Unlock player controls
+            if (PersistentClient.Instance.inputManager != null)
+            {
+                PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(false, this);
+            }
+        }
+
+        if (isGameScene)
+        {
+            SetImagesVisibility(false);
+        }
+
+        // Hide the input field when it loses focus
+        if (chatInputField != null)
+        {
+            chatInputField.gameObject.SetActive(false);
+        }
     }
 
     private void OnEnable()
@@ -179,8 +239,9 @@ public class LobbyChat : MonoBehaviour
 
     private void OnSubmitPressed(UnityEngine.InputSystem.InputAction.CallbackContext context)
     {
-        if (chatInputField != null && !chatInputField.isFocused)
+        if (chatInputField != null && !chatInputField.gameObject.activeInHierarchy)
         {
+            chatInputField.gameObject.SetActive(true);
             chatInputField.ActivateInputField();
         }
     }
@@ -204,22 +265,29 @@ public class LobbyChat : MonoBehaviour
 
     private void OnChatSubmitted(string message)
     {
-        if (string.IsNullOrEmpty(message))
+        if (string.IsNullOrWhiteSpace(message))
         {
-            chatInputField.ActivateInputField();
+            chatInputField.text = "";
+            // Unfocus the input field which will trigger OnChatUnfocused and hide it
+            if (UnityEngine.EventSystems.EventSystem.current != null)
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
             return;
         }
 
         if (!_currentLobby.IsValid)
         {
             Debug.LogWarning("[LobbyChat] Not in a lobby. Cannot send chat message.");
+            // Re-focus so the user can see why it didn't send or try again
             chatInputField.ActivateInputField();
             return;
         }
 
         SendChatMessage(message);
         chatInputField.text = "";
-        chatInputField.ActivateInputField();
+        
+        // After sending, unfocus/hide the field
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
     }
 
     private void SendChatMessage(string message)

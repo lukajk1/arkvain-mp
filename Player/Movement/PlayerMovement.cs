@@ -53,6 +53,27 @@ public class PlayerMovement : PredictedIdentity<PlayerMovement.MoveInput, Player
         _onLand = new PredictedEvent(predictionManager, this);
     }
 
+    protected override State GetInitialState()
+    {
+        return new State
+        {
+            jumpCooldown = 0f,
+            wasGrounded = false,
+            landCooldown = 0f,
+            movementState = MovementState.Airborne,
+            blinkConsumed = false,
+            wasPressingLeft = false,
+            wasPressingRight = false,
+            leftPressCount = 0,
+            rightPressCount = 0,
+            timeSinceLastStrafePress = 0f,
+            isGrounded = false,
+            isOnSlope = false,
+            slopeNormal = Vector3.up,
+            rotation = _rigidbody != null ? _rigidbody.rotation : Quaternion.identity
+        };
+    }
+
     protected override void GetUnityState(ref State state)
     {
         // Cache rotation for calculating forward/right vectors in Simulate

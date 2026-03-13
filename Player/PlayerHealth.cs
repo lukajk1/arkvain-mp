@@ -9,9 +9,10 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     [SerializeField] private float _yHeightKillThreshold = -25f;
     [SerializeField] private PlayerMovement _playerMovement;
 
-    [HideInInspector] public PredictedEvent<(int health, int maxHealth)> _onHealthChanged;
+    public PredictedEvent<(int health, int maxHealth)> _onHealthChanged;
     // predicted event even though only the server can call this (ie no resimulation) to essentially have a tick-associated observer rpc
-    [HideInInspector] public PredictedEvent<PlayerInfo?> _onDeathPredictedEvent;
+    public PredictedEvent<PlayerInfo?> _onDeathPredictedEvent;
+
     protected override void LateAwake()
     {
         base.LateAwake();
@@ -81,11 +82,25 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     protected override void Simulate(ref HealthState state, float delta)
     {
-        // rb is safe to read from in simulate()
+        // Server-only fall death check
         if (predictionManager.isServer && !state.isDead && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
         {
             state.health = 0;
-            ProcessDeath(ref state, null);
+            state.attacker = null; // Environment kill
+        }
+
+        // Death detection runs on ALL clients during simulation
+        // This ensures PredictedEvent fires on all clients at the same tick
+        if (state.health <= 0 && !state.isDead)
+        {
+            state.isDead = true;
+            Debug.Log("is dead fired in simulate");
+            // Fire event during Simulate() = all clients hear it!
+            _onDeathPredictedEvent.Invoke(state.attacker);
+
+            // Server-only cleanup
+            if (predictionManager.isServer)
+                ExecuteDeath(state.attacker);
         }
     }
 
@@ -114,9 +129,9 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         if (currentState.isDead) return;
 
         // Server-side validation: Clamp damage to maximum reasonable value
-        if (change < 0) 
+        if (change < 0)
         {
-            int maxDamage = 100; 
+            int maxDamage = 100;
             if (change < -maxDamage)
             {
                 if (predictionManager.isServer)
@@ -125,24 +140,17 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
             }
         }
 
-        currentState.health += change;
+        var state = currentState;
+        state.health += change;
 
-        // Only the server can confirm a death
-        if (predictionManager.isServer && currentState.health <= 0 && !currentState.isDead)
-        {
-            ProcessDeath(ref currentState, attacker);
-        }
+        // Store attacker info for death processing in Simulate()
+        if (state.health <= 0)
+            state.attacker = attacker;
+
+        currentState = state;
+        // Death will be processed in Simulate() on all clients
     }
 
-    private void ProcessDeath(ref HealthState state, PlayerInfo? attacker)
-    {
-        state.isDead = true;
-        state.attacker = attacker;
-        _onDeathPredictedEvent.Invoke(attacker);
-        
-        // Final death execution (scoring and deletion)
-        ExecuteDeath(attacker);
-    }
 
     public struct HealthState : IPredictedData<PlayerHealth.HealthState>
     {

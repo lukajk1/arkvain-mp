@@ -16,10 +16,6 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
     [SerializeField] private Camera _mainCamera;
     [SerializeField] private FirstPersonCamera _firstPersonCamera;
 
-    [Header("Death")]
-    [SerializeField] private GameObject _deadPlayerPrefab;
-    [SerializeField] private GameObject _ragdoll;
-
     [SerializeField] private PlayerHealth _playerHealth;
     [SerializeField] private PlayerMovement _playerMovement;
 
@@ -40,45 +36,14 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
 
     private float _footstepDistance;
     private bool _jumpEventsSubscribed;
-    private bool _deathEventSubscribed;
-
-    private void OnEnable()
-    {
-        // OnDeath action replaced by _onDeathPredictedEvent in OnDeathPredicted
-    }
 
     private void OnDisable()
     {
-        if (_playerHealth != null)
-        {
-            if (_deathEventSubscribed)
-            {
-                _playerHealth._onDeathPredictedEvent.RemoveListener(OnDeathPredicted);
-                _deathEventSubscribed = false;
-            }
-        }
-
         if (_jumpEventsSubscribed && _playerMovement != null && _playerMovement._onJump != null)
         {
             _playerMovement._onJump.RemoveListener(OnJump);
             _playerMovement._onLand.RemoveListener(OnLand);
             _jumpEventsSubscribed = false;
-        }
-    }
-
-    private void OnDeathPredicted(PlayerInfo? attacker)
-    {
-        // Hitmarker logic (only if we are the attacker)
-        if (attacker.HasValue && NetworkManager.main != null && attacker.Value.playerID == NetworkManager.main.localPlayer)
-        {
-            HitmarkerManager.Instance?.ReportKillConfirmed();
-        }
-
-        // Death visuals (dead player prefab)
-        if (isOwner)
-        {
-            if (_deadPlayerPrefab != null)
-                Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
         }
     }
 
@@ -199,12 +164,6 @@ public class PlayerVisualsManager : StatelessPredictedIdentity
             _playerMovement._onJump.AddListener(OnJump);
             _playerMovement._onLand.AddListener(OnLand);
             _jumpEventsSubscribed = true;
-        }
-
-        if (!_deathEventSubscribed && _playerHealth != null && _playerHealth._onDeathPredictedEvent != null)
-        {
-            _playerHealth._onDeathPredictedEvent.AddListener(OnDeathPredicted);
-            _deathEventSubscribed = true;
         }
 
         if (_playerMovement != null && _footstepClips.Count > 0

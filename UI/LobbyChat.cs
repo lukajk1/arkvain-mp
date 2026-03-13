@@ -78,11 +78,7 @@ public class LobbyChat : MonoBehaviour
         {
             PersistentClient.Instance.currentEscapeContext = EscapeContext.CloseOutChat;
             
-            // Lock player controls while typing
-            if (PersistentClient.Instance.inputManager != null)
-            {
-                PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(true, this);
-            }
+            PersistentClient.AddToCursorUnlockList(true, this);
         }
 
         if (isGameScene)
@@ -96,12 +92,9 @@ public class LobbyChat : MonoBehaviour
         if (PersistentClient.Instance != null)
         {
             PersistentClient.Instance.currentEscapeContext = EscapeContext.Neutral;
-            
-            // Unlock player controls
-            if (PersistentClient.Instance.inputManager != null)
-            {
-                PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(false, this);
-            }
+
+            PersistentClient.AddToCursorUnlockList(false, this);
+
         }
 
         if (isGameScene)

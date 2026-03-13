@@ -22,21 +22,7 @@ public class PersistentClient : MonoBehaviour
     public static float cm360;
     public static float playerDPI;
 
-    private static CursorLockMode _cursorLockState;
-    public static CursorLockMode CursorLockState
-    {
-        get => _cursorLockState;
-        private set
-        {
-            if (_cursorLockState != value)
-            {
-                _cursorLockState = value;
-                Cursor.lockState = value;
-                Cursor.visible = value == CursorLockMode.None;
-            }
-        }
-    }
-    private static List<object> cursorLockList = new();
+    private static List<object> cursorUnlockList = new();
     private void Awake()
     {
         if (Instance != null)
@@ -76,8 +62,87 @@ public class PersistentClient : MonoBehaviour
     }
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        StartCoroutine(DelayedSceneLoaded(scene));
+    }
+
+    private System.Collections.IEnumerator DelayedSceneLoaded(Scene scene)
+    {
+        // Wait 1 frame to let all scene objects run Awake/Start
+        yield return null;
+
+        // refresh to default cursor state
+        ClearCursorUnlockList();
+
         bool isGameScene = scene.name == gameScene.sceneName;
-        SetCursorToPlayMode(isGameScene);
+
+        // handles additive cases where the scene argument might be a map chunk
+        if (!isGameScene)
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                if (SceneManager.GetSceneAt(i).name == gameScene.sceneName)
+                {
+                    isGameScene = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isGameScene)
+        {
+            // unlock the cursor if NOT in game scene
+            AddToCursorUnlockList(true, this);
+        }
+        else
+        {
+            Debug.Log("[PersistentClient] Game scene detected - ensuring cursor is locked");
+            SetCursorLocked(true);
+        }
+    }
+
+    private void ClearCursorUnlockList()
+    {
+        cursorUnlockList.Clear();
+        
+        if (inputManager != null)
+        {
+            inputManager.ClearAllLocks();
+        }
+
+        SetCursorLocked(true); // defaults to locked
+    }
+
+    private void SetCursorLocked(bool locked)
+    {
+        if (locked)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+            
+            if (inputManager != null)
+            {
+                // Remove this object from the lock list to allow controls
+                inputManager.ModifyPlayerControlsLockList(false, this);
+            }
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            
+            if (inputManager != null)
+            {
+                // Add this object to the lock list to disable controls
+                inputManager.ModifyPlayerControlsLockList(true, this);
+            }
+        }
+    }
+    private void Update()
+    {
+        if (Time.frameCount % 60 == 0)
+        {
+            Debug.Log($"[PersistentClient] Cursor Locked: {Cursor.lockState == CursorLockMode.Locked}, Lock Count: {cursorUnlockList.Count}");
+        }
     }
     public void CreateConfirmationDialog(
         Action onConfirm = null,
@@ -89,31 +154,25 @@ public class PersistentClient : MonoBehaviour
         GameObject boxInstance = Instantiate(confirmationBox);
         boxInstance.GetComponentInChildren<ConfirmationBox>().Initialize(onConfirm, onCancel, message, confirmText, cancelText);
     }
-    public void SetCursorToPlayMode(bool value)
-    {
-        PersistentClient.Instance.inputManager.ModifyPlayerControlsLockList(!value, this);
-        ModifyCursorUnlockList(!value, this);
-    }
-
-    private static void ModifyCursorUnlockList(bool isAdding, object obj)
+    public static void AddToCursorUnlockList(bool isAdding, object obj)
     {
         if (isAdding)
         {
-            if (cursorLockList.Contains(obj)) return; // no need to modify in this case
+            if (cursorUnlockList.Contains(obj)) return; // no need to modify in this case
             else
             {
-                cursorLockList.Add(obj);
+                cursorUnlockList.Add(obj);
             }
         }
-        else cursorLockList.Remove(obj);
+        else cursorUnlockList.Remove(obj);
 
-        if (cursorLockList.Count > 0)
+        if (cursorUnlockList.Count > 0)
         {
-            CursorLockState = CursorLockMode.None;
+            Instance.SetCursorLocked(false);
         }
         else
         {
-            CursorLockState = CursorLockMode.Locked;
+            Instance.SetCursorLocked(true);
         }
     }
 

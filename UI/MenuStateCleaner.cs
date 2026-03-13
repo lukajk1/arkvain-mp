@@ -37,11 +37,5 @@ public class MenuStateCleaner : MonoBehaviour
         {
             LoadoutManager.Instance.SetState(false);
         }
-        
-        // Reset Cursor just in case
-        if (PersistentClient.Instance != null)
-        {
-            PersistentClient.Instance.SetCursorToPlayMode(false);
-        }
     }
 }

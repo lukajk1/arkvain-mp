@@ -64,7 +64,7 @@ public class EscapeMenu : MonoBehaviour
         if (_menu != null)
         {
             _menu.gameObject.SetActive(value);
-            PersistentClient.Instance.SetCursorToPlayMode(!value);
+            PersistentClient.AddToCursorUnlockList(value, this);
         }
     }
 

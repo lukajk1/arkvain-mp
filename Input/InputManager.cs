@@ -26,22 +26,48 @@ public class InputManager : MonoBehaviour
     {
         _actions?.Dispose();
     }
+    public void EnablePlayerControls()
+    {
+        _actions.Player.Enable();
+    }
+
+    public void DisablePlayerControls()
+    {
+        _actions.Player.Disable();
+    }
 
     /// <summary>
-    /// Modify the player controls lock list.
-    /// Multiple systems can lock - controls only unlock when all locks are removed.
+    /// Adds or removes an object from the list of things locking the player controls.
+    /// Controls are only enabled when the lock list is empty.
     /// </summary>
-    public void ModifyPlayerControlsLockList(bool isAdding, object obj)
+    public void ModifyPlayerControlsLockList(bool isAdding, object lockObject)
     {
         if (isAdding)
         {
-            if (_playerControlsLocks.Contains(obj)) return; // no need to modify then
-            else
-            {
-                _playerControlsLocks.Add(obj);
-            }
+            _playerControlsLocks.Add(lockObject);
         }
-        else _playerControlsLocks.Remove(obj);
+        else
+        {
+            _playerControlsLocks.Remove(lockObject);
+        }
+
+        UpdatePlayerControlsState();
+    }
+
+    public void UnlockPlayerControls(object lockObject)
+    {
+        ModifyPlayerControlsLockList(false, lockObject);
+    }
+
+    public void ClearAllLocks()
+    {
+        _playerControlsLocks.Clear();
+        UpdatePlayerControlsState();
+    }
+
+    private void UpdatePlayerControlsState()
+    {
+        if (_actions == null) return;
 
         if (_playerControlsLocks.Count > 0)
         {
@@ -51,36 +77,5 @@ public class InputManager : MonoBehaviour
         {
             _actions.Player.Enable();
         }
-    }
-
-    /// <summary>
-    /// Lock player controls (legacy method - use ModifyPlayerControlsLockList instead).
-    /// </summary>
-    [System.Obsolete("Use ModifyPlayerControlsLockList(true, this) instead")]
-    public void LockPlayerControls(object requester)
-    {
-        ModifyPlayerControlsLockList(true, requester);
-    }
-
-    /// <summary>
-    /// Unlock player controls for a specific requester (legacy method - use ModifyPlayerControlsLockList instead).
-    /// </summary>
-    [System.Obsolete("Use ModifyPlayerControlsLockList(false, this) instead")]
-    public void UnlockPlayerControls(object requester)
-    {
-        ModifyPlayerControlsLockList(false, requester);
-    }
-
-    // Legacy methods for backwards compatibility (now use lock/unlock instead)
-    [System.Obsolete("Use LockPlayerControls/UnlockPlayerControls instead")]
-    public void EnablePlayerControls()
-    {
-        _actions.Player.Enable();
-    }
-
-    [System.Obsolete("Use LockPlayerControls/UnlockPlayerControls instead")]
-    public void DisablePlayerControls()
-    {
-        _actions.Player.Disable();
     }
 }

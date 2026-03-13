@@ -102,7 +102,7 @@ public class ScoreboardManager : MonoBehaviour
         }
 
         // Get leaderboard sorted by score
-        List<PlayerMatchData> players = MatchSessionManager.Instance.GetLeaderboard();
+        var players = MatchSessionManager.Instance.GetLeaderboard();
 
         // Create a row for each player
         foreach (var playerData in players)
@@ -111,7 +111,7 @@ public class ScoreboardManager : MonoBehaviour
         }
     }
 
-    private void CreateRowForPlayer(PlayerMatchData playerData)
+    private void CreateRowForPlayer(MatchSessionManager.PlayerMatchState playerData)
     {
         if (playerRowPrefab == null || rowContainer == null)
         {
@@ -127,7 +127,7 @@ public class ScoreboardManager : MonoBehaviour
         {
             row.UpdateData(playerData);
             _activeRows.Add(row);
-            _playerRowMap[playerData.PlayerId] = row;
+            _playerRowMap[playerData.playerId] = row;
         }
         else
         {
@@ -143,12 +143,12 @@ public class ScoreboardManager : MonoBehaviour
         // Update each existing row with fresh data
         foreach (var row in _activeRows)
         {
-            if (row != null && row.PlayerData != null)
+            if (row != null)
             {
-                PlayerMatchData freshData = MatchSessionManager.Instance.GetPlayerData(row.PlayerData.PlayerId);
-                if (freshData != null)
+                var freshData = MatchSessionManager.Instance.GetPlayerData(row.PlayerData.playerId);
+                if (freshData.HasValue)
                 {
-                    row.UpdateData(freshData);
+                    row.UpdateData(freshData.Value);
                 }
             }
         }
@@ -172,10 +172,10 @@ public class ScoreboardManager : MonoBehaviour
         // If scoreboard is visible, add a row for the new player
         if (_isVisible && MatchSessionManager.Instance != null)
         {
-            PlayerMatchData playerData = MatchSessionManager.Instance.GetPlayerData(playerId);
-            if (playerData != null && !_playerRowMap.ContainsKey(playerId))
+            var playerData = MatchSessionManager.Instance.GetPlayerData(playerId);
+            if (playerData.HasValue && !_playerRowMap.ContainsKey(playerId))
             {
-                CreateRowForPlayer(playerData);
+                CreateRowForPlayer(playerData.Value);
             }
         }
     }

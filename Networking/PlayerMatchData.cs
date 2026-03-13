@@ -2,13 +2,6 @@ using PurrNet;
 using System;
 using UnityEngine;
 
-public enum PlayerStatus
-{
-    Alive,
-    Dead,
-    Spectating
-}
-
 [Serializable]
 public class PlayerMatchData
 {

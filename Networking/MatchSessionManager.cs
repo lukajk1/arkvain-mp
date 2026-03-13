@@ -1,31 +1,42 @@
 using PurrNet;
+using PurrNet.Prediction;
+using PurrNet.Pooling;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+public enum PlayerStatus
+{
+    Alive,
+    Dead,
+    Spectating
+}
+
+public struct KillInfo
+{
+    public PlayerID killer;
+    public PlayerID victim;
+}
+
 /// <summary>
-/// Manages the networked state of a match session, including player lifecycle (joining/leaving),
-/// synchronized player statistics (kills, deaths, assists), and loadout configuration.
-/// Acts as a central hub for reporting gameplay events to the server and broadcasting 
-/// session-wide updates to all clients via SyncLists and events.
+/// A tick-aligned, predicted manager for match session state.
+/// Tracks scores, player status, and broadcasts match-critical events.
 /// </summary>
-public class MatchSessionManager : NetworkBehaviour
+public class MatchSessionManager : PredictedIdentity<MatchSessionManager.MatchState>
 {
     public static MatchSessionManager Instance { get; private set; }
 
-    private readonly SyncList<PlayerMatchData> _playerStats = new();
+    // Visual-only lookup for strings (not networked in state)
+    private readonly Dictionary<PlayerID, string> _playerNames = new();
 
-    [Header("Ping Settings")]
-    [SerializeField] private float pingUpdateInterval = 2f;
-    private float _lastPingUpdate;
-
-    // Events for UI updates
-    public event Action<PlayerMatchData> OnPlayerStatsChanged;
+    // Events for UI updates (Local only)
+    public event Action<PlayerMatchState> OnPlayerStatsChanged;
     public event Action<PlayerID> OnPlayerJoined;
     public event Action<PlayerID> OnPlayerLeft;
 
+    // Tick-aligned Death Event
+    [HideInInspector] public PredictedEvent<KillInfo> OnPlayerKilled;
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -33,133 +44,71 @@ public class MatchSessionManager : NetworkBehaviour
             Destroy(gameObject);
             return;
         }
-
         Instance = this;
-        _playerStats.onChanged += OnStatsListChanged;
     }
-
-    private void Start()
+    protected override void LateAwake()
     {
-        StartCoroutine(WaitForPlayerModule());
+        base.LateAwake();
+
+
+        OnPlayerKilled = new PredictedEvent<KillInfo>(predictionManager, this);
     }
 
-    private IEnumerator WaitForPlayerModule()
+    protected override void Simulate(ref MatchState state, float delta)
     {
-        // Wait until NetworkManager and playerModule are initialized
-        while (NetworkManager.main == null || NetworkManager.main.playerModule == null)
-        {
-            yield return new WaitForSeconds(0.1f);
-        }
+        if (!predictionManager.isServer) return;
 
-        if (isServer)
+        // Sync local player list with PredictionManager's official list
+        var currentPlayers = predictionManager.players.currentState.players;
+        
+        // Add new players to our tracking list
+        for (int i = 0; i < currentPlayers.Count; i++)
         {
-            NetworkManager.main.playerModule.onPlayerJoined += OnPlayerJoinedNetwork;
-            NetworkManager.main.playerModule.onPlayerLeft += OnPlayerLeftNetwork;
+            PlayerID pid = currentPlayers[i];
+            if (!HasPlayer(ref state, pid))
+            {
+                state.players.Add(new PlayerMatchState { playerId = pid, status = PlayerStatus.Spectating });
+                // Note: We don't trigger OnPlayerJoined here because Simulate can run multiple times (rollbacks)
+            }
         }
     }
 
-    protected override void OnDestroy()
+    private bool HasPlayer(ref MatchState state, PlayerID pid)
     {
-        base.OnDestroy();
-
-        if (_playerStats != null)
-            _playerStats.onChanged -= OnStatsListChanged;
-
-        var networkManager = NetworkManager.main;
-        if (isServer && networkManager != null && networkManager.playerModule != null)
+        for (int i = 0; i < state.players.Count; i++)
         {
-            networkManager.playerModule.onPlayerJoined -= OnPlayerJoinedNetwork;
-            networkManager.playerModule.onPlayerLeft -= OnPlayerLeftNetwork;
+            if (state.players[i].playerId == pid) return true;
         }
+        return false;
     }
 
-    private void OnStatsListChanged(SyncListChange<PlayerMatchData> change)
-    {
-        if (change.operation == SyncListOperation.Set || change.operation == SyncListOperation.Added)
-        {
-            OnPlayerStatsChanged?.Invoke(change.value);
-        }
-    }
-
-    private void Update()
-    {
-        if (!isServer) return;
-
-        // Update pings periodically
-        if (Time.time - _lastPingUpdate >= pingUpdateInterval)
-        {
-            UpdateAllPlayerPings();
-            _lastPingUpdate = Time.time;
-        }
-    }
-
-    private void OnPlayerJoinedNetwork(PlayerID player, bool isReconnect, bool asServer)
-    {
-        if (!asServer) return;
-
-        Debug.Log($"[MatchSessionManager] Player joined: {player}");
-
-        int index = FindPlayerIndex(player);
-        if (index != -1)
-        {
-            _playerStats[index].SetConnected(true);
-            _playerStats.SetDirty(index);
-        }
-        else
-        {
-            var playerData = new PlayerMatchData(player, 0, $"Player_{player}");
-            _playerStats.Add(playerData);
-        }
-
-        OnPlayerJoined?.Invoke(player);
-    }
-
-    private void OnPlayerLeftNetwork(PlayerID player, bool asServer)
-    {
-        if (!asServer) return;
-
-        int index = FindPlayerIndex(player);
-        if (index != -1)
-        {
-            _playerStats[index].SetConnected(false);
-            _playerStats.SetDirty(index);
-        }
-
-        OnPlayerLeft?.Invoke(player);
-    }
-
-    private int FindPlayerIndex(PlayerID playerId)
-    {
-        for (int i = 0; i < _playerStats.Count; i++)
-        {
-            if (_playerStats[i].PlayerId == playerId)
-                return i;
-        }
-        return -1;
-    }
-
-    // Server-only stat modification methods
-    [ServerRpc(requireOwnership: false)]
+    // Authoritative Scoring (Called by PlayerHealth on Server)
     public void ReportKill(PlayerID killer, PlayerID victim)
     {
-        if (!isServer) return;
+        if (!predictionManager.isServer) return;
 
-        int killerIdx = FindPlayerIndex(killer);
-        if (killerIdx != -1)
+        ref var state = ref currentState;
+        
+        for (int i = 0; i < state.players.Count; i++)
         {
-            _playerStats[killerIdx].AddKill();
-            _playerStats.SetDirty(killerIdx);
+            var p = state.players[i];
+            if (p.playerId == killer)
+            {
+                p.kills++;
+                state.players[i] = p;
+            }
+            if (p.playerId == victim)
+            {
+                p.deaths++;
+                p.status = PlayerStatus.Dead;
+                state.players[i] = p;
+            }
         }
 
-        int victimIdx = FindPlayerIndex(victim);
-        if (victimIdx != -1)
-        {
-            _playerStats[victimIdx].AddDeath();
-            _playerStats[victimIdx].UpdateStatus(PlayerStatus.Dead);
-            _playerStats.SetDirty(victimIdx);
-        }
+        // Broadcast tick-aligned event
+        OnPlayerKilled.Invoke(new KillInfo { killer = killer, victim = victim });
 
-        // Notify the current game mode logic
+        // Notify Game Mode
         if (BaseGameModeLogic.Instance != null)
         {
             BaseGameModeLogic.Instance.OnPlayerKilled(killer, victim);
@@ -168,134 +117,115 @@ public class MatchSessionManager : NetworkBehaviour
 
     public void UpdatePlayerStatus(PlayerID playerId, PlayerStatus status)
     {
-        if (!isServer) return;
+        if (!predictionManager.isServer) return;
 
-        int index = FindPlayerIndex(playerId);
-        if (index != -1)
+        ref var state = ref currentState;
+        for (int i = 0; i < state.players.Count; i++)
         {
-            _playerStats[index].UpdateStatus(status);
-            _playerStats.SetDirty(index);
-            Debug.Log($"[MatchSessionManager] Updated status for {playerId} to {status}");
+            if (state.players[i].playerId == playerId)
+            {
+                var p = state.players[i];
+                p.status = status;
+                state.players[i] = p;
+                break;
+            }
         }
     }
 
     /// <summary>
-    /// Called by GameModeLogic to request the match to end.
+    /// Update visual-only name mapping. This is not predicted but useful for UI.
     /// </summary>
+    public void UpdatePlayerName(PlayerID id, string name)
+    {
+        _playerNames[id] = name;
+    }
+
+    public void UpdatePlayerSteamInfo(PlayerID playerId, ulong steamId, string steamName)
+    {
+        // For now, we just use the Steam name as the player name
+        UpdatePlayerName(playerId, steamName);
+        Debug.Log($"[MatchSessionManager] Updated Steam info for {playerId}: {steamName} ({steamId})");
+    }
+
+    public string GetPlayerName(PlayerID id)
+    {
+        if (_playerNames.TryGetValue(id, out var name)) return name;
+        return $"Player {id}";
+    }
+
+    public List<PlayerMatchState> GetAllPlayers()
+    {
+        return currentState.players.list.ToList();
+    }
+
+    public PlayerMatchState? GetPlayerData(PlayerID id)
+    {
+        foreach (var p in currentState.players.list)
+        {
+            if (p.playerId == id) return p;
+        }
+        return null;
+    }
+
+    public List<PlayerMatchState> GetLeaderboard()
+    {
+        return currentState.players.list
+            .OrderByDescending(p => CalculateScore(p))
+            .ToList();
+    }
+
+    public static float CalculateScore(PlayerMatchState p)
+    {
+        return (p.kills * 10f) + (p.assists * 3f) - (p.deaths * 5f);
+    }
+
+    public static float GetKDA(PlayerMatchState p)
+    {
+        if (p.deaths == 0) return p.kills + p.assists;
+        return (p.kills + p.assists) / (float)p.deaths;
+    }
+
     public void RequestEndMatch()
     {
-        if (!isServer) return;
+        if (!predictionManager.isServer) return;
 
         var sm = FindObjectOfType<PurrNet.Prediction.StateMachine.PredictedStateMachine>();
         if (sm != null)
         {
             var endState = sm.GetComponent<GameEndedState>();
-            if (endState != null)
-            {
-                Debug.Log("[MatchSessionManager] Explicitly setting state to GameEndedState.");
-                sm.SetState(endState);
-            }
-            else
-            {
-                Debug.LogWarning("[MatchSessionManager] GameEndedState component not found on StateMachine! Falling back to Next().");
-                sm.Next();
-            }
+            if (endState != null) sm.SetState(endState);
+            else sm.Next();
         }
     }
 
-    [ServerRpc(requireOwnership: false)]
-    public void ReportAssist(PlayerID assister, PlayerID victim)
+    protected override MatchState GetInitialState()
     {
-        if (!isServer) return;
-
-        int assisterIdx = FindPlayerIndex(assister);
-        if (assisterIdx != -1)
+        return new MatchState
         {
-            _playerStats[assisterIdx].AddAssist();
-            _playerStats.SetDirty(assisterIdx);
-        }
+            players = DisposableList<PlayerMatchState>.Create(16),
+            matchTimer = 0f
+        };
     }
 
-    private void UpdateAllPlayerPings()
+    public struct PlayerMatchState : IPredictedData<PlayerMatchState>
     {
-        for (int i = 0; i < _playerStats.Count; i++)
+        public PlayerID playerId;
+        public int kills;
+        public int deaths;
+        public int assists;
+        public PlayerStatus status;
+
+        public void Dispose() { }
+    }
+
+    public struct MatchState : IPredictedData<MatchState>
+    {
+        public DisposableList<PlayerMatchState> players;
+        public float matchTimer;
+
+        public void Dispose()
         {
-            PlayerMatchData playerData = _playerStats[i];
-            if (!playerData.IsConnected) continue;
-
-            float ping = GetPlayerPing(playerData.PlayerId);
-            playerData.UpdatePing(ping);
-            _playerStats.SetDirty(i);
+            if (players.list != null) players.Dispose();
         }
-    }
-
-    private float GetPlayerPing(PlayerID playerId)
-    {
-        return UnityEngine.Random.Range(20f, 100f);
-    }
-
-    // Public query methods
-    public PlayerMatchData GetPlayerData(PlayerID playerId)
-    {
-        return _playerStats.FirstOrDefault(p => p.PlayerId == playerId);
-    }
-
-    public List<PlayerMatchData> GetAllPlayers()
-    {
-        return _playerStats.ToList();
-    }
-
-    public List<PlayerMatchData> GetConnectedPlayers()
-    {
-        return _playerStats.Where(p => p.IsConnected).ToList();
-    }
-
-    public List<PlayerMatchData> GetLeaderboard()
-    {
-        return _playerStats
-            .OrderByDescending(p => p.CalculateScore())
-            .ToList();
-    }
-
-    public void UpdatePlayerSteamInfo(PlayerID playerId, ulong steamId, string steamName)
-    {
-        if (!isServer) return;
-
-        int index = FindPlayerIndex(playerId);
-        if (index != -1)
-        {
-            _playerStats[index].UpdateSteamInfo(steamId, steamName);
-            _playerStats.SetDirty(index);
-            Debug.Log($"[MatchSessionManager] Updated Steam info for {playerId}: {steamName} ({steamId})");
-        }
-    }
-
-    [ServerRpc(requireOwnership: false)]
-    public void UpdatePlayerLoadout(PlayerID playerId, LoadoutSelection selection)
-    {
-        if (!isServer) return;
-
-        // Basic validation
-        if (!System.Enum.IsDefined(typeof(HeroType), selection.Hero) || 
-            !System.Enum.IsDefined(typeof(WeaponType), selection.Weapon))
-        {
-            Debug.LogWarning($"[MatchSessionManager] Received invalid loadout from {playerId}");
-            return;
-        }
-
-        int index = FindPlayerIndex(playerId);
-        if (index != -1)
-        {
-            _playerStats[index].UpdateLoadout(selection);
-            _playerStats.SetDirty(index);
-            Debug.Log($"[MatchSessionManager] Updated loadout for {playerId}: Hero={selection.Hero}, Weapon={selection.Weapon}");
-        }
-    }
-
-    [ServerRpc(requireOwnership: false)]
-    public void ResetAllStats()
-    {
-        if (!isServer) return;
-        _playerStats.Clear();
     }
 }

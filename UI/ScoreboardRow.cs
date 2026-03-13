@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Heathen.SteamworksIntegration;
+using PurrNet;
 
 public class ScoreboardRow : MonoBehaviour
 {
@@ -21,72 +22,49 @@ public class ScoreboardRow : MonoBehaviour
     [SerializeField] private Color normalPlayerColor = new Color(0.1f, 0.1f, 0.1f, 0.5f);
     [SerializeField] private Color disconnectedColor = new Color(0.3f, 0.1f, 0.1f, 0.5f);
 
-    public PlayerMatchData PlayerData { get; private set; }
+    public MatchSessionManager.PlayerMatchState PlayerData { get; private set; }
     private ulong _loadedSteamId;
 
-    public void UpdateData(PlayerMatchData playerData)
+    public void UpdateData(MatchSessionManager.PlayerMatchState playerData)
     {
-        if (playerData == null)
-            return;
-
         PlayerData = playerData;
 
         // Update text fields
         if (playerNameText != null)
-            playerNameText.text = playerData.PlayerName;
+            playerNameText.text = MatchSessionManager.Instance.GetPlayerName(playerData.playerId);
 
         if (killsText != null)
-            killsText.text = playerData.Kills.ToString();
+            killsText.text = playerData.kills.ToString();
 
         if (deathsText != null)
-            deathsText.text = playerData.Deaths.ToString();
+            deathsText.text = playerData.deaths.ToString();
 
         if (assistsText != null)
-            assistsText.text = playerData.Assists.ToString();
+            assistsText.text = playerData.assists.ToString();
 
         if (kdaText != null)
-            kdaText.text = playerData.GetKDA().ToString("F2");
+            kdaText.text = MatchSessionManager.GetKDA(playerData).ToString("F2");
 
         if (scoreText != null)
-            scoreText.text = playerData.CalculateScore().ToString("F0");
-
-        if (pingText != null)
-            pingText.text = $"{playerData.AveragePing:F0}ms";
-
-        // Load avatar if Steam ID changed and is valid
-        if (avatar != null && playerData.SteamId != 0 && playerData.SteamId != _loadedSteamId)
-        {
-            _loadedSteamId = playerData.SteamId;
-            UserData.Get(playerData.SteamId).LoadAvatar(OnAvatarLoaded);
-        }
+            scoreText.text = MatchSessionManager.CalculateScore(playerData).ToString("F0");
 
         // Update background color
         UpdateBackgroundColor(playerData);
     }
 
-    private void OnAvatarLoaded(Texture2D texture)
-    {
-        if (avatar != null && texture != null)
-        {
-            avatar.texture = texture;
-        }
-    }
-
-    private void UpdateBackgroundColor(PlayerMatchData playerData)
+    private void UpdateBackgroundColor(MatchSessionManager.PlayerMatchState playerData)
     {
         if (backgroundImage == null)
             return;
 
-        // Check if disconnected
-        if (!playerData.IsConnected)
-        {
-            backgroundImage.color = disconnectedColor;
-            return;
-        }
-
         // Check if local player
-        // TODO: Compare with local player's PlayerID when available
-        // For now, use normal color
-        backgroundImage.color = normalPlayerColor;
+        if (NetworkManager.main != null && playerData.playerId == NetworkManager.main.localPlayer)
+        {
+            backgroundImage.color = localPlayerColor;
+        }
+        else
+        {
+            backgroundImage.color = normalPlayerColor;
+        }
     }
 }

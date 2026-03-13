@@ -109,6 +109,23 @@ public class PredictedLoadoutManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Updates the local player's hero and weapon selection.
+    /// This change is predicted instantly on the client.
+    /// </summary>
+    public void SetLocalLoadout(HeroType hero, int weaponIndex)
+    {
+        var localLoadout = GetLocalPlayerLoadout();
+        if (localLoadout != null)
+        {
+            localLoadout.SetIntendedLoadout(hero, weaponIndex);
+        }
+        else
+        {
+            Debug.LogWarning("[PredictedLoadoutManager] Local PlayerLoadoutState not found. Change will not be networked!");
+        }
+    }
+
     private void UpdateRespawnNotice()
     {
         if (_respawnNoticeText == null || !_hasSpawnedOnce) return;

@@ -12,10 +12,34 @@ public class MatchPlayerSpawner : PredictedIdentity<MatchPlayerSpawner.SpawnStat
 {
     [SerializeField] private GameObject _playerPrefab;
     [SerializeField] private float _disconnectCleanupDelay = 2.0f;
+    [SerializeField] private float _respawnDelay = 3.0f;
 
     protected override void LateAwake()
     {
         base.LateAwake();
+        
+        if (MatchSessionManager.Instance != null)
+        {
+            MatchSessionManager.Instance.OnPlayerKilled.AddListener(OnPlayerKilled);
+        }
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        if (MatchSessionManager.Instance != null)
+        {
+            MatchSessionManager.Instance.OnPlayerKilled.RemoveListener(OnPlayerKilled);
+        }
+    }
+
+    private void OnPlayerKilled(KillInfo info)
+    {
+        if (!predictionManager.isServer) return;
+
+        // Add to respawn queue
+        currentState.pendingRespawns[info.victim] = _respawnDelay;
+        Debug.Log($"[MatchPlayerSpawner] Player {info.victim} killed. Queuing respawn in {_respawnDelay}s");
     }
 
     protected override void Simulate(ref SpawnState state, float delta)
@@ -27,15 +51,15 @@ public class MatchPlayerSpawner : PredictedIdentity<MatchPlayerSpawner.SpawnStat
         {
             var currentPlayers = predictionManager.players.currentState.players;
             
-            // Handle Spawning
+            // Handle Initial Spawning
             if (IsReadyForSpawning())
             {
                 for (var i = 0; i < currentPlayers.Count; i++)
                 {
                     PlayerID player = currentPlayers[i];
                     
-                    // If we don't have a body for this player, spawn one
-                    if (!state.spawnedBodies.ContainsKey(player))
+                    // If we don't have a body for this player, AND they aren't waiting to respawn
+                    if (!state.spawnedBodies.ContainsKey(player) && !state.pendingRespawns.ContainsKey(player))
                     {
                         SpawnPlayer(player, i, ref state);
                     }
@@ -49,7 +73,43 @@ public class MatchPlayerSpawner : PredictedIdentity<MatchPlayerSpawner.SpawnStat
                 }
             }
 
-            // 2. Disconnection Detection & Timing
+            // 2. Process Respawn Timers
+            var toRespawn = ListPool<PlayerID>.Instantiate();
+            var respawnKeys = ListPool<PlayerID>.Instantiate();
+            foreach(var kvp in state.pendingRespawns) respawnKeys.Add(kvp.Key);
+
+            foreach (var id in respawnKeys)
+            {
+                float remaining = state.pendingRespawns[id] - delta;
+                if (remaining <= 0)
+                {
+                    toRespawn.Add(id);
+                }
+                else
+                {
+                    state.pendingRespawns[id] = remaining;
+                }
+            }
+
+            foreach (var id in toRespawn)
+            {
+                state.pendingRespawns.Remove(id);
+                Debug.Log($"[MatchPlayerSpawner] Respawn timer expired for {id}. Spawning fresh body.");
+                
+                // Find index in player list for spawn point selection
+                int idx = -1;
+                for (int i = 0; i < currentPlayers.Count; i++)
+                {
+                    if (currentPlayers[i] == id) { idx = i; break; }
+                }
+                
+                if (idx != -1) SpawnPlayer(id, idx, ref state);
+            }
+            ListPool<PlayerID>.Destroy(toRespawn);
+            ListPool<PlayerID>.Destroy(respawnKeys);
+
+            // 3. Disconnection Detection & Timing
+            // ... (rest of disconnection logic)
             // Detect players who are in spawnedBodies but NO LONGER in the predictionManager's player list
             var toStartTimer = ListPool<PlayerID>.Instantiate();
             foreach (var kvp in state.spawnedBodies)
@@ -152,6 +212,7 @@ public class MatchPlayerSpawner : PredictedIdentity<MatchPlayerSpawner.SpawnStat
         {
             spawnedBodies = DisposableDictionary<PlayerID, PredictedObjectID>.Create(),
             cleanupTimers = DisposableDictionary<PlayerID, float>.Create(),
+            pendingRespawns = DisposableDictionary<PlayerID, float>.Create(),
             isInitialized = true
         };
     }
@@ -160,12 +221,14 @@ public class MatchPlayerSpawner : PredictedIdentity<MatchPlayerSpawner.SpawnStat
     {
         public DisposableDictionary<PlayerID, PredictedObjectID> spawnedBodies;
         public DisposableDictionary<PlayerID, float> cleanupTimers;
+        public DisposableDictionary<PlayerID, float> pendingRespawns;
         public bool isInitialized;
 
         public void Dispose()
         {
             if (spawnedBodies.dictionary != null) spawnedBodies.Dispose();
             if (cleanupTimers.dictionary != null) cleanupTimers.Dispose();
+            if (pendingRespawns.dictionary != null) pendingRespawns.Dispose();
         }
     }
 }

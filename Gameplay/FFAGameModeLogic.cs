@@ -21,16 +21,17 @@ public class FFAGameModeLogic : BaseGameModeLogic
         if (!isServer) return;
 
         // Fetch current data for the killer
-        PlayerMatchData killerData = MatchSessionManager.Instance.GetPlayerData(killer);
+        var killerData = MatchSessionManager.Instance.GetPlayerData(killer);
         
-        if (killerData != null)
+        if (killerData.HasValue)
         {
-            Debug.Log($"[FFA] {killerData.PlayerName} kills: {killerData.Kills}/{killsToWin}");
+            string killerName = MatchSessionManager.Instance.GetPlayerName(killer);
+            Debug.Log($"[FFA] {killerName} kills: {killerData.Value.kills}/{killsToWin}");
 
             // Check if win condition is met
-            if (killerData.Kills >= killsToWin)
+            if (killerData.Value.kills >= killsToWin)
             {
-                Debug.Log($"[FFA] {killerData.PlayerName} has won the match!");
+                Debug.Log($"[FFA] {killerName} has won the match!");
                 EndMatch();
             }
         }

@@ -115,14 +115,19 @@ public class LoadoutManager : MonoBehaviour
         respawnNoticeText.gameObject.SetActive(_hasSpawnedOnce && isDifferent);
     }
 
+    public void SyncToNetwork()
+    {
+        if (PredictedLoadoutManager.Instance == null) return;
+
+        HeroType hero = (HeroType)heroDropdown.value;
+        int weaponIndex = weaponDropdown.value;
+
+        PredictedLoadoutManager.Instance.SetLocalLoadout(hero, weaponIndex);
+    }
+
     private void RequestUpdate()
     {
-        if (MatchSessionManager.Instance == null || NetworkManager.main == null) return;
-        
-        PlayerID localId = NetworkManager.main.localPlayer;
-        if (localId.isServer) return;
-
-        MatchSessionManager.Instance.UpdatePlayerLoadout(localId, CurrentLoadout);
+        SyncToNetwork();
     }
 
     void Update()

@@ -37,6 +37,32 @@ public class MatchSessionManager : PredictedIdentity<MatchSessionManager.MatchSt
 
     // Tick-aligned Death Event
     [HideInInspector] public PredictedEvent<KillInfo> OnPlayerKilled;
+
+    // Static registry for timing-independent subscription
+    private static readonly List<Action<KillInfo>> _pendingKilledListeners = new();
+
+    public static void RegisterKilledListener(Action<KillInfo> listener)
+    {
+        if (Instance != null && Instance.OnPlayerKilled != null)
+        {
+            Instance.OnPlayerKilled.AddListener(listener);
+        }
+        else
+        {
+            if (!_pendingKilledListeners.Contains(listener))
+                _pendingKilledListeners.Add(listener);
+        }
+    }
+
+    public static void UnregisterKilledListener(Action<KillInfo> listener)
+    {
+        if (Instance != null && Instance.OnPlayerKilled != null)
+        {
+            Instance.OnPlayerKilled.RemoveListener(listener);
+        }
+        _pendingKilledListeners.Remove(listener);
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -46,12 +72,19 @@ public class MatchSessionManager : PredictedIdentity<MatchSessionManager.MatchSt
         }
         Instance = this;
     }
+
     protected override void LateAwake()
     {
         base.LateAwake();
 
-
         OnPlayerKilled = new PredictedEvent<KillInfo>(predictionManager, this);
+
+        // Apply all pending listeners
+        foreach (var listener in _pendingKilledListeners)
+        {
+            OnPlayerKilled.AddListener(listener);
+        }
+        _pendingKilledListeners.Clear();
     }
 
     protected override void Simulate(ref MatchState state, float delta)

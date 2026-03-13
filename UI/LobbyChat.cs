@@ -57,6 +57,12 @@ public class LobbyChat : MonoBehaviour
         _lobbyChatMsgCallback = Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessage);
 
         RefreshChatUI();
+
+        // Safe subscription to global input
+        if (PersistentClient.Instance != null && PersistentClient.Instance.inputManager != null)
+        {
+            PersistentClient.Instance.inputManager.UI.Submit.performed += OnSubmitPressed;
+        }
     }
 
     private void SetImagesVisibility(bool visible)
@@ -110,13 +116,19 @@ public class LobbyChat : MonoBehaviour
         }
     }
 
-    private void OnEnable()
+    private void OnDestroy()
     {
+        if (chatInputField != null)
+            chatInputField.onSubmit.RemoveListener(OnChatSubmitted);
+
         if (PersistentClient.Instance != null && PersistentClient.Instance.inputManager != null)
         {
-            PersistentClient.Instance.inputManager.UI.Submit.performed += OnSubmitPressed;
+            PersistentClient.Instance.inputManager.UI.Submit.performed -= OnSubmitPressed;
         }
+    }
 
+    private void OnEnable()
+    {
         // Subscribe to lobby updates
         SteamTools.Events.OnLobbyChatUpdate += OnLobbyChatUpdate;
         SteamTools.Events.OnLobbyEnterSuccess += OnLobbyEnterSuccess;
@@ -128,11 +140,6 @@ public class LobbyChat : MonoBehaviour
 
     private void OnDisable()
     {
-        if (PersistentClient.Instance != null && PersistentClient.Instance.inputManager != null)
-        {
-            PersistentClient.Instance.inputManager.UI.Submit.performed -= OnSubmitPressed;
-        }
-
         SteamTools.Events.OnLobbyChatUpdate -= OnLobbyChatUpdate;
         SteamTools.Events.OnLobbyEnterSuccess -= OnLobbyEnterSuccess;
         SteamTools.Events.OnLobbyLeave -= OnLobbyLeave;
@@ -331,11 +338,5 @@ public class LobbyChat : MonoBehaviour
         if (chatScrollRect == null) return;
         Canvas.ForceUpdateCanvases();
         chatScrollRect.verticalNormalizedPosition = 0f;
-    }
-
-    private void OnDestroy()
-    {
-        if (chatInputField != null)
-            chatInputField.onSubmit.RemoveListener(OnChatSubmitted);
     }
 }

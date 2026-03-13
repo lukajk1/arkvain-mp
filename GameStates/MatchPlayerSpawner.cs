@@ -18,19 +18,14 @@ public class MatchPlayerSpawner : PredictedIdentity<MatchPlayerSpawner.SpawnStat
     {
         base.LateAwake();
         
-        if (MatchSessionManager.Instance != null)
-        {
-            MatchSessionManager.Instance.OnPlayerKilled.AddListener(OnPlayerKilled);
-        }
+        // Register this spawner with the global match manager
+        MatchSessionManager.RegisterKilledListener(OnPlayerKilled);
     }
 
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        if (MatchSessionManager.Instance != null)
-        {
-            MatchSessionManager.Instance.OnPlayerKilled.RemoveListener(OnPlayerKilled);
-        }
+        MatchSessionManager.UnregisterKilledListener(OnPlayerKilled);
     }
 
     private void OnPlayerKilled(KillInfo info)

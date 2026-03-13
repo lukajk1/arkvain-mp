@@ -11,21 +11,43 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
     public PredictedEvent<(int health, int maxHealth)> _onHealthChanged;
     // predicted event even though only the server can call this (ie no resimulation) to essentially have a tick-associated observer rpc
-    public PredictedEvent<PlayerInfo?> _onDeathPredictedEvent;
+    public PredictedEvent<PlayerInfo?> _onDeathConfirmed;
 
     // Regular C# event that external components can safely subscribe to
     public event Action<PlayerInfo?> OnDeath;
+    // to signal subscription is safe
+    public event Action _eventsReady;
+
+    // Local tracking (NOT in state, not replicated)
+    private bool _wasDeadLastSimulate;
 
     protected override void LateAwake()
     {
         base.LateAwake();
         if (isOwner) gameObject.name = "local player";
 
-        _onHealthChanged = new PredictedEvent<(int, int)>(predictionManager, this);
-        _onDeathPredictedEvent = new PredictedEvent<PlayerInfo?>(predictionManager, this);
+        _onDeathConfirmed = new PredictedEvent<PlayerInfo?>(predictionManager, this);
+        _onHealthChanged = new PredictedEvent<(int health, int maxHealth)>(predictionManager, this);
+        _eventsReady?.Invoke(); // making it nullable prevents errors if there are no subscribers
+
+        Debug.Log($"[PlayerHealth] LateAwake - PredictedEvent Hash: {_onDeathConfirmed?.GetHashCode()}");
 
         // Bridge: PredictedEvent -> C# event
-        _onDeathPredictedEvent.AddListener(attacker => OnDeath?.Invoke(attacker));
+        if (_onDeathConfirmed != null)
+        {
+            _onDeathConfirmed.AddListener(attacker =>
+            {
+                Debug.Log($"[PlayerHealth] PredictedEvent bridge triggered! Attacker: {attacker?.playerID}, Invoking C# event...");
+                OnDeath?.Invoke(attacker);
+                Debug.Log($"[PlayerHealth] C# OnDeath invoked. Subscriber count: {OnDeath?.GetInvocationList().Length ?? 0}");
+            });
+
+            Debug.Log($"[PlayerHealth] Bridge listener added to PredictedEvent");
+        }
+        else
+        {
+            Debug.LogError("[PlayerHealth] _onDeathPredictedEvent is NULL in LateAwake!");
+        }
     }
 
     protected override void OnDestroy()
@@ -39,7 +61,9 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         {
             health = _maxHealth,
             lastHealth = _maxHealth,
-            lastVisualHealth = _maxHealth
+            lastVisualHealth = _maxHealth,
+            deathTimer = 0f,
+            isDead = false
         };
     }
 
@@ -89,24 +113,36 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     protected override void Simulate(ref HealthState state, float delta)
     {
         // Server-only fall death check
-        if (predictionManager.isServer && !state.isDead && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
+        if (predictionManager.isServer && state.health > 0 && _playerMovement._rigidbody.position.y < _yHeightKillThreshold)
         {
             state.health = 0;
             state.attacker = null; // Environment kill
         }
 
-        // Death detection runs on ALL clients during simulation
-        // This ensures PredictedEvent fires on all clients at the same tick
-        if (state.health <= 0 && !state.isDead)
+        // Death detection - check if we transitioned from alive to dead THIS tick
+        // Uses local member variable (not replicated) so each client detects transition independently
+        bool isDeadNow = state.health <= 0;
+
+        if (isDeadNow && !_wasDeadLastSimulate)
         {
             state.isDead = true;
-            // Fire event during Simulate() = all clients hear it!
-            _onDeathPredictedEvent.Invoke(state.attacker);
-            Debug.Log("is dead fired in simulate");
+            state.deathTimer = 0.2f; // Delay deletion to allow state to replicate
 
-            // Server-only cleanup
-            if (predictionManager.isServer)
+            Debug.Log($"[PlayerHealth] Death transition detected! isServer: {predictionManager.isServer}, attacker: {state.attacker?.playerID}");
+            _onDeathConfirmed.Invoke(state.attacker);
+        }
+
+        // Update local tracking for next tick (NOT in state, so doesn't replicate)
+        _wasDeadLastSimulate = isDeadNow;
+
+        // Delayed deletion - allows state to replicate to clients first
+        if (state.isDead && state.deathTimer > 0)
+        {
+            state.deathTimer -= delta;
+            if (state.deathTimer <= 0 && predictionManager.isServer)
+            {
                 ExecuteDeath(state.attacker);
+            }
         }
     }
 
@@ -163,8 +199,9 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         public int health;
         public bool isDead;
         public PlayerInfo? attacker;
-        public int lastHealth; 
+        public int lastHealth;
         public int lastVisualHealth;
+        public float deathTimer; // Delay before server deletes object (allows state to replicate)
 
         public void Dispose() { }
 

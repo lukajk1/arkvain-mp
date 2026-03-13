@@ -17,16 +17,20 @@ public class DeathVisualsManager : StatelessPredictedIdentity
     [SerializeField] private GameObject _ragdollPrefab;
     [SerializeField] private Vector3 _offsetForRagdoll;
 
-    private void Start()
+    private void OnEnable()
     {
         if (_playerHealth != null)
         {
             _playerHealth.OnDeath += OnDeathEvent;
             Debug.Log("DeathVisualsManager successfully subscribed to death event");
         }
+        else
+        {
+            Debug.LogWarning("DeathVisualsManager: PlayerHealth reference is null!");
+        }
     }
 
-    protected override void Destroyed()
+    private void OnDisable()
     {
         if (_playerHealth != null)
         {

@@ -10,6 +10,7 @@ public class HUDManager : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI _healthText;
     [SerializeField] private TextMeshProUGUI _healthTextDropShadow;
+    [SerializeField] private Gradient _healthGradient;
     [SerializeField] private TextMeshProUGUI _velocityText;
 
     [Header("Center Display Broadcasts")]
@@ -46,7 +47,12 @@ public class HUDManager : MonoBehaviour
     public void SetHealthReadout(int currentHealth, int maxHealth)
     {
         if (_healthText != null)
+        {
             _healthText.text = $"{currentHealth}";
+            float t = maxHealth > 0 ? (float)currentHealth / maxHealth : 0;
+            // Flip the evaluation: 0 (left) is now full health, 1 (right) is low health
+            _healthText.color = _healthGradient.Evaluate(1f - t);
+        }
             
         if (_healthTextDropShadow != null) _healthTextDropShadow.text = $"{currentHealth}";
     }

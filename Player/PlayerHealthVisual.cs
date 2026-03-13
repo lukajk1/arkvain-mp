@@ -32,6 +32,27 @@ public class PlayerHealthVisual : MonoBehaviour
     private int _previousBreakpoint = -1;
     private float _lastHurtSFXTime = -999f;
 
+    private bool _subscribed;
+
+    private void Update()
+    {
+        if (!_subscribed && _playerHealth != null && _playerHealth._onHealthChanged != null)
+        {
+            _playerHealth._onHealthChanged.AddListener(OnHealthChanged);
+            _subscribed = true;
+            Debug.Log("successfully subscribed to healthchanged");
+        }
+        Debug.Log($"{gameObject.GetInstanceID()} healthchanged subscribed: {_subscribed}");
+    }
+
+    private void OnDisable()
+    {
+        if (!_subscribed && _playerHealth != null && _playerHealth._onHealthChanged != null)
+        {
+            _playerHealth._onHealthChanged.RemoveListener(OnHealthChanged);
+            _subscribed = false;
+        }
+    }
     private void Start()
     {
         ScreenspaceEffectManager.SetScreenDamage(0f);
@@ -49,23 +70,17 @@ public class PlayerHealthVisual : MonoBehaviour
                 _healthSlider.value = _previousHealthPercent;
             }
 
-            _playerHealth._onHealthChanged.AddListener(OnHealthChanged);
+            //_playerHealth._onHealthChanged.AddListener(OnHealthChanged);
         }
     }
 
-    private void OnDestroy()
-    {
-        if (_playerHealth != null)
-        {
-            _playerHealth._onHealthChanged.RemoveListener(OnHealthChanged);
-        }
-    }
 
     /// <summary>
     /// Updates the health bar visual based on current health percentage.
     /// </summary>
     private void OnHealthChanged((int health, int maxHealth) values)
     {
+        Debug.Log("OnHealthChanged called");
         int currentHealth = values.health;
         int maxHealth = values.maxHealth;
         float newHealthPercent = (float)currentHealth / maxHealth;

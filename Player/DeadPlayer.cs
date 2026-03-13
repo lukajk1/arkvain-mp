@@ -5,7 +5,6 @@ public class DeadPlayer : MonoBehaviour
     [SerializeField] private AudioClip onDeathClip;
     private void Start()
     {
-        Debug.Log("this should be called HHH");
         ScreenspaceEffectManager.SetGrayscale(true);
         ScreenspaceEffectManager.FlashBloom();
 

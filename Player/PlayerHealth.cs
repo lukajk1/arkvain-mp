@@ -13,6 +13,9 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
     // predicted event even though only the server can call this (ie no resimulation) to essentially have a tick-associated observer rpc
     public PredictedEvent<PlayerInfo?> _onDeathPredictedEvent;
 
+    // Regular C# event that external components can safely subscribe to
+    public event Action<PlayerInfo?> OnDeath;
+
     protected override void LateAwake()
     {
         base.LateAwake();
@@ -20,6 +23,9 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
 
         _onHealthChanged = new PredictedEvent<(int, int)>(predictionManager, this);
         _onDeathPredictedEvent = new PredictedEvent<PlayerInfo?>(predictionManager, this);
+
+        // Bridge: PredictedEvent -> C# event
+        _onDeathPredictedEvent.AddListener(attacker => OnDeath?.Invoke(attacker));
     }
 
     protected override void OnDestroy()
@@ -94,9 +100,9 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         if (state.health <= 0 && !state.isDead)
         {
             state.isDead = true;
-            Debug.Log("is dead fired in simulate");
             // Fire event during Simulate() = all clients hear it!
             _onDeathPredictedEvent.Invoke(state.attacker);
+            Debug.Log("is dead fired in simulate");
 
             // Server-only cleanup
             if (predictionManager.isServer)

@@ -15,40 +15,35 @@ public class DeathVisualsManager : StatelessPredictedIdentity
     [Header("Visuals")]
     [SerializeField] private GameObject _deadPlayerPrefab;
     [SerializeField] private GameObject _ragdollPrefab;
-    [SerializeField] private AudioClip _deathClip;
     [SerializeField] private Vector3 _offsetForRagdoll;
 
-    private bool _deathEventSubscribed;
-
-    private void Update()
+    private void Start()
     {
-        // Safe subscription to the predicted event
-        if (!_deathEventSubscribed && _playerHealth != null && _playerHealth._onDeathPredictedEvent != null)
+        if (_playerHealth != null)
         {
-            _playerHealth._onDeathPredictedEvent.AddListener(OnDeathPredicted);
-            _deathEventSubscribed = true;
+            _playerHealth.OnDeath += OnDeathEvent;
             Debug.Log("DeathVisualsManager successfully subscribed to death event");
         }
     }
 
-    private void OnDisable()
+    protected override void Destroyed()
     {
-        if (_deathEventSubscribed && _playerHealth != null)
+        if (_playerHealth != null)
         {
-            _playerHealth._onDeathPredictedEvent.RemoveListener(OnDeathPredicted);
-            _deathEventSubscribed = false;
+            _playerHealth.OnDeath -= OnDeathEvent;
         }
     }
 
-    private void OnDeathPredicted(PlayerInfo? attacker)
+    private void OnDeathEvent(PlayerInfo? attacker)
     {
         Debug.Log("DeathVisualsManager predicted event was triggered");
 
         // 1. Kill Notification (If we were the killer)
-        if (attacker.HasValue && NetworkManager.main != null && attacker.Value.playerID == NetworkManager.main.localPlayer)
-        {
-            HitmarkerManager.Instance?.ReportKillConfirmed();
-        }
+        // this needs to be updated to use proper setup for ui feedback
+        //if (attacker.HasValue && NetworkManager.main != null && attacker.Value.playerID == NetworkManager.main.localPlayer)
+        //{
+        //    HitmarkerManager.Instance?.ReportKillConfirmed();
+        //}
 
         // 2. Local Effects (If we are the victim)
         if (isOwner)
@@ -57,14 +52,9 @@ public class DeathVisualsManager : StatelessPredictedIdentity
 
             ScreenspaceEffectManager.SetGrayscale(true);
             
-            // Spawn the "corpse" prefab locally
             if (_deadPlayerPrefab != null)
             {
                 Instantiate(_deadPlayerPrefab, transform.position + Vector3.up, transform.rotation);
-            }
-            if (_deathClip != null)
-            {
-                SoundManager.PlayNonDiegetic(_deathClip, varyPitch: false, varyVolume: false);
             }
         }
 

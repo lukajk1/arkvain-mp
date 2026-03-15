@@ -103,6 +103,10 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponInput, Weapon
         input.switchToPrimary |= playerInput.PrimaryWeapon.WasPressedThisFrame();
         input.switchToSecondary |= playerInput.SecondaryWeapon.WasPressedThisFrame();
         input.quickSwitch |= playerInput.QuickSwitchWeapon.WasPressedThisFrame();
+
+        // Mouse wheel scrolling (using new Input System)
+        input.switchToPrimary |= playerInput.ScrollUp.WasPressedThisFrame();
+        input.switchToSecondary |= playerInput.ScrollDown.WasPressedThisFrame();
     }
 
     protected override void ModifyExtrapolatedInput(ref WeaponInput input)

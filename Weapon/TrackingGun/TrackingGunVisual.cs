@@ -18,9 +18,10 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
     [SerializeField] private float _envHitSimSpeed = 1f;
     [SerializeField] private float _envHitNormalOffset = 0.05f;
 
-    [Header("Tracer Line")]
+    [Header("Beam")]
     [SerializeField] private LineRenderer _tracerLine;
-    [SerializeField] private float _tracerDuration = 0.1f;
+    [SerializeField] private Transform _beamOrigin;
+    [SerializeField] private float _beamMaxRange = 9f;
 
     [Header("Continuous Beam Hit Effect")]
     [SerializeField] private ParticleSystem _continuousHitParticles;
@@ -31,7 +32,6 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
     private Coroutine _activeBulletCoroutine;
     private GameObject _activeBulletObject;
 
-    private Coroutine _tracerCoroutine;
     private Vector3 _lastHitPosition;
     private Vector3 _lastHitNormal;
     private bool _isHitting;
@@ -67,6 +67,30 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
             // Stop playing if we're no longer hitting
             DisableContinuousHitEffect();
         }
+
+        // Draw beam while attack button is held
+        if (_tracerLine != null && _beamOrigin != null && _weaponLogic != null && _weaponLogic.IsCurrent)
+        {
+            bool attackHeld = PersistentClient.Instance.inputManager.Player.Attack.IsPressed();
+
+            if (attackHeld)
+            {
+                Vector3 beamStart = _beamOrigin.position;
+                Vector3 beamEnd = beamStart + _beamOrigin.forward * _beamMaxRange;
+
+                _tracerLine.SetPosition(0, beamStart);
+                _tracerLine.SetPosition(1, beamEnd);
+
+                if (!_tracerLine.enabled)
+                {
+                    _tracerLine.enabled = true;
+                }
+            }
+            else if (_tracerLine.enabled)
+            {
+                _tracerLine.enabled = false;
+            }
+        }
     }
 
     /// <summary>
@@ -94,19 +118,6 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
 
         if (_shootSound != null && _weaponLogic.isOwner)
             SoundManager.PlayNonDiegetic(_shootSound, varyVolume: false);
-
-        // Draw tracer line from muzzle to max range, hide after duration
-        if (_tracerLine != null)
-        {
-            if (_tracerCoroutine != null)
-                StopCoroutine(_tracerCoroutine);
-
-            Vector3 muzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
-            _tracerLine.SetPosition(0, muzzlePos);
-            _tracerLine.SetPosition(1, muzzlePos + fireDirection * _bulletMaxDistance);
-            _tracerLine.enabled = true;
-            _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
-        }
 
         // Reset hit flag - will be set to true by OnHit if we actually hit something this frame
         _isHitting = false;
@@ -222,6 +233,12 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
     {
         base.OnHolstered(); // Stops animations
         DisableContinuousHitEffect();
+
+        // Disable beam
+        if (_tracerLine != null)
+        {
+            _tracerLine.enabled = false;
+        }
     }
 
     private void DisableContinuousHitEffect()
@@ -266,10 +283,4 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
         _activeBulletObject = null;
     }
 
-    private System.Collections.IEnumerator HideTracerAfterDelay()
-    {
-        yield return new WaitForSeconds(_tracerDuration);
-        _tracerLine.enabled = false;
-        _tracerCoroutine = null;
-    }
 }

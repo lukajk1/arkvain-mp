@@ -99,7 +99,7 @@ public class TrackingGunLogic : BaseWeaponLogic<TrackingGunLogic.ShootInput, Tra
         Shoot(ref state);
 
         // Consume ammo
-        state.currentAmmo--;
+        //state.currentAmmo--;
     }
 
     private void StartReload(ref ShootState state)

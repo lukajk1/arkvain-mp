@@ -22,6 +22,13 @@ public class PersistentClient : MonoBehaviour
     public static float cm360;
     public static float playerDPI;
 
+    public static LoadoutSelection currentLoadout = new LoadoutSelection
+    {
+        Hero = HeroType.Richter,
+        Weapon1 = WeaponType.Crossbow,
+        Weapon2 = WeaponType.Revolver
+    };
+
     private static List<object> cursorUnlockList = new();
     private void Awake()
     {

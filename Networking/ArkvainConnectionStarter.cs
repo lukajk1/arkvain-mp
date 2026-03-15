@@ -16,6 +16,9 @@ public class ArkvainConnectionStarter : MonoBehaviour
     private UDPTransport _udpTransport;
     private NetworkManager _networkManager;
 
+    [SerializeField] private LoadoutSelection selectionForNotFromLobby;
+
+
     private bool _isFromLobby;
 
     private void Awake()
@@ -85,6 +88,8 @@ public class ArkvainConnectionStarter : MonoBehaviour
     private void StartNormal()
     {
         _networkManager.transport = _udpTransport;
+        PersistentClient.currentLoadout = selectionForNotFromLobby;
+
 
         // Load a default map/mode if we are starting outside of a lobby
         if (MapLoader.Instance != null)

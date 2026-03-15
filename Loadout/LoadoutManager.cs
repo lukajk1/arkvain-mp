@@ -16,7 +16,12 @@ public class LoadoutManager : MonoBehaviour
     [SerializeField] private Button closeButton;
     [SerializeField] private TMP_Text respawnNoticeText;
 
-    public static LoadoutSelection CurrentLoadout;
+    public static LoadoutSelection CurrentLoadout = new LoadoutSelection
+    {
+        Hero = HeroType.Richter,
+        Weapon1 = WeaponType.Crossbow,
+        Weapon2 = WeaponType.Revolver
+    };
     private static LoadoutSelection _appliedLoadout;
     private static bool _hasSpawnedOnce;
 
@@ -82,6 +87,9 @@ public class LoadoutManager : MonoBehaviour
             CurrentLoadout.Weapon2 = (WeaponType)weapon2Dropdown.value;
         }
 
+        // Sync to PersistentClient immediately
+        PersistentClient.currentLoadout = CurrentLoadout;
+
         // Initial sync
         RequestUpdate();
     }
@@ -100,6 +108,7 @@ public class LoadoutManager : MonoBehaviour
     private void OnHeroChanged(int index)
     {
         CurrentLoadout.Hero = (HeroType)index;
+        PersistentClient.currentLoadout = CurrentLoadout;
         RequestUpdate();
         UpdateRespawnNotice();
     }
@@ -107,6 +116,7 @@ public class LoadoutManager : MonoBehaviour
     private void OnWeapon1Changed(int index)
     {
         CurrentLoadout.Weapon1 = (WeaponType)index;
+        PersistentClient.currentLoadout = CurrentLoadout;
         RequestUpdate();
         UpdateRespawnNotice();
     }
@@ -114,6 +124,7 @@ public class LoadoutManager : MonoBehaviour
     private void OnWeapon2Changed(int index)
     {
         CurrentLoadout.Weapon2 = (WeaponType)index;
+        PersistentClient.currentLoadout = CurrentLoadout;
         RequestUpdate();
         UpdateRespawnNotice();
     }

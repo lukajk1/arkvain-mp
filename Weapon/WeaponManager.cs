@@ -3,11 +3,11 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Manages the active weapon for a player. 
-/// In this version, weapon switching is disabled; a weapon is assigned at spawn and remains active.
+/// Manages weapons for a player with primary and secondary slots.
+/// Reads loadout from PersistentClient at spawn and allows switching between the two equipped weapons.
 /// Broadcasts weapon events globally for systems like hitmarkers.
 /// </summary>
-public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
+public class WeaponManager : PredictedIdentity<WeaponManager.WeaponInput, WeaponManager.WeaponState>
 {
     [System.Serializable]
     public class WeaponPair
@@ -34,6 +34,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
 
     [Header("Other")]
     [SerializeField] private ViewmodelSway _viewmodelSway;
+    [SerializeField] private float _weaponSwitchCooldown = 0.6f;
 
     private WeaponPair[] _weapons;
     private bool _isInitialized = false;
@@ -43,6 +44,17 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
     /// </summary>
     public event Action<IWeaponLogic> OnWeaponEquipped;
 
+    protected override WeaponState GetInitialState()
+    {
+        return new WeaponState
+        {
+            primaryWeaponIndex = Mathf.Clamp((int)PersistentClient.currentLoadout.Weapon1, 0, 3),
+            secondaryWeaponIndex = Mathf.Clamp((int)PersistentClient.currentLoadout.Weapon2, 0, 3),
+            isPrimaryActive = true,
+            switchCooldown = 0f
+        };
+    }
+
     protected override void LateAwake()
     {
         base.LateAwake();
@@ -51,9 +63,9 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
         _weapons = new WeaponPair[]
         {
             new WeaponPair(_crossbowLogic, _crossbowVisual),      // Index 0
+            new WeaponPair(_trackingGunLogic, _trackingGunVisual), // Index 3
             new WeaponPair(_deagleLogic, _deagleVisual),          // Index 1
             new WeaponPair(_railgunLogic, _railgunVisual),        // Index 2
-            new WeaponPair(_trackingGunLogic, _trackingGunVisual) // Index 3
         };
 
         // Disable everything initially
@@ -62,50 +74,91 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
             SetWeaponActive(weapon, false);
         }
 
-        // Pull from networked loadout manager if available
-        if (owner.HasValue)
-        {
-            var loadout = PlayerLoadoutState.GetLoadout(owner.Value);
-            if (loadout != null)
-            {
-                var state = currentState;
-                state.activeWeaponIndex = loadout.weapon1Index;
-                ApplyActiveWeapon(state.activeWeaponIndex);
-            }
-        }
-
         // Initialize based on current state (important for late-joiners)
-        ApplyActiveWeapon(currentState.activeWeaponIndex);
+        ApplyActiveWeapon(GetActiveWeaponIndex());
         _isInitialized = true;
     }
 
     /// <summary>
-    /// Sets the active weapon index. Should typically be called by the server or 
-    /// owner during the initialization/spawning phase.
+    /// Sets the primary and secondary weapon indices.
     /// </summary>
-    public void InitialEquip(int index)
+    public void InitialEquip(int primaryIndex, int secondaryIndex)
     {
-        index = Mathf.Clamp(index, 0, _weapons.Length - 1);
-        
+        primaryIndex = Mathf.Clamp(primaryIndex, 0, _weapons.Length - 1);
+        secondaryIndex = Mathf.Clamp(secondaryIndex, 0, _weapons.Length - 1);
+
         // Update the predicted state
         var state = currentState;
-        state.activeWeaponIndex = index;
+        state.primaryWeaponIndex = primaryIndex;
+        state.secondaryWeaponIndex = secondaryIndex;
+        state.isPrimaryActive = true;
     }
 
-    protected override void Simulate(ref WeaponState state, float delta)
+
+    protected override void UpdateInput(ref WeaponInput input)
     {
-        // Safety: If we are the owner but the state doesn't match our loadout yet (due to timing)
-        if (isOwner && owner.HasValue)
+        var playerInput = PersistentClient.Instance.inputManager.Player;
+
+        // Accumulate button presses (like jump in PlayerMovement)
+        input.switchToPrimary |= playerInput.PrimaryWeapon.WasPressedThisFrame();
+        input.switchToSecondary |= playerInput.SecondaryWeapon.WasPressedThisFrame();
+        input.quickSwitch |= playerInput.QuickSwitchWeapon.WasPressedThisFrame();
+    }
+
+    protected override void ModifyExtrapolatedInput(ref WeaponInput input)
+    {
+        // Reset accumulated presses to prevent weapon switches from being extrapolated
+        input.switchToPrimary = false;
+        input.switchToSecondary = false;
+        input.quickSwitch = false;
+    }
+
+    protected override void Simulate(WeaponInput input, ref WeaponState state, float delta)
+    {
+        // Count down switch cooldown
+        if (state.switchCooldown > 0)
         {
-            var loadout = PlayerLoadoutState.GetLoadout(owner.Value);
-            if (loadout != null && state.activeWeaponIndex != loadout.weaponIndex)
+            state.switchCooldown -= delta;
+        }
+
+        // Only allow weapon switch if cooldown has expired
+        if (state.switchCooldown <= 0f)
+        {
+            bool switched = false;
+
+            // Apply accumulated weapon switches
+            if (input.switchToPrimary && !state.isPrimaryActive)
             {
-                state.activeWeaponIndex = loadout.weaponIndex;
+                state.isPrimaryActive = true;
+                switched = true;
+            }
+            else if (input.switchToSecondary && state.isPrimaryActive)
+            {
+                state.isPrimaryActive = false;
+                switched = true;
+            }
+            else if (input.quickSwitch)
+            {
+                state.isPrimaryActive = !state.isPrimaryActive;
+                switched = true;
+            }
+
+            // Reset cooldown if a switch occurred
+            if (switched)
+            {
+                state.switchCooldown = _weaponSwitchCooldown;
             }
         }
 
         // If the state says we should be using a different weapon than what is visually active
-        ApplyActiveWeapon(state.activeWeaponIndex);
+        int activeIndex = state.isPrimaryActive ? state.primaryWeaponIndex : state.secondaryWeaponIndex;
+        ApplyActiveWeapon(activeIndex);
+    }
+
+    private int GetActiveWeaponIndex()
+    {
+        var state = currentState;
+        return state.isPrimaryActive ? state.primaryWeaponIndex : state.secondaryWeaponIndex;
     }
 
     private int _lastAppliedIndex = -1;
@@ -179,9 +232,20 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
         return _weapons[_lastAppliedIndex].logic;
     }
 
+    public struct WeaponInput : IPredictedData<WeaponInput>
+    {
+        public bool switchToPrimary;
+        public bool switchToSecondary;
+        public bool quickSwitch;
+        public void Dispose() { }
+    }
+
     public struct WeaponState : IPredictedData<WeaponState>
     {
-        public int activeWeaponIndex;
+        public int primaryWeaponIndex;
+        public int secondaryWeaponIndex;
+        public bool isPrimaryActive; // true = primary, false = secondary
+        public float switchCooldown;
         public void Dispose() { }
     }
 }

@@ -104,7 +104,7 @@ public class RevolverLogic : BaseWeaponLogic<RevolverLogic.ShootInput, RevolverL
         Shoot(ref state);
 
         // Consume ammo
-        state.currentAmmo--;
+        //state.currentAmmo--;
     }
 
     private void StartReload(ref ShootState state)

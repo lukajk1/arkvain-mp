@@ -9,32 +9,122 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
     [Header("Shoot Effects")]
     [SerializeField] private ParticleSystem _muzzleFlashParticles;
     [SerializeField] private AudioClip _shootSound;
+    [SerializeField] private GameObject _bulletPrefab;
+    [SerializeField] private Transform _bulletTrailOrigin;
+    [SerializeField] private float _bulletMaxDistance = 100f;
+    [SerializeField] private float _bulletSpeed = 100f;
 
-    [Header("Hit Effects")]
-    [SerializeField] private AudioClip _hitSound;
+    [SerializeField] private ParticleSystem _envHitParticles;
+    [SerializeField] private float _envHitSimSpeed = 1f;
+    [SerializeField] private float _envHitNormalOffset = 0.05f;
+
+    [Header("Tracer Line")]
+    [SerializeField] private LineRenderer _tracerLine;
+    [SerializeField] private float _tracerDuration = 0.1f;
+
+    [Header("Continuous Beam Hit Effect")]
+    [SerializeField] private ParticleSystem _continuousHitParticles;
 
     [Header("Reload Effects")]
-    [SerializeField] private AudioClip _reloadSound;
+    [SerializeField] private AudioClip _reloadComplete;
 
-    [Header("Equip Animation")]
-    [SerializeField] private Animator _animator;
-    [SerializeField] private string _equipAnimationTrigger = "Equip";
+    private Coroutine _activeBulletCoroutine;
+    private GameObject _activeBulletObject;
+
+    private Coroutine _tracerCoroutine;
+    private Vector3 _lastHitPosition;
+    private Vector3 _lastHitNormal;
+    private bool _isHitting;
+
+    private void Awake()
+    {
+        if (_tracerLine != null)
+            _tracerLine.enabled = false;
+
+        if (_continuousHitParticles != null)
+        {
+            _continuousHitParticles.Stop();
+            _continuousHitParticles.gameObject.SetActive(false);
+        }
+
+        if (_envHitParticles != null)
+            VFXPoolManager.Instance.RegisterPrefab(_envHitParticles.gameObject, simSpeed: _envHitSimSpeed);
+
+        if (_bulletPrefab != null)
+            VFXPoolManager.Instance.RegisterPrefab(_bulletPrefab, initialCapacity: 30, maxSize: 50);
+    }
+
+    private void Update()
+    {
+        // Update continuous hit particle position if hitting
+        if (_isHitting && _continuousHitParticles != null)
+        {
+            _continuousHitParticles.transform.position = _lastHitPosition;
+            _continuousHitParticles.transform.rotation = Quaternion.LookRotation(_lastHitNormal);
+        }
+        else if (!_isHitting && _continuousHitParticles != null && _continuousHitParticles.isPlaying)
+        {
+            // Stop playing if we're no longer hitting
+            DisableContinuousHitEffect();
+        }
+    }
 
     /// <summary>
     /// Called when the tracking gun shoots. Plays muzzle flash and shoot sound.
     /// </summary>
     protected override void OnShoot(Vector3 fireDirection)
     {
-        base.OnShoot(fireDirection); // Call base to trigger animation if configured
+        // Immediately stop any currently playing animation and play shoot animation
+        if (_animancer != null && _shootClip != null)
+        {
+            _animancer.Stop();
+            var shootState = _animancer.Play(_shootClip, 0f); // No fade, immediate transition
+            shootState.Events(this).OnEnd = PlayIdleAnimation;
+        }
 
         if (_muzzleFlashParticles != null)
         {
-            _muzzleFlashParticles.Play();
+            if (!_muzzleFlashParticles.gameObject.activeInHierarchy)
+            {
+                _muzzleFlashParticles.gameObject.SetActive(true);
+            }
+            _muzzleFlashParticles.Clear();
+            _muzzleFlashParticles.Play(true);
         }
 
-        if (_shootSound != null)
+        if (_shootSound != null && _weaponLogic.isOwner)
+            SoundManager.PlayNonDiegetic(_shootSound, varyVolume: false);
+
+        // Draw tracer line from muzzle to max range, hide after duration
+        if (_tracerLine != null)
         {
-            SoundManager.Play(new SoundData(_shootSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+            if (_tracerCoroutine != null)
+                StopCoroutine(_tracerCoroutine);
+
+            Vector3 muzzlePos = _bulletTrailOrigin != null ? _bulletTrailOrigin.position : transform.position;
+            _tracerLine.SetPosition(0, muzzlePos);
+            _tracerLine.SetPosition(1, muzzlePos + fireDirection * _bulletMaxDistance);
+            _tracerLine.enabled = true;
+            _tracerCoroutine = StartCoroutine(HideTracerAfterDelay());
+        }
+
+        // Reset hit flag - will be set to true by OnHit if we actually hit something this frame
+        _isHitting = false;
+
+        // Spawn bullet that travels to max distance (will be stopped early by OnHit if something is hit)
+        // disable for now
+        if (false && _bulletPrefab != null && VFXPoolManager.Instance != null)
+        {
+            Vector3 startPos = _bulletTrailOrigin.position;
+            Vector3 endPos = startPos + fireDirection * _bulletMaxDistance;
+            Quaternion rotation = Quaternion.LookRotation(fireDirection);
+            GameObject bulletObj = VFXPoolManager.Instance.Spawn(_bulletPrefab, startPos, rotation);
+
+            if (bulletObj != null)
+            {
+                _activeBulletObject = bulletObj;
+                _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(bulletObj, startPos, endPos));
+            }
         }
     }
 
@@ -43,14 +133,55 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
     /// </summary>
     protected override void OnHit(HitInfo hitInfo)
     {
-        // Play hit particles via centralized manager
+        // Play hit particles via centralized manager (blood effects if applicable)
         WeaponHitEffectsManager.PlayHitEffect(hitInfo, _weaponLogic.isOwner);
 
-        // Play hit sound for body hits (only for owner)
-        if (hitInfo.hitPlayer && _weaponLogic.isOwner && _hitSound != null)
+        // Update continuous hit effect for environment hits
+        if (!hitInfo.hitPlayer && _continuousHitParticles != null)
         {
-            SoundManager.Play(new SoundData(_hitSound, blend: SoundData.SoundBlend.Spatial, soundPos: hitInfo.position));
+            _isHitting = true;
+            _lastHitPosition = hitInfo.position + hitInfo.surfaceNormal * _envHitNormalOffset;
+            _lastHitNormal = hitInfo.surfaceNormal;
+
+            if (!_continuousHitParticles.gameObject.activeInHierarchy)
+            {
+                _continuousHitParticles.gameObject.SetActive(true);
+            }
+
+            if (!_continuousHitParticles.isPlaying)
+            {
+                _continuousHitParticles.Play();
+            }
+
+            _continuousHitParticles.transform.position = _lastHitPosition;
+            _continuousHitParticles.transform.rotation = Quaternion.LookRotation(_lastHitNormal);
         }
+        else if (hitInfo.hitPlayer && _continuousHitParticles != null)
+        {
+            // Don't show continuous particles when hitting players
+            DisableContinuousHitEffect();
+        }
+
+        if (VFXPoolManager.Instance != null && Camera.main != null && _envHitParticles != null)
+        {
+            float distanceSqr = (Camera.main.transform.position - hitInfo.position).sqrMagnitude;
+            if (!hitInfo.hitPlayer && distanceSqr < ClientsideGameManager.maxVFXDistance * ClientsideGameManager.maxVFXDistance)
+            {
+                // Orient the particle effect so its Z+ axis aligns with the surface normal
+                Quaternion rotation = Quaternion.LookRotation(hitInfo.surfaceNormal);
+                Vector3 spawnPos = hitInfo.position + hitInfo.surfaceNormal * _envHitNormalOffset;
+                VFXPoolManager.Instance.Spawn(_envHitParticles.gameObject, spawnPos, rotation);
+            }
+        }
+
+        // Stop the active bullet early and redirect it to the actual hit position
+        if (_activeBulletCoroutine != null && _activeBulletObject != null)
+        {
+            StopCoroutine(_activeBulletCoroutine);
+            Vector3 currentPos = _activeBulletObject.transform.position;
+            _activeBulletCoroutine = StartCoroutine(AnimateBulletToHit(_activeBulletObject, currentPos, hitInfo.position));
+        }
+
     }
 
     /// <summary>
@@ -59,23 +190,86 @@ public class TrackingGunVisual : WeaponVisual<TrackingGunLogic>
     protected override void OnReload()
     {
         base.OnReload(); // Call base to trigger animation if configured
+    }
 
-        if (_reloadSound != null)
+    protected override void OnReloadComplete()
+    {
+        base.OnReloadComplete(); // Call base to trigger animation if configured
+
+        if (_reloadComplete != null)
         {
-            SoundManager.Play(new SoundData(_reloadSound, blend: SoundData.SoundBlend.Spatial, soundPos: transform.position));
+            if (_weaponLogic.isOwner)
+                SoundManager.PlayNonDiegetic(_reloadComplete, varyPitch: false, varyVolume: false);
+            else
+                SoundManager.PlayDiegetic(_reloadComplete, transform.position, varyPitch: false, varyVolume: false);
         }
     }
 
+
     /// <summary>
-    /// Called when the tracking gun becomes the active weapon. Plays equip animation.
+    /// Called when the tracking gun becomes the active weapon. Shows the viewmodel.
     /// </summary>
     protected override void OnEquipped()
     {
         base.OnEquipped(); // Call base to trigger animation if configured
+        Show(); // Show the viewmodel
+    }
 
-        if (_animator != null && !string.IsNullOrEmpty(_equipAnimationTrigger))
+    /// <summary>
+    /// Called when the tracking gun is holstered (deactivated).
+    /// </summary>
+    protected override void OnHolstered()
+    {
+        base.OnHolstered(); // Stops animations
+        DisableContinuousHitEffect();
+    }
+
+    private void DisableContinuousHitEffect()
+    {
+        _isHitting = false;
+
+        if (_continuousHitParticles != null)
         {
-            _animator.SetTrigger(_equipAnimationTrigger);
+            _continuousHitParticles.Stop();
+            _continuousHitParticles.gameObject.SetActive(false);
         }
+    }
+
+    /// <summary>
+    /// Animates the bullet from start to end position, then returns it to the pool.
+    /// </summary>
+    private System.Collections.IEnumerator AnimateBulletToHit(GameObject bulletObj, Vector3 startPos, Vector3 endPos)
+    {
+        float distance = Vector3.Distance(startPos, endPos);
+        float duration = distance / _bulletSpeed;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            bulletObj.transform.position = Vector3.Lerp(startPos, endPos, t);
+            yield return null;
+        }
+
+        // Ensure final position is exact
+        bulletObj.transform.position = endPos;
+
+        // Return to pool after arrival
+        if (VFXPoolManager.Instance != null)
+        {
+            VFXPoolManager.Instance.Return(bulletObj);
+        }
+
+        // Clear active references
+        _activeBulletCoroutine = null;
+        _activeBulletObject = null;
+    }
+
+    private System.Collections.IEnumerator HideTracerAfterDelay()
+    {
+        yield return new WaitForSeconds(_tracerDuration);
+        _tracerLine.enabled = false;
+        _tracerCoroutine = null;
     }
 }

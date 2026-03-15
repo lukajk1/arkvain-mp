@@ -2,7 +2,7 @@ using PurrDiction;
 using PurrNet.Prediction;
 using UnityEngine;
 
-public class DeagleLogic : BaseWeaponLogic<DeagleLogic.ShootInput, DeagleLogic.ShootState>
+public class RevolverLogic : BaseWeaponLogic<RevolverLogic.ShootInput, RevolverLogic.ShootState>
 {
     [Header("Stats")]
     [SerializeField] private float _fireRate;

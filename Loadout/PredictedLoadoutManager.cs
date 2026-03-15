@@ -12,14 +12,16 @@ public class PredictedLoadoutManager : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private Canvas _canvas;
     [SerializeField] private TMP_Dropdown _heroDropdown;
-    [SerializeField] private TMP_Dropdown _weaponDropdown;
+    [SerializeField] private TMP_Dropdown _weapon1Dropdown;
+    [SerializeField] private TMP_Dropdown _weapon2Dropdown;
     [SerializeField] private Button _closeButton;
     [SerializeField] private TMP_Text _respawnNoticeText;
 
     public static PredictedLoadoutManager Instance { get; private set; }
 
     private HeroType _appliedHero;
-    private int _appliedWeaponIndex = -1;
+    private int _appliedWeapon1Index = -1;
+    private int _appliedWeapon2Index = -1;
     private bool _hasSpawnedOnce = false;
 
     private void Awake()
@@ -42,8 +44,9 @@ public class PredictedLoadoutManager : MonoBehaviour
     {
         if (_closeButton != null) _closeButton.onClick.AddListener(CloseClicked);
         if (_heroDropdown != null) _heroDropdown.onValueChanged.AddListener(OnHeroChanged);
-        if (_weaponDropdown != null) _weaponDropdown.onValueChanged.AddListener(OnWeaponChanged);
-        
+        if (_weapon1Dropdown != null) _weapon1Dropdown.onValueChanged.AddListener(OnWeapon1Changed);
+        if (_weapon2Dropdown != null) _weapon2Dropdown.onValueChanged.AddListener(OnWeapon2Changed);
+
         GameEvents.OnPlayerSpawned += OnPlayerSpawned;
     }
 
@@ -51,8 +54,9 @@ public class PredictedLoadoutManager : MonoBehaviour
     {
         if (_closeButton != null) _closeButton.onClick.RemoveListener(CloseClicked);
         if (_heroDropdown != null) _heroDropdown.onValueChanged.RemoveListener(OnHeroChanged);
-        if (_weaponDropdown != null) _weaponDropdown.onValueChanged.RemoveListener(OnWeaponChanged);
-        
+        if (_weapon1Dropdown != null) _weapon1Dropdown.onValueChanged.RemoveListener(OnWeapon1Changed);
+        if (_weapon2Dropdown != null) _weapon2Dropdown.onValueChanged.RemoveListener(OnWeapon2Changed);
+
         GameEvents.OnPlayerSpawned -= OnPlayerSpawned;
     }
 
@@ -64,9 +68,10 @@ public class PredictedLoadoutManager : MonoBehaviour
             if (localLoadout != null)
             {
                 _appliedHero = localLoadout.hero;
-                _appliedWeaponIndex = localLoadout.weaponIndex;
+                _appliedWeapon1Index = localLoadout.weapon1Index;
+                _appliedWeapon2Index = localLoadout.weapon2Index;
             }
-            
+
             _hasSpawnedOnce = true;
             UpdateRespawnNotice();
         }
@@ -89,7 +94,13 @@ public class PredictedLoadoutManager : MonoBehaviour
         UpdateRespawnNotice();
     }
 
-    private void OnWeaponChanged(int index)
+    private void OnWeapon1Changed(int index)
+    {
+        SyncToNetwork();
+        UpdateRespawnNotice();
+    }
+
+    private void OnWeapon2Changed(int index)
     {
         SyncToNetwork();
         UpdateRespawnNotice();
@@ -97,15 +108,16 @@ public class PredictedLoadoutManager : MonoBehaviour
 
     private void SyncToNetwork()
     {
-        if (_heroDropdown == null || _weaponDropdown == null) return;
+        if (_heroDropdown == null || _weapon1Dropdown == null || _weapon2Dropdown == null) return;
 
         HeroType hero = (HeroType)_heroDropdown.value;
-        int weaponIndex = _weaponDropdown.value;
+        int weapon1Index = _weapon1Dropdown.value;
+        int weapon2Index = _weapon2Dropdown.value;
 
         var localLoadout = GetLocalPlayerLoadout();
         if (localLoadout != null)
         {
-            localLoadout.SetIntendedLoadout(hero, weaponIndex);
+            localLoadout.SetIntendedLoadout(hero, weapon1Index, weapon2Index);
         }
     }
 
@@ -113,12 +125,12 @@ public class PredictedLoadoutManager : MonoBehaviour
     /// Updates the local player's hero and weapon selection.
     /// This change is predicted instantly on the client.
     /// </summary>
-    public void SetLocalLoadout(HeroType hero, int weaponIndex)
+    public void SetLocalLoadout(HeroType hero, int weapon1Index, int weapon2Index)
     {
         var localLoadout = GetLocalPlayerLoadout();
         if (localLoadout != null)
         {
-            localLoadout.SetIntendedLoadout(hero, weaponIndex);
+            localLoadout.SetIntendedLoadout(hero, weapon1Index, weapon2Index);
         }
         else
         {
@@ -130,9 +142,10 @@ public class PredictedLoadoutManager : MonoBehaviour
     {
         if (_respawnNoticeText == null || !_hasSpawnedOnce) return;
 
-        bool isDifferent = (HeroType)_heroDropdown.value != _appliedHero || 
-                          _weaponDropdown.value != _appliedWeaponIndex;
-        
+        bool isDifferent = (HeroType)_heroDropdown.value != _appliedHero ||
+                          _weapon1Dropdown.value != _appliedWeapon1Index ||
+                          _weapon2Dropdown.value != _appliedWeapon2Index;
+
         _respawnNoticeText.gameObject.SetActive(isDifferent);
     }
 

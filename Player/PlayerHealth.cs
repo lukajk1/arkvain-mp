@@ -154,6 +154,10 @@ public class PlayerHealth : PredictedIdentity<PlayerHealth.HealthState>
         // Detect visual health change and fire event
         if (visualHealth != state.lastVisualHealth)
         {
+            if (isOwner)
+            {
+                Debug.Log($"[PlayerHealth {gameObject.GetInstanceID()}] Invoking _onHealthChanged: {visualHealth}/{_maxHealth}");
+            }
             _onHealthChanged?.Invoke((visualHealth, _maxHealth));
             state.lastVisualHealth = visualHealth;
         }

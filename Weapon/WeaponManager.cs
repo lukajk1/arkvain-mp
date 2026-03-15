@@ -25,8 +25,8 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
     [Header("Weapon References")]
     [SerializeField] private CrossbowLogic _crossbowLogic;
     [SerializeField] private CrossbowVisual _crossbowVisual;
-    [SerializeField] private DeagleLogic _deagleLogic;
-    [SerializeField] private DeagleVisual _deagleVisual;
+    [SerializeField] private RevolverLogic _deagleLogic;
+    [SerializeField] private RevolverVisual _deagleVisual;
     [SerializeField] private RailgunLogic _railgunLogic;
     [SerializeField] private RailgunVisual _railgunVisual;
     [SerializeField] private TrackingGunLogic _trackingGunLogic;
@@ -37,11 +37,6 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
 
     private WeaponPair[] _weapons;
     private bool _isInitialized = false;
-
-    /// <summary>
-    /// Static event broadcast when a local player's WeaponManager is initialized.
-    /// </summary>
-    public static event Action<WeaponManager> OnLocalWeaponManagerReady;
 
     /// <summary>
     /// Event broadcast when the active weapon is set or changed.
@@ -74,7 +69,7 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
             if (loadout != null)
             {
                 var state = currentState;
-                state.activeWeaponIndex = loadout.weaponIndex;
+                state.activeWeaponIndex = loadout.weapon1Index;
                 ApplyActiveWeapon(state.activeWeaponIndex);
             }
         }
@@ -82,11 +77,6 @@ public class WeaponManager : PredictedIdentity<WeaponManager.WeaponState>
         // Initialize based on current state (important for late-joiners)
         ApplyActiveWeapon(currentState.activeWeaponIndex);
         _isInitialized = true;
-
-        if (isOwner)
-        {
-            OnLocalWeaponManagerReady?.Invoke(this);
-        }
     }
 
     /// <summary>

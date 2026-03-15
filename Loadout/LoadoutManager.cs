@@ -11,7 +11,8 @@ public class LoadoutManager : MonoBehaviour
     [SerializeField] private Canvas canvas;
 
     [SerializeField] private TMP_Dropdown heroDropdown;
-    [SerializeField] private TMP_Dropdown weaponDropdown;
+    [SerializeField] private TMP_Dropdown weapon1Dropdown;
+    [SerializeField] private TMP_Dropdown weapon2Dropdown;
     [SerializeField] private Button closeButton;
     [SerializeField] private TMP_Text respawnNoticeText;
 
@@ -69,12 +70,18 @@ public class LoadoutManager : MonoBehaviour
             CurrentLoadout.Hero = (HeroType)heroDropdown.value;
         }
 
-        if (weaponDropdown != null)
+        if (weapon1Dropdown != null)
         {
-            weaponDropdown.onValueChanged.AddListener(OnWeaponChanged);
-            CurrentLoadout.Weapon = (WeaponType)weaponDropdown.value;
+            weapon1Dropdown.onValueChanged.AddListener(OnWeapon1Changed);
+            CurrentLoadout.Weapon1 = (WeaponType)weapon1Dropdown.value;
         }
-        
+
+        if (weapon2Dropdown != null)
+        {
+            weapon2Dropdown.onValueChanged.AddListener(OnWeapon2Changed);
+            CurrentLoadout.Weapon2 = (WeaponType)weapon2Dropdown.value;
+        }
+
         // Initial sync
         RequestUpdate();
     }
@@ -97,9 +104,16 @@ public class LoadoutManager : MonoBehaviour
         UpdateRespawnNotice();
     }
 
-    private void OnWeaponChanged(int index)
+    private void OnWeapon1Changed(int index)
     {
-        CurrentLoadout.Weapon = (WeaponType)index;
+        CurrentLoadout.Weapon1 = (WeaponType)index;
+        RequestUpdate();
+        UpdateRespawnNotice();
+    }
+
+    private void OnWeapon2Changed(int index)
+    {
+        CurrentLoadout.Weapon2 = (WeaponType)index;
         RequestUpdate();
         UpdateRespawnNotice();
     }
@@ -108,9 +122,10 @@ public class LoadoutManager : MonoBehaviour
     {
         if (respawnNoticeText == null) return;
 
-        bool isDifferent = CurrentLoadout.Hero != _appliedLoadout.Hero || 
-                          CurrentLoadout.Weapon != _appliedLoadout.Weapon;
-        
+        bool isDifferent = CurrentLoadout.Hero != _appliedLoadout.Hero ||
+                          CurrentLoadout.Weapon1 != _appliedLoadout.Weapon1 ||
+                          CurrentLoadout.Weapon2 != _appliedLoadout.Weapon2;
+
         // Only show if we've actually spawned once and it's different
         respawnNoticeText.gameObject.SetActive(_hasSpawnedOnce && isDifferent);
     }
@@ -120,9 +135,10 @@ public class LoadoutManager : MonoBehaviour
         if (PredictedLoadoutManager.Instance == null) return;
 
         HeroType hero = (HeroType)heroDropdown.value;
-        int weaponIndex = weaponDropdown.value;
+        int weapon1Index = weapon1Dropdown.value;
+        int weapon2Index = weapon2Dropdown.value;
 
-        PredictedLoadoutManager.Instance.SetLocalLoadout(hero, weaponIndex);
+        PredictedLoadoutManager.Instance.SetLocalLoadout(hero, weapon1Index, weapon2Index);
     }
 
     private void RequestUpdate()

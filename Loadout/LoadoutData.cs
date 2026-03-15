@@ -15,5 +15,6 @@ public enum WeaponType
 public struct LoadoutSelection
 {
     public HeroType Hero;
-    public WeaponType Weapon;
+    public WeaponType Weapon1;
+    public WeaponType Weapon2;
 }

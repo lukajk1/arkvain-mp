@@ -18,7 +18,6 @@ public class PlayerHealthVisual : MonoBehaviour
     [SerializeField] private float _thresholdToShowSSDamage = 0.4f;
 
     [Header("Healthbar Tick Down")]
-    [SerializeField] private Transform _damageFlashContainer;
     [SerializeField] private float _damageFlashScaleY = 2f;
     [SerializeField] private float _damageFlashDuration = 0.3f;
     [SerializeField] private int _healthBreakpoints = 10;
@@ -33,24 +32,51 @@ public class PlayerHealthVisual : MonoBehaviour
     private float _lastHurtSFXTime = -999f;
 
     private bool _subscribed;
+    private int _instanceID;
+
+    private void Awake()
+    {
+        _instanceID = gameObject.GetInstanceID();
+    }
 
     private void Update()
     {
         if (!_subscribed && _playerHealth != null && _playerHealth._onHealthChanged != null)
         {
+            if (_playerHealth.isOwner)
+            {
+                Debug.Log($"[{_instanceID}] ATTEMPTING to subscribe to healthchanged event on PlayerHealth instance {_playerHealth.GetInstanceID()}");
+            }
             _playerHealth._onHealthChanged.AddListener(OnHealthChanged);
             _subscribed = true;
-            Debug.Log("successfully subscribed to healthchanged");
+            if (_playerHealth.isOwner)
+            {
+                Debug.Log($"[{_instanceID}] AddListener completed, _subscribed flag set to true");
+            }
         }
-        Debug.Log($"{gameObject.GetInstanceID()} healthchanged subscribed: {_subscribed}");
+
+        // Debug: Log subscription status (owner only)
+        if (_playerHealth != null && _playerHealth.isOwner)
+        {
+            bool eventExists = _playerHealth._onHealthChanged != null;
+            string playerHealthInfo = $"exists (instanceID={_playerHealth.GetInstanceID()}), event={(eventExists ? "exists" : "null")}";
+            Debug.Log($"[{_instanceID}] subscribed={_subscribed}, playerHealth={playerHealthInfo}, isOwner=true");
+        }
     }
 
     private void OnDisable()
     {
-        if (!_subscribed && _playerHealth != null && _playerHealth._onHealthChanged != null)
+        if (_subscribed)
         {
-            _playerHealth._onHealthChanged.RemoveListener(OnHealthChanged);
-            _subscribed = false;
+            if (_playerHealth != null && _playerHealth._onHealthChanged != null)
+            {
+                _playerHealth._onHealthChanged.RemoveListener(OnHealthChanged);
+                if (_playerHealth.isOwner)
+                {
+                    Debug.Log($"[{_instanceID}] unsubscribed from healthchanged");
+                }
+            }
+            _subscribed = false; // Always reset flag when disabled
         }
     }
     private void Start()
@@ -80,7 +106,10 @@ public class PlayerHealthVisual : MonoBehaviour
     /// </summary>
     private void OnHealthChanged((int health, int maxHealth) values)
     {
-        Debug.Log("OnHealthChanged called");
+        if (_playerHealth != null && _playerHealth.isOwner)
+        {
+            Debug.Log($"[{_instanceID}] OnHealthChanged called - health={values.health}/{values.maxHealth}");
+        }
         int currentHealth = values.health;
         int maxHealth = values.maxHealth;
         float newHealthPercent = (float)currentHealth / maxHealth;
@@ -197,7 +226,7 @@ public class PlayerHealthVisual : MonoBehaviour
         RectTransform fillRect = _healthSlider.fillRect;
 
         // Instantiate the damage flash image
-        Transform parent = _damageFlashContainer != null ? _damageFlashContainer : fillRect.parent;
+        Transform parent = fillRect.parent;
         if (parent == null) return;
 
         Image damageFlash = Instantiate(_damageFlashPrefab, parent);

@@ -89,9 +89,6 @@ public class LoadoutManager : MonoBehaviour
 
         // Sync to PersistentClient immediately
         PersistentClient.currentLoadout = CurrentLoadout;
-
-        // Initial sync
-        RequestUpdate();
     }
 
     public void SetState(bool value)
@@ -103,13 +100,12 @@ public class LoadoutManager : MonoBehaviour
     private void CloseClicked()
     {
         SetState(false);
-        RequestUpdate();
     }
+
     private void OnHeroChanged(int index)
     {
         CurrentLoadout.Hero = (HeroType)index;
         PersistentClient.currentLoadout = CurrentLoadout;
-        RequestUpdate();
         UpdateRespawnNotice();
     }
 
@@ -117,7 +113,6 @@ public class LoadoutManager : MonoBehaviour
     {
         CurrentLoadout.Weapon1 = (WeaponType)index;
         PersistentClient.currentLoadout = CurrentLoadout;
-        RequestUpdate();
         UpdateRespawnNotice();
     }
 
@@ -125,7 +120,6 @@ public class LoadoutManager : MonoBehaviour
     {
         CurrentLoadout.Weapon2 = (WeaponType)index;
         PersistentClient.currentLoadout = CurrentLoadout;
-        RequestUpdate();
         UpdateRespawnNotice();
     }
 
@@ -139,22 +133,6 @@ public class LoadoutManager : MonoBehaviour
 
         // Only show if we've actually spawned once and it's different
         respawnNoticeText.gameObject.SetActive(_hasSpawnedOnce && isDifferent);
-    }
-
-    public void SyncToNetwork()
-    {
-        if (PredictedLoadoutManager.Instance == null) return;
-
-        HeroType hero = (HeroType)heroDropdown.value;
-        int weapon1Index = weapon1Dropdown.value;
-        int weapon2Index = weapon2Dropdown.value;
-
-        PredictedLoadoutManager.Instance.SetLocalLoadout(hero, weapon1Index, weapon2Index);
-    }
-
-    private void RequestUpdate()
-    {
-        SyncToNetwork();
     }
 
     void Update()
